@@ -51,11 +51,11 @@ full text, and read a report locally or open its Web URL.
 
 ## Install
 
-Download `dsh-paper-deepread-1.1.3.tgz` from the GitHub release, then install it into the
+Download `dsh-paper-deepread-1.1.4.tgz` from the GitHub release, then install it into the
 Web profile:
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.1.3.tgz
+dsh plugin --profile web add ./dsh-paper-deepread-1.1.4.tgz
 ```
 
 Restart the Web UI:

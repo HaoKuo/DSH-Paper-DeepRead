@@ -4,6 +4,20 @@ All notable changes to DSH-Paper-DeepRead are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.4] — 2026-10-30
+
+### Changed (UI polish)
+
+- Plugin panel: removed the duplicated header block (icon + 文献精读库 title +
+  "Paper Deepread · 上传、精读与报告管理" subtitle). The embedded library page already
+  carries its own header; the panel now starts with the 文献库 / 上传 / 报告管理 tab bar,
+  and the report count + library version moved to the right side of that bar (文献库 tab
+  also shows the count badge).
+- Bundled `library/manage.html`: fixed the step-card row on the upload tab — the `<ol>`
+  kept the browser's default 40px padding, so the three numbered cards were inset
+  relative to the cards below; `padding: 0` aligns them with the panel edge.
+- No API/tool/behaviour changes.
+
 ## [1.1.3] — 2026-10-30
 
 ### Fixed

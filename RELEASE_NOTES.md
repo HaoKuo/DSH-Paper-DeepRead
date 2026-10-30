@@ -1,60 +1,41 @@
-# DSH-Paper-DeepRead 1.1.3
+# DSH-Paper-DeepRead 1.1.4
 
 Release date: 2026-10-30
 
 **English** | [中文](#中文)
 
-## Fix
+## What changed
 
-Model-tool outputs are now **lossless JSON**.
+A small UI-polish release for the DSH panel and the bundled management console.
 
-v1.1.2's `paper_deepread` tool could fail in the live web profile with:
-
-```text
-tool "paper_deepread" returned invalid output: value is not lossless JSON
-```
-
-Cause: absent optional fields were returned as `undefined` object properties
-(`publicPaper` did `doi: paper.doi || undefined`, `publicLibrary` did
-`version/buildDate || undefined`; the uploads tool did `path/hint: ... ?? undefined`
-and the reports tool did `rebuild: ... : undefined`). DSH's tool-output validator
-rejects values whose JSON round-trip loses keys, so papers without a DOI (and other
-sparse records) broke the call.
-
-v1.1.3 passes every tool `execute` result through one recursive sanitizer
-(`src/lossless.js`): `undefined`/function/symbol/BigInt object properties are omitted,
-array holes become `null`, `NaN`/`Infinity` become `null`, cycles become `null`. The
-three tools keep identical names, descriptions, parameters and payload shapes — only
-non-JSON properties disappear.
-
-## Regression test
-
-`tests/lossless.test.js` recursively rejects undefined/NaN/Infinity, then asserts
-`JSON.parse(JSON.stringify(value))` deep-equals the payload for:
-
-- `paper_deepread`: bundled library list / substring query / id lookup / missing id
-- `paper_deepread_uploads`: list with a synthetic failed upload record + delete error
-- `paper_deepread_reports`: list on the real bundled library + invalid dir/build errors
-
-It fails on v1.1.2 with `paper_deepread list.papers[1].doi: undefined` and
-`paper_deepread_uploads list.python.hint: undefined`, and passes on v1.1.3
-(`npm test`: 25/25).
+- **Panel header de-duplicated** — the plugin panel dropped its own copy of the
+  "文献精读库 / Paper Deepread · 上传、精读与报告管理" header. The embedded library page
+  already shows the brand, so the panel now opens directly with the
+  **文献库 / 上传 / 报告管理** tab bar; the report count and library version sit on the
+  right of that bar, and the 文献库 tab shows the count badge.
+- **Upload step cards aligned** — in `manage.html` the three numbered step cards are an
+  `<ol>` that kept the browser default 40 px padding, so they were inset relative to the
+  cards below. With `padding: 0` they line up with the panel edge (verified with rendered
+  geometry: steps / cards / tabs all start at the same left edge).
+- **No API, tool, or behaviour changes.** Upload, auto deep-read worker, report
+  management, and the shared `paper-read` library are unchanged.
 
 ## Install / upgrade
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.1.3.tgz
+dsh plugin --profile web add ./dsh-paper-deepread-1.1.4.tgz
+dsh web   # restart to load the updated client bundle
 ```
 
-Then restart `dsh web`. Upgrading from 1.1.2 is in place: managed data
-(`$DSH_HOME/paper-deepread`) and any `libraryDir` configuration are untouched. This is a
-content-only patch — the bundled library, skill, HTTP API and tool parameters are
-unchanged from v1.1.2.
+Then refresh the browser page; the panel appears without the duplicated header block.
 
-## Requirements
+## Compatibility
 
-- DeepSeek Harness `0.2.0-rc.2` – `0.2.1-rc.3` (verified against `0.2.1-rc.3`)
+- DeepSeek Harness `0.2.0-rc.2` – `0.2.1-rc.3` (built and verified against `0.2.1-rc.3`)
 - Node.js `>= 24`
+- The `web` profile
+
+The SHA-256 of the tarball is listed in `SHA256SUMS` on this release.
 
 ## License
 
@@ -63,57 +44,39 @@ MIT © 2026 HaoKuo
 <details>
 <summary>中文</summary>
 
-# DSH-Paper-DeepRead 1.1.3
+# DSH-Paper-DeepRead 1.1.4
 
 发布日期：2026-10-30
 
-## 修复
+## 变更内容
 
-模型工具输出现在是**无损 JSON**。
+针对 DSH 面板与内置管理台的小型 UI 修正。
 
-v1.1.2 的 `paper_deepread` 工具在线上 web profile 会失败：
-
-```text
-tool "paper_deepread" returned invalid output: value is not lossless JSON
-```
-
-原因：缺省可选字段以 `undefined` 属性返回（`publicPaper` 的
-`doi: paper.doi || undefined`、`publicLibrary` 的 `version/buildDate || undefined`；
-uploads 工具的 `path/hint: ... ?? undefined`、reports 工具的 `rebuild: ... : undefined`）。
-DSH 的工具输出校验器会拒绝 JSON 往返后丢键的值，因此没有 DOI 的论文（以及其他稀疏记录）
-会触发错误。
-
-v1.1.3 让每个工具的 `execute` 返回值统一经过递归清洗器（`src/lossless.js`）：
-`undefined`/函数/symbol/BigInt 对象属性被省略，数组空位变 `null`，`NaN`/`Infinity` 变
-`null`，循环引用变 `null`。三个工具的名称、描述、参数与返回结构不变，只是移除了非 JSON 属性。
-
-## 回归测试
-
-`tests/lossless.test.js` 递归拒绝 undefined/NaN/Infinity，并断言
-`JSON.parse(JSON.stringify(value))` 与载荷深度相等，覆盖：
-
-- `paper_deepread`：内置书库列表 / 子串查询 / id 查询 / 不存在的 id
-- `paper_deepread_uploads`：含合成失败上传记录的列表 + 删除错误
-- `paper_deepread_reports`：真实内置书库的列表 + 非法目录/构建错误
-
-该测试在 v1.1.2 失败（`paper_deepread list.papers[1].doi: undefined`、
-`paper_deepread_uploads list.python.hint: undefined`），在 v1.1.3 通过
-（`npm test`：25/25）。
+- **面板标题去重** —— 插件面板不再重复显示「文献精读库 / Paper Deepread · 上传、精读与报告管理」
+  这两行标题（内嵌的文献库页面本身已有品牌头部）。面板现在直接从
+  **文献库 / 上传 / 报告管理** 标签栏开始，报告数量与书库版本移到标签栏右侧，
+  文献库标签也带数量徽标。
+- **上传步骤卡片对齐** —— `manage.html` 的 3 张编号步骤卡使用 `<ol>`，保留了浏览器默认的
+  40px 内边距，导致它们相对下方卡片内缩。改为 `padding: 0` 后与面板左边缘对齐
+  （已用渲染几何验证：步骤卡 / 卡片 / 标签栏左边缘一致）。
+- **无 API、工具或行为变更**：上传、自动精读 worker、报告管理与共享 `paper-read` 书库均不受影响。
 
 ## 安装 / 升级
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.1.3.tgz
+dsh plugin --profile web add ./dsh-paper-deepread-1.1.4.tgz
+dsh web   # 重启以加载新的客户端 bundle
 ```
 
-然后重启 `dsh web`。从 1.1.2 原地升级：受管数据（`$DSH_HOME/paper-deepread`）与
-`libraryDir` 配置不受影响。这是纯内容补丁——内置书库、技能、HTTP API 与工具参数均与
-v1.1.2 相同。
+重启后刷新浏览器页面即可看到去掉重复标题的面板。
 
-## 环境要求
+## 兼容性
 
-- DeepSeek Harness `0.2.0-rc.2` – `0.2.1-rc.3`（针对 `0.2.1-rc.3` 验证）
+- DeepSeek Harness `0.2.0-rc.2` – `0.2.1-rc.3`（针对 `0.2.1-rc.3` 构建与验证）
 - Node.js `>= 24`
+- `web` profile
+
+tarball 的 SHA-256 见本 release 的 `SHA256SUMS`。
 
 ## 许可证
 

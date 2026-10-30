@@ -79,7 +79,7 @@ header.top{
 .count{display:inline-block;min-width:18px;margin-left:6px;padding:0 5px;border-radius:9px;background:var(--surface-2);border:1px solid var(--rule);font-size:11px;line-height:17px;text-align:center;color:var(--ink-2)}
 main{padding:22px 0 64px}
 .panel[hidden]{display:none!important}
-.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 16px}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 16px;padding:0}
 .steps li{list-style:none;position:relative;border:1px solid var(--rule);border-radius:11px;background:var(--surface);padding:11px 13px 11px 40px;font-size:12.5px;color:var(--ink-2);counter-increment:step}
 .steps{counter-reset:step}
 .steps li::before{content:counter(step);position:absolute;left:11px;top:10px;width:21px;height:21px;border-radius:50%;background:var(--teal-soft);color:var(--teal-ink);display:grid;place-items:center;font-size:11.5px;font-weight:700}
@@ -124,6 +124,8 @@ td.nowrap{white-space:nowrap}
 .pill.ok{background:var(--ok-soft);border-color:color-mix(in srgb,var(--ok) 35%,transparent);color:var(--ok)}
 .pill.warn{background:var(--amber-soft);border-color:color-mix(in srgb,var(--amber) 35%,transparent);color:var(--amber-ink)}
 .pill.bad{background:var(--bad-soft);border-color:color-mix(in srgb,var(--bad) 35%,transparent);color:var(--bad)}
+.pill.info{background:var(--teal-soft);border-color:color-mix(in srgb,var(--teal) 35%,transparent);color:var(--teal-ink)}
+.pill.muted{color:var(--ink-3)}
 .actions{display:flex;gap:6px;flex-wrap:wrap}
 .prompt{
   width:100%;min-height:128px;resize:vertical;padding:11px 12px;border:1px solid var(--rule);
@@ -208,8 +210,8 @@ footer{border-top:1px solid var(--rule);padding:18px 0 30px;color:var(--ink-3);f
   <section class="panel" id="panelUpload" role="tabpanel" aria-labelledby="tabUpload">
     <ol class="steps">
       <li>把 PDF 拖进下方收件箱（开放上传，不离开本页）。</li>
-      <li>复制该文件的手递指令，发给任意 Agent：它会用 <code>paper-deepread-html</code> 技能精读并把报告写回文献库。</li>
-      <li>报告完成后到「报告管理」刷新、检查、重建索引并发布。</li>
+      <li>上传后自动进入精读队列，本机 <strong>deepread worker</strong> 会用 headless Agent 完成精读并把报告写回文献库。</li>
+      <li>报告完成后自动重建索引并发布，文献库首页与 DSH 插件同时可见；失败会显示原因并可重试。</li>
     </ol>
 
     <div class="card">
@@ -226,21 +228,25 @@ footer{border-top:1px solid var(--rule);padding:18px 0 30px;color:var(--ink-3);f
     </div>
 
     <div class="card">
-      <div class="row between"><h2>待处理队列 <span class="muted" id="queueSummary"></span></h2>
+      <div class="row between"><h2>精读队列（自动处理） <span class="muted" id="queueSummary"></span></h2>
         <button class="btn ghost" id="refreshUploads" type="button">刷新</button></div>
       <div id="queueBody"><p class="empty">还没有上传记录。</p></div>
     </div>
 
     <div class="card">
-      <h2>交给 Agent 精读</h2>
-      <p>插件/站点本身不调用模型。把下面这段指令（含服务器上的 PDF 绝对路径）复制给任意 Agent；它会用
-        <code>paper-deepread-html</code> 技能精读，再把报告目录构建进文献库。</p>
-      <textarea class="prompt" id="handoffPrompt" readonly aria-label="给 Agent 的精读指令"></textarea>
-      <div class="row" style="margin-top:10px">
-        <button class="btn primary" id="copyHandoff" type="button">复制指令</button>
-        <span class="muted" id="copyState" role="status"></span>
-      </div>
-      <p class="muted" style="margin-top:10px">提示：精读完成后回到「报告管理」点「重建索引并发布」，报告就会出现在文献库首页。</p>
+      <h2>自动精读（本机 worker）</h2>
+      <p>上传后自动进入精读队列（本机 worker 处理，无需手动复制指令；失败会显示原因并可重试）。
+        worker 会用 <code>paper-deepread-html</code> 技能完成精读、校验报告，然后自动重建索引并发布。</p>
+      <details class="manual-fallback">
+        <summary>手动交给 Agent（备用）</summary>
+        <p class="muted">自动 worker 未运行或不可用时，可把下面这段指令（含服务器上的 PDF 绝对路径）复制给任意 Agent。</p>
+        <textarea class="prompt" id="handoffPrompt" readonly aria-label="给 Agent 的精读指令"></textarea>
+        <div class="row" style="margin-top:10px">
+          <button class="btn" id="copyHandoff" type="button">复制指令</button>
+          <span class="muted" id="copyState" role="status"></span>
+        </div>
+      </details>
+      <p class="muted" style="margin-top:10px">提示：worker 状态可在队列里看到；「报告管理」页可继续隐藏/删除报告或手动重新发布。</p>
     </div>
   </section>
 
@@ -439,7 +445,10 @@ footer{border-top:1px solid var(--rule);padding:18px 0 30px;color:var(--ink-3);f
     $('panelUpload').hidden = name !== 'upload';
     $('panelManage').hidden = name !== 'manage';
     if (name === 'manage' && state) renderManage();
-    if (name === 'upload' && state) renderUploads();
+    if (name === 'upload') {
+      if (state) renderUploads();
+      loadState().catch(function () { /* offline banner already shown */ });
+    }
     try { history.replaceState(null, '', '#' + name); } catch (e) { /* ignore */ }
   }
   $('tabUpload').addEventListener('click', function () { showTab('upload'); });
@@ -478,7 +487,7 @@ footer{border-top:1px solid var(--rule);padding:18px 0 30px;color:var(--ink-3);f
     pollTimer = setInterval(function () {
       if (document.visibilityState === 'hidden' || busy) return;
       loadState().catch(function () { /* offline banner already shown */ });
-    }, 7000);
+    }, 10000);
   }
 
   /* ---------------- uploads ---------------- */
@@ -497,21 +506,57 @@ footer{border-top:1px solid var(--rule);padding:18px 0 30px;color:var(--ink-3);f
     html.push('<table><thead><tr><th>文件</th><th>大小</th><th>时间</th><th>状态</th><th>操作</th></tr></thead><tbody>');
     rows.forEach(function (row) {
       var size = row.size != null ? row.size : row.bytes;
+      var status = row.status || 'uploaded';
       html.push('<tr data-id="' + esc(row.id) + '">');
-      html.push('<td><span class="title">' + esc(row.name) + '</span><span class="sub mono">id: ' + esc(row.id) + '</span></td>');
+      html.push('<td><span class="title">' + esc(row.name) + '</span><span class="sub mono">id: ' + esc(row.id) + '</span>');
+      if (status === 'processing' && row.claimedAt) {
+        html.push('<span class="sub">开始于 ' + esc(fmtTime(row.claimedAt)) + '</span>');
+      } else if (status === 'done' && row.reportDir) {
+        html.push('<span class="sub">报告目录：' + esc(row.reportDir) + '</span>');
+      } else if (status === 'failed' && row.message) {
+        html.push('<span class="sub" style="color:var(--bad)">' + esc(row.message) + '</span>');
+      }
+      html.push('</td>');
       html.push('<td class="nowrap">' + fmtSize(size) + '</td>');
       html.push('<td class="nowrap">' + fmtTime(row.createdAt) + '</td>');
-      html.push('<td><span class="pill warn">待精读</span></td>');
-      html.push('<td><div class="actions">' +
-        '<button class="btn ghost js-handoff" type="button" data-id="' + esc(row.id) + '">手递指令</button>' +
-        '<button class="btn danger js-delete-upload" type="button" data-id="' + esc(row.id) + '">删除</button>' +
-        '</div></td>');
+      html.push('<td>' + queuePill(status) + '</td>');
+      var actions = ['<div class="actions">'];
+      if (status === 'done' && row.reportDir) {
+        actions.push('<a class="btn ghost" href="/' + encodeURIComponent(row.reportDir) + '/' +
+          encodeURIComponent(row.reportDir) + '.html" target="_blank" rel="noopener">查看报告</a>');
+      }
+      if (status === 'failed') {
+        actions.push('<button class="btn js-retry" type="button" data-id="' + esc(row.id) + '">重试</button>');
+      }
+      actions.push('<button class="btn ghost js-handoff" type="button" data-id="' + esc(row.id) + '">手递指令</button>');
+      actions.push('<button class="btn danger js-delete-upload" type="button" data-id="' + esc(row.id) + '">删除</button>');
+      actions.push('</div>');
+      html.push('<td>' + actions.join('') + '</td>');
       html.push('</tr>');
     });
     html.push('</tbody></table>');
     $('queueBody').innerHTML = html.join('');
     var last = rows[rows.length - 1];
     $('handoffPrompt').value = defaultHandoff(last);
+  }
+
+  function queuePill(status) {
+    if (status === 'processing') return '<span class="pill info">精读中</span>';
+    if (status === 'done') return '<span class="pill ok">已完成</span>';
+    if (status === 'failed') return '<span class="pill bad">失败</span>';
+    if (status === 'retry') return '<span class="pill warn">重试中</span>';
+    return '<span class="pill warn">待精读</span>';
+  }
+
+  function retryQueue(id) {
+    hide($('uploadError'));
+    hide($('uploadNotice'));
+    runAdmin('重试精读', function () {
+      return request('queue/retry', { method: 'POST', body: { id: id } });
+    }).then(function () {
+      showNotice($('uploadNotice'), '已重新排队，worker 会再次处理这篇 PDF。');
+      loadState().catch(function () {});
+    }).catch(function () { /* error already surfaced */ });
   }
 
   function defaultHandoff(row) {
@@ -573,7 +618,7 @@ footer{border-top:1px solid var(--rule);padding:18px 0 30px;color:var(--ink-3);f
     function next() {
       if (index >= files.length) {
         setUploadBusy(false);
-        showNotice($('uploadNotice'), '已上传 ' + files.length + ' 篇 PDF；下一步复制下方指令发给 Agent。');
+        showNotice($('uploadNotice'), '已上传 ' + files.length + ' 篇 PDF，已自动进入精读队列；本机 worker 会逐篇处理并自动发布。');
         loadState().catch(function () {});
         return;
       }
@@ -823,6 +868,8 @@ footer{border-top:1px solid var(--rule);padding:18px 0 30px;color:var(--ink-3);f
       copyHandoff();
       return;
     }
+    var retry = target.closest('.js-retry');
+    if (retry) { retryQueue(retry.dataset.id); return; }
     var del = target.closest('.js-delete-upload');
     if (del) { deleteUpload(del.dataset.id); return; }
     var toggle = target.closest('.js-toggle');
