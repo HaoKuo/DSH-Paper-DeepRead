@@ -4,6 +4,22 @@ All notable changes to DSH-Paper-DeepRead are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] — 2026-10-30
+
+### Bundled skill
+
+- `paper-deepread-html` **1.3.0** — fixes under-reading in research articles:
+  - **All main figures and main tables are mandatory** (no 3–8 figure cap for research; every main
+    figure gets a card, every main table a table card). Key supplementary figures/tables must be read
+    or explicitly referenced; skipped ones need a written reason.
+  - **Section-by-section reading for research papers**: every Results subsection gets a `sec-brief`
+    plus 2–4 body paragraphs (goal / key evidence and numbers / conclusion and place in the argument
+    chain / doubts), quoting its figures, tables and page numbers.
+  - New required **reading-coverage checklist** (`<details class="coverage">`) listing every main
+    figure/table and key supplementary item with where it was read or why it was skipped.
+  - QA checklist, article-type reference and the unattended worker prompt enforce the new rules.
+- No plugin code or API changes.
+
 ## [1.2.0] — 2026-10-30
 
 ### Bundled skill
