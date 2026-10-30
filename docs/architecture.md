@@ -107,3 +107,61 @@ needed because the route is served by the host half on the same origin.
 Every registration goes through the plugin `ctx`, so Cordis disposes the route, the tool,
 and the browser slots with the plugin fiber. A malformed library, an unavailable
 `webServer`, or a failed skill copy is logged and skipped; the plugin still loads.
+
+
+## v1.1.0 — managed library, upload inbox, report management
+
+```text
+dataDir ($DSH_HOME/paper-deepread)
+├── library/      seeded once from <package>/library, then user-owned
+├── uploads/      <uploadId>.pdf raw uploads
+├── work/<id>/    paper_ingest.py output + agent-authored content.html/meta.json
+├── state.json    upload records (status uploaded|ingested|reported|failed)
+└── .seed.json    one-time seed marker (never overwrites an existing library)
+```
+
+Host modules:
+
+- `src/store.js` — resolves `dataDir` (`config.dataDir` → else `$DSH_HOME/paper-deepread`),
+  seeds the packaged library once, serializes `state.json` writes (temp file + rename),
+  and exposes `safeChildDir()` for report path validation. Legacy `config.libraryDir`
+  makes that directory the managed root and skips seeding (`managed: false`).
+- `src/uploads.js` — filename sanitizing, raw-body streaming with a hard 80 MB limit,
+  `%PDF-` magic sniffing, and `uploads/<id>.pdf` storage.
+- `src/reports.js` — scans direct child directories of the managed root for report HTML
+  + `library.json` metadata + `RAW-*.pdf`; hide/unhide merges `{"hidden": bool}` into
+  `library.json`; delete removes exactly one validated child directory; rebuild runs
+  `build_library.py` (thumbs when a PyMuPDF interpreter is already prepared, otherwise a
+  plain `python3 --no-thumbs` fallback).
+- `src/python.js` — resolves the skill interpreter through `setup_env.sh` (cached venv
+  or PyMuPDF-capable python3; first run may install PyMuPDF), runs child processes with
+  timeouts/cancellation and captured output, and exports pure argv builders.
+- `src/manager.js` — wires the store, reports, and Python together; dispatches the
+  `/paper-deepread/api/*` routes; and defines the three model tools:
+  `paper_deepread` (catalogue/search), `paper_deepread_uploads`
+  (`list`/`env`/`ingest`/`delete`), `paper_deepread_reports`
+  (`list`/`build`/`rebuild`/`delete`/`hide`).
+
+The plugin never calls a model: the upload tab hands the user a prefilled instruction,
+and an agent runs ingest (deterministic) then follows the skill to author report sources
+and call `build`. The one-click index rebuild is deterministic and model-free.
+
+### API (same `/paper-deepread` prefix route)
+
+| Method | Path | Meaning |
+| --- | --- | --- |
+| GET | `/paper-deepread/api/state` | library root/title/version, stats, uploads, reports, Python/skill status, limits |
+| POST | `/paper-deepread/api/upload` | raw PDF body, `x-filename` (percent-encoded), `content-type: application/pdf` → `201`/`413`/`415`/`400` |
+| POST | `/paper-deepread/api/uploads/delete` | `{id}` — record, raw PDF, and work directory |
+| POST | `/paper-deepread/api/reports/rebuild` | rebuild `index.html`/`index.md`; returns stats + log tail |
+| POST | `/paper-deepread/api/reports/delete` | `{dir}` — exactly one validated child directory |
+| POST | `/paper-deepread/api/reports/visibility` | `{dir, hidden}` — merges `library.json` |
+
+Errors are `{"ok": false, "error": {"code", "message"}}`; non-GET on state/upload and
+unknown routes return `405`/`404`; management bodies must be `application/json`.
+
+### Browser half
+
+`lib/client.js` keeps the same sidebar/main-slot registration and adds a three-tab page:
+文献库 (the iframe), 上传 (drop zone, XHR progress, queue, copyable agent instruction),
+报告管理 (summary, report table, hide/delete, one-click rebuild + log tail).

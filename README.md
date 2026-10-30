@@ -51,11 +51,11 @@ full text, and read a report locally or open its Web URL.
 
 ## Install
 
-Download `dsh-paper-deepread-1.0.0.tgz` from the GitHub release, then install it into the
+Download `dsh-paper-deepread-1.1.0.tgz` from the GitHub release, then install it into the
 Web profile:
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.0.0.tgz
+dsh plugin --profile web add ./dsh-paper-deepread-1.1.0.tgz
 ```
 
 Restart the Web UI:
@@ -70,6 +70,42 @@ sidebar. The bundled library is also reachable directly at
 
 See [docs/install.md](docs/install.md) for the exact commands, verification steps, and
 uninstall instructions.
+
+## Upload papers and manage reports (v1.1.0)
+
+The panel now has three tabs: **文献库 | 上传 | 报告管理**.
+
+![Upload tab](docs/screenshot-upload.png)
+
+- **Upload** — drag & drop (or pick) one or more PDFs. Files go into the managed
+  inbox at `<dataDir>/uploads/<id>.pdf` (80 MB default limit, `%PDF-` magic checked),
+  with per-file progress and a list of uploads/statuses you can delete.
+- **Agent handoff** — the plugin never calls a model. The upload tab shows a prefilled
+  instruction; copy it into a chat so an agent calls `paper_deepread_uploads`
+  (`list` / `ingest` / `env` / `delete`) and `paper_deepread_reports`
+  (`list` / `build` / `rebuild` / `delete` / `hide`) to run the bundled skill and
+  assemble the report.
+- **Report management** — a table of reports with open/report-raw links, hide/unhide
+  (current-window filtering via `library.json`), delete one report directory, and a
+  one-click **重建索引** that deterministically rebuilds `index.html` / `index.md`
+  with `build_library.py` (no model involved).
+
+![Report management tab](docs/screenshot-manage.png)
+
+The managed library lives in a data directory (`$DSH_HOME/paper-deepread` by default):
+
+```text
+~/.dsh/paper-deepread/
+├── library/      seeded once from the packaged 文献精读库, then user-owned
+├── uploads/      uploaded PDFs waiting to be deep-read
+├── work/<id>/    ingest output + agent-authored report sources
+├── state.json    upload inbox and statuses
+└── .seed.json    one-time seed marker
+```
+
+Report statuses flow `uploaded -> ingested -> reported` (`failed` carries the error).
+If you set the legacy `libraryDir` option, that directory is used as the managed root
+and seeding is skipped, so you can point the plugin at an existing local 文献精读库.
 
 ## The `paper_deepread` tool
 
@@ -101,15 +137,22 @@ The plugin works with no configuration. Optional row config:
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `libraryDir` | bundled `library/` | Directory served under `/paper-deepread`. |
+| `dataDir` | `$DSH_HOME/paper-deepread` | Managed library, uploads, work directory, and `state.json`. |
+| `libraryDir` | unset (use seeded `dataDir/library`) | External 文献精读库 root; disables seeding (legacy-compatible). |
 | `skillsDir` | `$DSH_HOME/skills` (`~/.dsh/skills`) | Where the bundled skill is installed. |
 | `registerSkill` | `true` | Set `false` to never copy the bundled skill. |
+| `maxUploadBytes` | `83886080` (80 MB) | Per-upload size limit. |
 
 ## Repository layout
 
 ```text
 DSH-Paper-DeepRead/
-├── src/index.js        # host half: Web route, model tool, skill registration
+├── src/index.js        # host half: Web route + API + tools + skill registration
+├── src/manager.js      # managed library, API dispatch, model tools
+├── src/store.js        # dataDir, one-time seed, atomic state.json
+├── src/uploads.js      # PDF validation + inbox storage
+├── src/reports.js      # report scan/hide/delete + library rebuild
+├── src/python.js       # skill Python resolution + child processes
 ├── src/library.js      # library catalogue parser/search (stdlib only)
 ├── src/skill.js        # conservative skill self-registration (stdlib only)
 ├── lib/client.js       # browser half: sidebar icon + main-panel page
@@ -135,8 +178,12 @@ The package is published as a GitHub release tarball; it is not required to be o
 
 ## Known limitations
 
-- The bundled library is a fixed snapshot (version and build date are shown in the page
-  header). To update it, replace `library/` and rebuild the tarball.
+- The first ingest/report build prepares a PyMuPDF interpreter through the bundled
+  skill's `setup_env.sh` (cached venv under `~/.cache/paper-deepread`; the first run may
+  download PyMuPDF). Rebuilding the library index does not need PyMuPDF: without a
+  prepared interpreter it falls back to a plain `python3 --no-thumbs` rebuild.
+- The plugin never calls a model itself: upload -> deep-read stays agent-driven through
+  `paper_deepread_uploads` / `paper_deepread_reports`.
 - `library/index.html` probes `/api/library` for live updates; that endpoint does not
   exist in the plugin route, so the page shows its embedded catalogue as an offline
   snapshot. Navigation, reports, and PDFs are unaffected.

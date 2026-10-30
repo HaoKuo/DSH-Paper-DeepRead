@@ -13,12 +13,10 @@ VERSION="$(node -p "require('./package.json').version")"
 TARBALL="dist/dsh-paper-deepread-${VERSION}.tgz"
 
 echo "==> Checking JavaScript syntax"
-node --check src/index.js
-node --check src/library.js
-node --check src/route.js
-node --check src/skill.js
-node --check lib/client.js
-echo "    ok: src/index.js src/library.js src/route.js src/skill.js lib/client.js"
+for file in src/*.js lib/*.js; do
+  node --check "$file"
+done
+echo "    ok: $(ls src/*.js lib/*.js | tr '\n' ' ')"
 
 echo "==> Packing dsh-paper-deepread@${VERSION}"
 mkdir -p dist
@@ -30,13 +28,13 @@ if [ ! -f "${TARBALL}" ]; then
   exit 1
 fi
 
-echo "==> Writing dist/SHA256SUMS"
+echo "==> Writing dist/SHA256SUMS (all tarballs kept in dist)"
 (
   cd dist
   if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "dsh-paper-deepread-${VERSION}.tgz" > SHA256SUMS
+    sha256sum dsh-paper-deepread-*.tgz > SHA256SUMS
   else
-    shasum -a 256 "dsh-paper-deepread-${VERSION}.tgz" > SHA256SUMS
+    shasum -a 256 dsh-paper-deepread-*.tgz > SHA256SUMS
   fi
   cat SHA256SUMS
 )
@@ -44,4 +42,4 @@ echo "==> Writing dist/SHA256SUMS"
 echo "==> Tarball"
 ls -lh "${TARBALL}"
 echo "    files: $(tar -tzf "${TARBALL}" | wc -l | tr -d ' ')"
-echo "    sha256: $(awk '{print $1}' dist/SHA256SUMS)"
+echo "    sha256: $(grep "  dsh-paper-deepread-${VERSION}.tgz$" dist/SHA256SUMS | awk '{print $1}')"

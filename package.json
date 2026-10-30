@@ -1,11 +1,11 @@
 {
   "name": "dsh-paper-deepread",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "private": false,
   "license": "MIT",
   "author": "HaoKuo",
-  "description": "DSH-Paper-DeepRead is a DeepSeek Harness (dsh) web plugin that bundles the 文献精读库 Paper Deepread library and the paper-deepread-html deep-read skill: browse interactive paper reports in a sidebar panel, open the original PDFs, and let the model search the same catalogue. | DSH-Paper-DeepRead 是 DeepSeek Harness（dsh）Web 插件：内置「文献精读库」与 paper-deepread-html 精读技能，可在侧边栏浏览论文精读报告、打开原文 PDF，并让模型检索同一份书目。",
+  "description": "DSH-Paper-DeepRead is a DeepSeek Harness (dsh) web plugin that bundles the 文献精读库 Paper Deepread library and the paper-deepread-html deep-read skill: browse reports, upload PDFs into a managed library, let an agent deep-read them, and manage/rebuild the library from a sidebar panel. | DSH-Paper-DeepRead 是 DeepSeek Harness（dsh）Web 插件：内置「文献精读库」与 paper-deepread-html 精读技能，支持在侧边栏浏览报告、上传 PDF 到受管书库、由 Agent 精读成稿，并管理/重建书库。",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/HaoKuo/DSH-Paper-DeepRead.git"
@@ -61,8 +61,9 @@
     "LICENSE"
   ],
   "scripts": {
-    "check": "node --check src/index.js && node --check src/library.js && node --check src/route.js && node --check src/skill.js && node --check lib/client.js",
-    "pack": "bash scripts/pack.sh"
+    "check": "node --check src/index.js && node --check src/library.js && node --check src/route.js && node --check src/skill.js && node --check src/store.js && node --check src/uploads.js && node --check src/reports.js && node --check src/python.js && node --check src/manager.js && node --check lib/client.js",
+    "pack": "bash scripts/pack.sh",
+    "test": "node --test tests/units.test.js tests/api.test.js"
   },
   "keywords": [
     "dsh",

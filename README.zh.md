@@ -43,10 +43,10 @@ DSH-Paper-DeepRead 把一个 dsh 插件包做成两件事：
 
 ## 安装
 
-从 GitHub release 下载 `dsh-paper-deepread-1.0.0.tgz`，安装到 Web profile：
+从 GitHub release 下载 `dsh-paper-deepread-1.1.0.tgz`，安装到 Web profile：
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.0.0.tgz
+dsh plugin --profile web add ./dsh-paper-deepread-1.1.0.tgz
 ```
 
 重启 Web UI：
@@ -59,6 +59,36 @@ dsh web
 <http://127.0.0.1:3080/paper-deepread/index.html>。
 
 完整命令、验证步骤与卸载方法见 [docs/install.md](docs/install.md)。
+
+## 上传论文与报告管理（v1.1.0）
+
+面板现在有三个标签页：**文献库 | 上传 | 报告管理**。
+
+![上传标签页](docs/screenshot-upload.png)
+
+- **上传** —— 拖放或选择多个 PDF，进入受管收件箱 `<dataDir>/uploads/<id>.pdf`
+  （默认单篇 80 MB 上限、校验 `%PDF-` 文件头），带逐文件进度，可查看/删除上传记录。
+- **交给 Agent** —— 插件不调用模型。上传页提供一段预填指令，复制到对话中发送后，
+  由 Agent 调用 `paper_deepread_uploads`（`list` / `ingest` / `env` / `delete`）与
+  `paper_deepread_reports`（`list` / `build` / `rebuild` / `delete` / `hide`）驱动内置技能完成精读与成稿。
+- **报告管理** —— 报告表格支持打开报告/原文、隐藏/显示（写入 `library.json`，书库页面过滤）、
+  删除单篇报告目录，以及一键**重建索引**（`build_library.py` 确定性重建 `index.html` / `index.md`，不需要模型）。
+
+![报告管理标签页](docs/screenshot-manage.png)
+
+受管书库默认位于 `$DSH_HOME/paper-deepread`：
+
+```text
+~/.dsh/paper-deepread/
+├── library/      首次从安装包复制一次，之后归用户所有
+├── uploads/      待精读 PDF
+├── work/<id>/    摄取产物 + Agent 撰写的报告源文件
+├── state.json    上传收件箱与状态
+└── .seed.json    一次性播种标记
+```
+
+状态流转：`uploaded -> ingested -> reported`（失败为 `failed` 并带错误信息）。
+若配置了旧版 `libraryDir`，该目录直接作为受管根目录且跳过播种，便于指向已有的本地文献精读库。
 
 ## `paper_deepread` 工具
 
@@ -90,15 +120,22 @@ dsh web
 
 | 选项 | 默认值 | 说明 |
 | --- | --- | --- |
-| `libraryDir` | 内置 `library/` | `/paper-deepread` 提供的目录。 |
+| `dataDir` | `$DSH_HOME/paper-deepread` | 受管书库、上传、work 目录与 `state.json`。 |
+| `libraryDir` | 未设置（用播种的 `dataDir/library`） | 外部文献精读库根目录；禁用播种（兼容旧版）。 |
 | `skillsDir` | `$DSH_HOME/skills`（`~/.dsh/skills`） | 内置技能安装位置。 |
 | `registerSkill` | `true` | 设为 `false` 则从不复制内置技能。 |
+| `maxUploadBytes` | `83886080`（80 MB） | 单篇上传大小上限。 |
 
 ## 仓库结构
 
 ```text
 DSH-Paper-DeepRead/
-├── src/index.js        # 宿主：Web 路由、模型工具、技能注册
+├── src/index.js        # 宿主：Web 路由 + API + 工具 + 技能注册
+├── src/manager.js      # 受管书库、API 分发、模型工具
+├── src/store.js        # dataDir、一次性播种、原子 state.json
+├── src/uploads.js      # PDF 校验 + 收件箱存储
+├── src/reports.js      # 报告扫描/隐藏/删除 + 书库重建
+├── src/python.js       # 技能解释器解析 + 子进程
 ├── src/library.js      # 书库目录解析/搜索（仅 Node 内置模块）
 ├── src/skill.js        # 保守的技能自注册（仅 Node 内置模块）
 ├── lib/client.js       # 浏览器端：侧边栏图标 + 主面板页面

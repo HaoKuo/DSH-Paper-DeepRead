@@ -80,19 +80,21 @@ function cacheControlOf(file) {
  * resolves the request against `libraryDir`, and rejects any target outside
  * that directory after resolution.
  *
+ * Requests under `/paper-deepread/api/` are handed to `apiHandler` before the
+ * static lookup and before the GET/HEAD method check, because the management
+ * API accepts POST.
+ *
  * @param {string} libraryDir Directory of the static site to serve.
  * @param {{info?: Function, warn?: Function}} [logger] Plugin logger.
+ * @param {((req: object, res: object, subPath: string) => Promise<void>)|undefined} [apiHandler]
+ *   Management API handler receiving the decoded path after `/paper-deepread`.
  * @returns {(req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse) => Promise<void>}
  */
-export function createLibraryHandler(libraryDir, logger) {
+export function createLibraryHandler(libraryDir, logger, apiHandler) {
   const root = resolve(libraryDir)
   return async function libraryHandler(req, res) {
     try {
       const method = req.method || 'GET'
-      if (method !== 'GET' && method !== 'HEAD') {
-        sendText(res, 405, 'Method Not Allowed', { allow: 'GET, HEAD' })
-        return
-      }
       let pathname
       try {
         pathname = new URL(req.url ?? '/', 'http://localhost').pathname
@@ -113,6 +115,15 @@ export function createLibraryHandler(libraryDir, logger) {
       }
       if (decoded !== ROUTE_PREFIX && !decoded.startsWith(`${ROUTE_PREFIX}/`)) {
         sendText(res, 404, 'Not Found')
+        return
+      }
+      // The management API owns every method under /paper-deepread/api.
+      if (apiHandler && (decoded === `${ROUTE_PREFIX}/api` || decoded.startsWith(`${ROUTE_PREFIX}/api/`))) {
+        await apiHandler(req, res, decoded.slice(ROUTE_PREFIX.length))
+        return
+      }
+      if (method !== 'GET' && method !== 'HEAD') {
+        sendText(res, 405, 'Method Not Allowed', { allow: 'GET, HEAD' })
         return
       }
       let relativePath = decoded.slice(ROUTE_PREFIX.length).replace(/^\/+/u, '')

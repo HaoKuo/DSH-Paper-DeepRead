@@ -1,4 +1,4 @@
-# DSH-Paper-DeepRead 1.0.0
+# DSH-Paper-DeepRead 1.1.0
 
 Release date: 2026-10-30
 
@@ -6,58 +6,67 @@ Release date: 2026-10-30
 
 ## Highlights
 
-DSH-Paper-DeepRead is a DeepSeek Harness (dsh) Web plugin that ships a complete
-deep-read paper library together with the skill that produces it. One install adds:
+v1.1.0 turns the library viewer into a managed deep-read workspace: upload papers,
+hand them to an agent, then manage the reports.
 
-- **A sidebar panel** — *Paper Deepread* opens the bundled 文献精读库 library in the main
-  panel, with an open-in-new-tab link and a reload button.
-- **The library itself** — four deep-read papers (2025–2026, Nature Communications /
-  bioRxiv / Anthropic · BigHat Biosciences), each with an interactive single-file HTML
-  report (original figure crops with page/figure traceability, redrawn SVG schematics, a
-  claims ledger, a critical appraisal) and the untouched source PDF. 56 MB of content is
-  bundled inside the tarball; nothing is downloaded at runtime.
-- **The `paper-deepread-html` skill** — the full deep-read pipeline. On first activation
-  the plugin copies it to `~/.dsh/skills/paper-deepread-html`, but only when that
-  directory does not exist; an existing user copy is never overwritten.
-- **A model tool, `paper_deepread`** — lists the catalogue, substring-searches English and
-  Chinese titles, journals, tags, TL;DRs and full text (up to 20 ranked hits with
-  snippets), and returns absolute report/PDF paths plus Web URLs for any paper.
+- **Upload tab** — drag & drop (or pick) multiple PDFs with per-file progress. Files
+  land in a persistent managed inbox (`$DSH_HOME/paper-deepread` by default; 80 MB
+  limit, `%PDF-` content check, sanitized filenames). The queue shows status
+  (`待精读 → 已摄取 → 已成稿`, plus `失败`) and lets you delete pending uploads.
+- **Agent-driven deep-read** — the plugin never calls a model. A prefilled instruction
+  on the upload tab is copied into a chat; an agent in any session then calls
+  `paper_deepread_uploads` (`ingest`) and `paper_deepread_reports` (`build`) to run the
+  bundled `paper-deepread-html` skill and assemble the report. Rebuilding the index is
+  deterministic and needs no model.
+- **Report management tab** — table of reports with title/year/journal/size, open report
+  and raw PDF links, hide/unhide (filtered on the library page), delete one report
+  directory, and one-click **重建索引** with the rebuild log.
+- **Managed library** — the packaged 文献精读库 is seeded once into `dataDir/library`
+  and then belongs to you; user edits are never overwritten and a second boot does not
+  re-seed. The legacy `libraryDir` option still points the plugin at an external local
+  文献精读库 (no seeding).
+- **New model tools** — `paper_deepread_uploads` (`list`/`env`/`ingest`/`delete`) and
+  `paper_deepread_reports` (`list`/`build`/`rebuild`/`delete`/`hide`); the existing
+  `paper_deepread` catalogue/search tool now reads the managed library and reports
+  upload/report counts.
+- **HTTP API** under `/paper-deepread/api/*` on the same single prefix route: `state`,
+  `upload`, `uploads/delete`, `reports/rebuild`, `reports/delete`, `reports/visibility`.
 
 ## Install
 
-1. Download `dsh-paper-deepread-1.0.0.tgz` from this release.
-2. Install it into the Web profile and restart:
+```bash
+dsh plugin --profile web add ./dsh-paper-deepread-1.1.0.tgz
+dsh web
+```
 
-   ```bash
-   dsh plugin --profile web add ./dsh-paper-deepread-1.0.0.tgz
-   dsh web
-   ```
+Open the UI, click **Paper Deepread**, then use the 文献库 / 上传 / 报告管理 tabs.
+The first ingest or report build prepares a PyMuPDF interpreter through the bundled
+skill's `setup_env.sh` (cached in `~/.cache/paper-deepread`; first run may download
+PyMuPDF once).
 
-3. Open the UI, then click **Paper Deepread** in the left sidebar. The library is also
-   served directly at `/paper-deepread/index.html`.
+## Upgrade notes
 
-The exact SHA-256 of the release tarball is listed in `dist/SHA256SUMS` inside the source
-repository (and in the release description).
+- Upgrading from 1.0.0 is in place: on first activation the packaged library is copied
+  once into `$DSH_HOME/paper-deepread/library`, so the existing library page keeps
+  working. Nothing is written into the package directory.
+- Remove `$DSH_HOME/paper-deepread` to reset uploads, work directories, and the managed
+  library (the packaged snapshot is copied again on the next activation).
+- Existing configuration keys (`libraryDir`, `skillsDir`, `registerSkill`) keep working;
+  new optional keys are `dataDir` and `maxUploadBytes`.
 
 ## Requirements
 
-- DeepSeek Harness `0.2.0-rc.2` – `0.2.1-rc.3` (built and verified against `0.2.1-rc.3`)
+- DeepSeek Harness `0.2.0-rc.2` – `0.2.1-rc.3` (verified against `0.2.1-rc.3`)
 - Node.js `>= 24`
-- The `web` profile
-
-## Configuration
-
-Optional row config: `libraryDir` (serve another static-site directory), `skillsDir`
-(install the skill elsewhere), `registerSkill: false` (never copy the skill). Defaults
-work without configuration.
+- Python 3 for ingest/report builds (prepared by the bundled skill; PyMuPDF cached venv)
 
 ## Known limitations
 
-- The bundled library is a fixed snapshot; replace `library/` to update it.
+- Deep-reading itself is agent-driven and needs a model session; the plugin only runs
+  deterministic extraction/build/reindex scripts.
 - `library/index.html` probes `/api/library` for live updates and falls back to its
   embedded catalogue ("离线快照"); navigation, reports, and PDFs are unaffected.
-- The browser panel requires dsh's client module system, so both halves activate only in
-  a Web profile.
+- Hidden reports stay on disk (that is the point of hide); only delete removes files.
 
 ## License
 
@@ -66,57 +75,63 @@ MIT © 2026 HaoKuo
 <details>
 <summary>中文</summary>
 
-# DSH-Paper-DeepRead 1.0.0
+# DSH-Paper-DeepRead 1.1.0
 
 发布日期：2026-10-30
 
 ## 亮点
 
-DSH-Paper-DeepRead 是一个 DeepSeek Harness（dsh）Web 插件：把完整的文献精读库和产出它的
-精读技能一起打包。一次安装即可获得：
+v1.1.0 把「书库浏览」升级为受管的精读工作台：上传论文、交给 Agent 精读、再管理报告。
 
-- **侧边栏面板** —— 「Paper Deepread」在主面板中打开内置「文献精读库」，带新标签页打开与刷新按钮。
-- **文献精读库本体** —— 4 篇精读论文（2025–2026，Nature Communications / bioRxiv /
-  Anthropic · BigHat Biosciences），每篇含单文件交互式 HTML 精读报告（原文图表裁切并标注
-  图号/页码、SVG 重绘示意图、证据账本、批判性评估）与未改动的原文 PDF。56 MB 内容随包分发，
-  运行时不下载任何东西。
-- **`paper-deepread-html` 技能** —— 完整精读流水线。首次激活时复制到
-  `~/.dsh/skills/paper-deepread-html`，但仅在该目录不存在时才复制；已有用户副本绝不覆盖。
-- **模型工具 `paper_deepread`** —— 列书目、按英文/中文标题、期刊、标签、TL;DR 与全文做包含搜索
-  （最多 20 条带摘要命中），并返回每篇论文的报告/PDF 绝对路径与 Web URL。
+- **上传标签页** —— 拖放或选择多个 PDF，逐文件显示进度。文件进入持久化受管收件箱
+  （默认 `$DSH_HOME/paper-deepread`；单篇 80 MB 上限、校验 `%PDF-`、文件名净化）。
+  队列显示状态（`待精读 → 已摄取 → 已成稿`，失败为 `失败`），可删除待处理上传。
+- **Agent 驱动精读** —— 插件本身不调用模型。上传页提供预填指令，复制到对话后，
+  任意会话中的 Agent 调用 `paper_deepread_uploads`（`ingest`）与
+  `paper_deepread_reports`（`build`）驱动内置 `paper-deepread-html` 技能成稿；
+  重建索引是确定性操作，不需要模型。
+- **报告管理标签页** —— 报告表格展示标题/年份/期刊/大小，支持打开报告与原文、
+  隐藏/显示（书库页面过滤）、删除单篇报告目录，以及一键「重建索引」并查看日志。
+- **受管书库** —— 安装包内的「文献精读库」首次激活时复制到 `dataDir/library`，
+  之后归用户所有；不会覆盖用户修改，第二次启动不会重复播种。旧版 `libraryDir`
+  仍可指向外部本地书库（不播种）。
+- **新增模型工具** —— `paper_deepread_uploads`（`list`/`env`/`ingest`/`delete`）与
+  `paper_deepread_reports`（`list`/`build`/`rebuild`/`delete`/`hide`）；原有
+  `paper_deepread` 目录/搜索工具改为读取受管书库，并附带上传/报告计数。
+- **HTTP API** 仍在同一个 `/paper-deepread` 前缀路由下：`api/state`、`api/upload`、
+  `api/uploads/delete`、`api/reports/rebuild`、`api/reports/delete`、`api/reports/visibility`。
 
 ## 安装
 
-1. 从本 release 下载 `dsh-paper-deepread-1.0.0.tgz`。
-2. 安装到 Web profile 并重启：
+```bash
+dsh plugin --profile web add ./dsh-paper-deepread-1.1.0.tgz
+dsh web
+```
 
-   ```bash
-   dsh plugin --profile web add ./dsh-paper-deepread-1.0.0.tgz
-   dsh web
-   ```
+打开界面点击 **Paper Deepread**，使用 文献库 / 上传 / 报告管理 三个标签页。
+首次摄取或成稿会通过内置技能的 `setup_env.sh` 准备带 PyMuPDF 的解释器
+（缓存于 `~/.cache/paper-deepread`，首次可能联网安装一次 PyMuPDF）。
 
-3. 打开界面，点击左侧边栏的 **Paper Deepread**。也可直接访问
-   `/paper-deepread/index.html`。
+## 升级说明
 
-发布包的 SHA-256 见源码仓库中的 `dist/SHA256SUMS`（以及 release 说明）。
+- 从 1.0.0 原地升级：首次激活时把安装包内的书库复制一次到
+  `$DSH_HOME/paper-deepread/library`，原有书库页面继续可用；不会写入安装包目录。
+- 删除 `$DSH_HOME/paper-deepread` 可重置上传、work 与受管书库（下次激活会重新播种）。
+- 原有配置（`libraryDir`、`skillsDir`、`registerSkill`）继续有效；新增可选
+  `dataDir` 与 `maxUploadBytes`。
 
 ## 环境要求
 
-- DeepSeek Harness `0.2.0-rc.2` – `0.2.1-rc.3`（针对 `0.2.1-rc.3` 构建与验证）
+- DeepSeek Harness `0.2.0-rc.2` – `0.2.1-rc.3`（针对 `0.2.1-rc.3` 验证）
 - Node.js `>= 24`
-- `web` profile
-
-## 配置
-
-可选行配置：`libraryDir`（换一个静态站点目录）、`skillsDir`（把技能安装到别处）、
-`registerSkill: false`（从不复制技能）。默认无需配置。
+- Python 3（用于摄取/成稿，由内置技能准备；PyMuPDF 使用缓存 venv）
 
 ## 已知限制
 
-- 内置书库是固定快照；更新时替换 `library/`。
-- `library/index.html` 会请求 `/api/library` 尝试实时更新，失败时回退到内嵌目录
-  （「离线快照」）；导航、报告与 PDF 不受影响。
-- 浏览器面板依赖 dsh 客户端模块系统，因此两半只在 Web profile 中激活。
+- 精读本身由 Agent 驱动，需要模型会话；插件只运行确定性的提取、成稿与重建脚本。
+- `library/index.html` 会请求 `/api/library` 尝试实时更新，失败时回退内嵌目录（「离线快照」）；
+  导航、报告与 PDF 不受影响。
+- 隐藏的报告仍保留在磁盘上（隐藏的目的就是保留下次显示）；只有删除才会移除文件。
 
 ## 许可证
 
