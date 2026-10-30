@@ -1,0 +1,18 @@
+# Build output
+dist/
+
+# Throwaway verification material (kept out of the package and the repository)
+verify/
+tests/tmp/
+
+# Dependencies and caches
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Local noise
+*.bak
+*.log
+npm-debug.log*

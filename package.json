@@ -1,0 +1,78 @@
+{
+  "name": "dsh-paper-deepread",
+  "version": "1.0.0",
+  "type": "module",
+  "private": false,
+  "license": "MIT",
+  "author": "HaoKuo",
+  "description": "DSH-Paper-DeepRead is a DeepSeek Harness (dsh) web plugin that bundles the 文献精读库 Paper Deepread library and the paper-deepread-html deep-read skill: browse interactive paper reports in a sidebar panel, open the original PDFs, and let the model search the same catalogue. | DSH-Paper-DeepRead 是 DeepSeek Harness（dsh）Web 插件：内置「文献精读库」与 paper-deepread-html 精读技能，可在侧边栏浏览论文精读报告、打开原文 PDF，并让模型检索同一份书目。",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HaoKuo/DSH-Paper-DeepRead.git"
+  },
+  "homepage": "https://github.com/HaoKuo/DSH-Paper-DeepRead#readme",
+  "bugs": {
+    "url": "https://github.com/HaoKuo/DSH-Paper-DeepRead/issues"
+  },
+  "icon": "./assets/icon.svg",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./lib/client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./assets/icon.svg",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-session",
+        "@deepseek-ai/dsh-client-ui-renderer"
+      ],
+      "platform": "web"
+    }
+  },
+  "engines": {
+    "node": ">=24",
+    "dsh": "^0.2.0-rc.2 || ^0.2.1-rc.2 || ^0.2.1-rc.3"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": "^0.2.0-rc.2 || ^0.2.1-rc.2 || ^0.2.1-rc.3"
+  },
+  "files": [
+    "src",
+    "lib",
+    "cordis.patch.yml",
+    "skills",
+    "library",
+    "assets",
+    "docs",
+    "locale",
+    "README.md",
+    "README.zh.md",
+    "CHANGELOG.md",
+    "RELEASE_NOTES.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "check": "node --check src/index.js && node --check src/library.js && node --check src/route.js && node --check src/skill.js && node --check lib/client.js",
+    "pack": "bash scripts/pack.sh"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "paper",
+    "deep-read",
+    "literature",
+    "文献精读",
+    "skill",
+    "web-ui"
+  ]
+}

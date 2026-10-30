@@ -1,0 +1,567 @@
+<section id="sec-tldr">
+<h2 id="sec-tldr">结论先行：这篇论文真正解决了什么</h2>
+
+<p>无细胞基因表达（cell-free gene expression, CFE）的配方里有 30–40 种添加物，传统做法靠"一次改一个变量"的经验试错。DropAI 的做法是把配方组合压缩进 250 pL 的液滴，用荧光颜色+强度给每个液滴写一个"四位条形码"（FluoreCode），一次成像就能反解出它装的是哪种组合、表达了多少蛋白；再用这些数据训练模型，让模型去<em>未做过实验</em>的组合里挑高产的，最后回到试管里验证。</p>
+
+<p class="lead-quote">一句话：把"配方优化"从湿实验问题，改造成"可编码、可并行、可预测"的数据问题。<span class="ev" data-ev="p.2 Fig.1">原文 p.2 · Fig. 1</span></p>
+
+<figure class="tbl">
+<figcaption><b>表 1</b>　四条主结论与它们的证据强度（本报告判读）</figcaption>
+<div class="table-wrap">
+<table class="cmp-table">
+<thead><tr><th>结论</th><th>原文数字</th><th>证据</th><th>我的判读</th></tr></thead>
+<tbody>
+<tr><td>简化 E. coli 配方</td><td>12 种添加剂 → 只留 3 种（PEP、亚精胺、叶酸）</td><td>Fig. 3i、p.5–6 <span class="ev" data-ev="p.5 Fig.3i">证据</span></td><td>贡献分来自模型而非因果实验，但趋势与已知代谢逻辑一致</td></tr>
+<tr><td>降本</td><td>添加剂成本 1.87 → 0.90 USD/mL（2.1×）；单位成本 2.63 → 0.72 USD/mg（4×）</td><td>p.6、Supplementary Table 1 <span class="ev" data-ev="p.6 Table">证据</span></td><td>"单位成本"只算添加剂，不含提取物/DNA/人力/设备</td></tr>
+<tr><td>增产</td><td>sfGFP 0.71 → 1.38 mg/mL（1.9×）</td><td>p.6、Supplementary Fig. 9a <span class="ev" data-ev="p.6 Fig.4">证据</span></td><td>体外验证为 bulk 试管实验，n 与重复见 Methods</td></tr>
+<tr><td>跨底盘迁移</td><td>B. subtilis 体系：27–36 组实验即可 R²&gt;0.95；直接学习需 ≥75 组</td><td>Fig. 5b–c、p.7 <span class="ev" data-ev="p.7 Fig.5">证据</span></td><td>"迁移"本质是特征增强，不是深度微调；外推到真核体系未验证</td></tr>
+</tbody>
+</table>
+</div>
+<p class="table-note">判读为报告作者推断的部分已在正文用 <code>[推断]</code> 标出；数字均转录自原文页面。</p>
+</figure>
+</section>
+
+<section id="sec-problem">
+<h2 id="sec-problem">问题背景：CFE 越强，配方越贵</h2>
+
+<p>CFE 用细胞裂解液代替活细胞，绕开了细胞壁、生长和克隆周期，但它把复杂度转移到了"配方"上：一个典型的细菌裂解液体系，除裂解液和模板 DNA 外还要加约 40 种组分，其中超过一半的成本来自能量底物和各类添加剂。作者给出的组合爆炸例子很直观：<b>5 种能量底物选 1 种 × 10 种转录翻译因子"有/无" = 5120 种组合</b>，按 96 孔板做需要约 <b>6 万次移液、54 块板</b>，还没算浓度梯度。</p>
+
+<aside class="callout method">
+<p class="callout-label">方法动机</p>
+<p>既然瓶颈是"组合太多、单次实验太贵"，那就把单次反应体积从 10 μL 压到 250 pL（4 万倍），并让每个液滴自带"身份码"。这正是 DropAI 的两个支点：<b>微流控压缩体积</b> + <b>荧光编码携带组合信息</b>。<span class="ev" data-ev="p.1 摘要">原文 p.1</span></p>
+</aside>
+
+<p>[推断] 这个思路真正的门槛不在液滴生成，而在"身份码"的可靠性：一旦编码/解码错一位，训练数据就被污染。因此 Fig. 2 的 6561 组合解码实验（99.5% 覆盖率）其实是整篇文章的方法学地基，值得比结果图更仔细地读。</p>
+</section>
+
+<section id="sec-method">
+<h2 id="sec-method">方法总览：DropAI 的三段闭环</h2>
+
+<figure class="paper-fig" data-fig="fig1">
+<div class="pf-panels">
+<h4>逐面板解读</h4>
+<ul>
+<li><b>a</b><span><strong>液滴筛选</strong>：载流液滴（CFE 混合物）在下游依次与 3 个卫星液滴相遇，在微齿结构处用电场合并。每个卫星液滴从一个"条件池"里随机取样，用不同颜色的染料标出自己代表哪一组条件。<span class="ev" data-ev="p.2 Fig.1a">原文 p.2</span></span></li>
+<li><b>b</b><span><strong>在硅优化</strong>：把每个液滴的编码（组合）和表型（sfGFP 荧光）配对成训练数据，训练模型，再用模型扫描整个组合空间、预测高产组合。</span></li>
+<li><b>c</b><span><strong>体外验证</strong>：把模型推荐的最优配方放回 15 μL 试管体系验证，形成"干湿闭环"。</span></li>
+</ul>
+</div>
+<aside class="callout insight">
+<p class="callout-label">读图要点</p>
+<p>Fig. 1 是全文的"路线图"，本身不含数据；真正需要盯的是它隐含的三个假设：①液滴内 CFE 效率与试管一致（由 Supplementary Fig. 3 支撑）；②染料不干扰表达、不串色（Supplementary Fig. 3e、f）；③编码能无损解码（Fig. 2）。任何一个不成立，后面的数字都要打折。</p>
+</aside>
+</figure>
+
+<figure class="schematic stepfig" id="sch-workflow" data-stepfig data-stepstart="all">
+<div class="sch-head">
+<span class="sch-badge">AI 重绘示意图 · 非原文图</span>
+<h3>一轮 DropAI 闭环：从组合设计到体外验证</h3>
+</div>
+<div class="sch-canvas">
+<svg viewBox="0 0 960 430" role="img" aria-labelledby="schWfTitle schWfDesc">
+<title id="schWfTitle">DropAI 一轮闭环示意</title>
+<desc id="schWfDesc">三个阶段：液滴筛选、在硅优化、体外验证，验证结果回到下一轮设计。</desc>
+<defs>
+<marker id="wfArrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+<path d="M0 0 L10 5 L0 10 z" fill="var(--svg-ink-2)"/>
+</marker>
+<marker id="wfArrowLoop" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+<path d="M0 0 L10 5 L0 10 z" fill="var(--svg-1)"/>
+</marker>
+</defs>
+
+<g font-family="inherit">
+<text x="480" y="24" text-anchor="middle" font-size="12" letter-spacing="2" fill="var(--svg-mute)">SCREEN → LEARN → VERIFY → REPEAT</text>
+
+<!-- stage frames -->
+<rect x="20" y="52" width="270" height="250" rx="14" fill="var(--svg-node)" stroke="var(--svg-1)" stroke-width="1.4"/>
+<rect x="345" y="52" width="270" height="250" rx="14" fill="var(--svg-node)" stroke="var(--svg-3)" stroke-width="1.4"/>
+<rect x="670" y="52" width="270" height="250" rx="14" fill="var(--svg-node)" stroke="var(--svg-2)" stroke-width="1.4"/>
+
+<text x="45" y="82" font-size="11" letter-spacing="1.6" fill="var(--svg-mute)">STAGE 01</text>
+<text x="45" y="106" font-size="18" font-weight="700" fill="var(--svg-ink)">液滴筛选</text>
+<text x="370" y="82" font-size="11" letter-spacing="1.6" fill="var(--svg-mute)">STAGE 02</text>
+<text x="370" y="106" font-size="18" font-weight="700" fill="var(--svg-ink)">在硅优化</text>
+<text x="695" y="82" font-size="11" letter-spacing="1.6" fill="var(--svg-mute)">STAGE 03</text>
+<text x="695" y="106" font-size="18" font-weight="700" fill="var(--svg-ink)">体外验证</text>
+
+<!-- stage 1 content -->
+<g data-step="1">
+<g fill="var(--svg-1-soft)" stroke="var(--svg-1)" stroke-width="1.2">
+<circle cx="75" cy="150" r="17"/><circle cx="112" cy="150" r="17"/><circle cx="149" cy="150" r="17"/>
+<circle cx="186" cy="150" r="17"/><circle cx="223" cy="150" r="17"/><circle cx="260" cy="150" r="17"/>
+<circle cx="93" cy="184" r="17"/><circle cx="130" cy="184" r="17"/><circle cx="167" cy="184" r="17"/>
+<circle cx="204" cy="184" r="17"/><circle cx="241" cy="184" r="17"/>
+</g>
+<text x="155" y="226" text-anchor="middle" font-size="12.5" fill="var(--svg-ink-2)">80 μm 液滴 · ~250 pL · 300 Hz</text>
+<text x="155" y="248" text-anchor="middle" font-size="12.5" fill="var(--svg-ink-2)">四种颜色 × 九级强度 = 6561 码</text>
+<text x="155" y="272" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--svg-1)">每轮约 10⁵ 个反应</text>
+</g>
+
+<!-- stage 2 content -->
+<g data-step="2">
+<rect x="382" y="132" width="196" height="44" rx="8" fill="var(--svg-3-soft)" stroke="var(--svg-3)" stroke-width="1"/>
+<text x="480" y="150" text-anchor="middle" font-size="12.5" fill="var(--svg-ink)">编码 × sfGFP 强度</text>
+<text x="480" y="167" text-anchor="middle" font-size="11.5" fill="var(--svg-ink-2)">每滴 = 一条「组合 → 产量」记录</text>
+<path d="M480 176 V 196" stroke="var(--svg-3)" stroke-width="1.2" marker-end="url(#wfArrow)"/>
+<rect x="382" y="198" width="196" height="40" rx="8" fill="var(--svg-node)" stroke="var(--svg-3)" stroke-width="1"/>
+<text x="480" y="216" text-anchor="middle" font-size="12.5" fill="var(--svg-ink)">NN 7 层 → XGBoost → 迁移</text>
+<text x="480" y="231" text-anchor="middle" font-size="11.5" fill="var(--svg-ink-2)">R² 0.88（初筛）/ 0.99（浓度）</text>
+<path d="M480 238 V 258" stroke="var(--svg-3)" stroke-width="1.2" marker-end="url(#wfArrow)"/>
+<rect x="382" y="260" width="196" height="36" rx="8" fill="var(--svg-node)" stroke="var(--svg-3)" stroke-width="1" stroke-dasharray="4 3"/>
+<text x="480" y="283" text-anchor="middle" font-size="12.5" fill="var(--svg-ink)">扫描 768 / 3780 种未做过的组合</text>
+</g>
+
+<!-- stage 3 content -->
+<g data-step="3">
+<rect x="705" y="132" width="200" height="40" rx="8" fill="var(--svg-2-soft)" stroke="var(--svg-2)" stroke-width="1"/>
+<text x="805" y="149" text-anchor="middle" font-size="12.5" fill="var(--svg-ink)">15 μL 试管 · 30 °C · 4 h</text>
+<text x="805" y="165" text-anchor="middle" font-size="11.5" fill="var(--svg-ink-2)">sfGFP 荧光 → 标准曲线 → mg/mL</text>
+<text x="805" y="200" text-anchor="middle" font-size="12.5" fill="var(--svg-ink-2)">0.71 → <tspan font-weight="700" fill="var(--svg-2)">1.38 mg/mL</tspan></text>
+<text x="805" y="224" text-anchor="middle" font-size="12.5" fill="var(--svg-ink-2)">2.63 → <tspan font-weight="700" fill="var(--svg-2)">0.72 USD/mg</tspan></text>
+<text x="805" y="256" text-anchor="middle" font-size="12" fill="var(--svg-mute)">12 种蛋白 / 3 种抗菌肽</text>
+<text x="805" y="278" text-anchor="middle" font-size="12" fill="var(--svg-mute)">B. subtilis 迁移验证</text>
+</g>
+
+<!-- arrows between stages (always visible) -->
+<path d="M292 177 H 343" stroke="var(--svg-ink-2)" stroke-width="1.4" marker-end="url(#wfArrow)"/>
+<path d="M617 177 H 668" stroke="var(--svg-ink-2)" stroke-width="1.4" marker-end="url(#wfArrow)"/>
+
+<!-- feedback loop -->
+<g data-step="4">
+<path d="M805 306 V 340 H 155 V 308" fill="none" stroke="var(--svg-1)" stroke-width="1.6" marker-end="url(#wfArrowLoop)"/>
+<text x="480" y="360" text-anchor="middle" font-size="12.5" fill="var(--svg-1)">每轮约 4 h：15 min 配液 + 20 min 装片 + 2 h 生成卫星滴 + 25 min 合并 + 1 h 成像</text>
+<text x="480" y="382" text-anchor="middle" font-size="12" fill="var(--svg-mute)">若卫星滴提前备好，单轮可压到约 2 h（原文 p.9）</text>
+</g>
+</g>
+</svg>
+</div>
+<div class="step-read">
+<div class="step-text" data-step="1"><h4><span class="step-n">1</span>液滴筛选</h4><p>载流液滴在下游依次与三个卫星液滴配对合并，卫星液滴各自从一个条件池随机取样；四种荧光颜色、每种九级强度，让每个合并液滴得到一个四位九进制码（9⁴ = 6561）。单轮可测约 10⁵ 个液滴。</p></div>
+<div class="step-text" data-step="2"><h4><span class="step-n">2</span>在硅优化</h4><p>把"编码 → sfGFP 强度"配对成表，先训 7 层神经网络（初筛，R² = 0.88），再用 XGBoost 做浓度优化（R² = 0.99，作者自己提示有数据泄漏风险），最后扫描整个组合空间找模型认为高产的组合。</p></div>
+<div class="step-text" data-step="3"><h4><span class="step-n">3</span>体外验证</h4><p>模型推荐的配方回到 15 μL 试管体系验证：sfGFP 0.71 → 1.38 mg/mL，单位成本 2.63 → 0.72 USD/mg；再在 12 种蛋白和 B. subtilis 体系上做泛化测试。</p></div>
+<div class="step-text" data-step="4"><h4><span class="step-n">4</span>闭环与成本</h4><p>两轮 E. coli 优化共用约 10 万液滴、25 μL 反应液（含损耗约 100 μL），每轮约 4 h。对比 96 孔板做同规模筛选需要 1 L 以上试剂和数天——这是 DropAI 最硬的一条工程优势。</p></div>
+</div>
+<figcaption class="sch-caption"><b>依据</b>：原文 Fig. 1、p.2–3、p.9 文字与数字重绘；阶段框中数值为原文报告值，不代表新的实验。<span class="ev" data-ev="p.2 Fig.1">原文 p.2</span></figcaption>
+</figure>
+
+<figure class="tbl">
+<figcaption><b>表 2</b>　复现 DropAI 所需的关键参数（摘自 Methods）</figcaption>
+<div class="table-wrap">
+<table class="cmp-table">
+<thead><tr><th>环节</th><th>参数</th><th>出处</th></tr></thead>
+<tbody>
+<tr><td>CFE 反应</td><td>15 μL 试管或 80 μm 液滴（~250 pL），30 °C，4 h；27%（v/v）裂解液，13.3 μg/mL 质粒</td><td>p.9 <span class="ev" data-ev="p.9 Methods">Methods</span></td></tr>
+<tr><td>液滴稳定</td><td>水相加 0.2%（v/v）P-188 + 1%（v/v）PEG-6000；油相 HFE-7500 + 2.5 wt% PEG-PFPE 表活</td><td>p.9–10</td></tr>
+<tr><td>液滴尺寸</td><td>载流滴 ~70 μm；卫星滴 ~36 μm；合并芯片微齿 + 1.5 kV Vpp / 50 kHz 交流电场</td><td>p.3、p.10</td></tr>
+<tr><td>编码</td><td>4 色（Alexa-488/546/594/647）× 9 级强度；9⁴ = 6561</td><td>p.2–4</td></tr>
+<tr><td>读出</td><td>4 通道数字 PCR 液滴读取仪（Nebula Reader）+ 自研分析软件；MATLAB 多带通滤波 + 分箱</td><td>p.10</td></tr>
+<tr><td>模型</td><td>初筛：7 层全连接 NN，TensorFlow 2.8，Adam，dropout 0.25，MAPE ~5.6%；浓度：XGBoost 180 棵树 + GridSearchCV + 5 折 CV</td><td>p.10–11</td></tr>
+<tr><td>验证</td><td>sfGFP 荧光 ex 485 / em 528 nm，用自建标准曲线换算 mg/mL；Western blot / SDS-PAGE 定量其余蛋白</td><td>p.9</td></tr>
+</tbody>
+</table>
+</div>
+<p class="table-note">参数转录自原文 Methods；Supplementary Table 1/4/6 含完整配方、染料浓度与超参数。</p>
+</figure>
+</section>
+
+<section id="sec-fig2">
+<h2 id="sec-fig2">图 2｜微流控与编解码：6561 种组合怎么被"读出来"</h2>
+
+<figure class="paper-fig" data-fig="fig2">
+<div class="pf-panels">
+<h4>逐面板解读</h4>
+<ul>
+<li><b>a</b><span>器件布局：载流液滴在上游排队，依次经过三个汇合口，每个口加入一个卫星液滴，最后在微齿结构处合并。<span class="ev" data-ev="p.3 Fig.2a">原文 p.3</span></span></li>
+<li><b>b</b><span>实拍配对/合并过程：假彩色标出载流滴（绿）与三个卫星滴（黄/粉/蓝）。合并效率约 <strong>90%</strong>，重复性用 3 次独立实验验证（N = 3）。</span></li>
+<li><b>c</b><span>合并后液滴成为"四色条码"（FluoreCode）：颜色区分"来自哪个池"，强度区分"池内第几档"，合起来是<strong>四位九进制数</strong>。</span></li>
+<li><b>d–e</b><span>用 6561 种染料组合直接建库并四通道成像：成像阶段共测 <strong>206,634</strong> 个液滴，滤波后保留 <strong>112,156</strong> 个用于解码。</span></li>
+<li><b>f</b><span>按 FluoreCode 分箱得到 <strong>6,527 个簇</strong>，覆盖理论空间的 <strong>99.5%</strong>；t-SNE 图展示簇的分离程度。</span></li>
+</ul>
+</div>
+<template data-hotspots>
+<svg class="pf-hotspots" aria-hidden="true">
+<g class="hs" tabindex="0" role="button" data-tip="载流滴 + 三个卫星滴在微齿处合并；合并效率约 90%" data-tip-kicker="原文 Fig. 2a · p.3">
+<circle class="hs-halo" cx="26%" cy="17%" r="19"/><circle class="hs-dot" cx="26%" cy="17%" r="13"/><text class="hs-num" x="26%" y="17%">1</text>
+</g>
+<g class="hs" tabindex="0" role="button" data-tip="四位九进制条码：4 色 × 9 级 = 6561 种编码" data-tip-kicker="原文 Fig. 2c · p.4">
+<circle class="hs-halo" cx="86%" cy="13%" r="19"/><circle class="hs-dot" cx="86%" cy="13%" r="13"/><text class="hs-num" x="86%" y="13%">2</text>
+</g>
+<g class="hs" tabindex="0" role="button" data-tip="6561 组合液滴库的实拍拼接图" data-tip-kicker="原文 Fig. 2d · p.4">
+<circle class="hs-halo" cx="12%" cy="76%" r="19"/><circle class="hs-dot" cx="12%" cy="76%" r="13"/><text class="hs-num" x="12%" y="76%">3</text>
+</g>
+<g class="hs" tabindex="0" role="button" data-tip="按 FluoreCode 聚类：6,527 簇覆盖 99.5% 理论空间" data-tip-kicker="原文 Fig. 2f · p.4">
+<circle class="hs-halo" cx="86%" cy="78%" r="19"/><circle class="hs-dot" cx="86%" cy="78%" r="13"/><text class="hs-num" x="86%" y="78%">4</text>
+</g>
+</svg>
+</template>
+<aside class="callout caveat">
+<p class="callout-label">读图注意（两处数字不一致）</p>
+<p>正文 p.4 与 Fig. 2f 图内标注都是 112,156 个液滴；但同一面板的图注写的是 153,302 个液滴、6,527 个簇，差 4 万余滴，原文没有解释这个口径差（可能是滤波前后或绘图抽样）。<b>这类不一致不影响 99.5% 覆盖率的量级判断，但说明"每个液滴都被正确解码"这件事并没有被逐滴验证</b>——99.5% 是"簇的覆盖率"，不是"解码准确率"。<span class="ev" data-ev="p.4 Fig.2f">原文 p.4</span></p>
+</aside>
+<aside class="callout insight">
+<p class="callout-label">这张图真正的贡献</p>
+<p>它证明了"编码 → 成像 → 解码"的闭环在 6561 规模上可行，这是后面一切数据的前提。但要注意：Fig. 2 用的是<b>染料水溶液</b>而非真实 CFE 反应，染料与反应体系的兼容性由 Supplementary Fig. 3 单独验证。真正的筛选数据（Fig. 3–5）只用了 3 色、100–125 种组合，远低于 6561 的上限——编码能力是"余量"，不是"已用满"。</p>
+</aside>
+</figure>
+</section>
+
+<section id="sec-fig3">
+<h2 id="sec-fig3">图 3｜第一轮：从 12 个添加剂里找出"必需品"</h2>
+
+<figure class="paper-fig" data-fig="fig3">
+<div class="pf-panels">
+<h4>逐面板解读</h4>
+<ul>
+<li><b>a</b><span>CFE 混合物组成与乳化流程示意：12 种候选添加剂（7 种转录/翻译因子 + 5 种能量底物）分配到卫星液滴池中。</span></li>
+<li><b>b–c</b><span><strong>概念验证</strong>：先把 Mg²⁺ 的"有/无"编码进液滴，两种条件分成两簇（b）；再把 Mg²⁺ 做成五档浓度梯度，五个簇清晰分开，且 sfGFP 在 12 mM 处最高（c），与试管平行实验（c 内嵌小图、n = 6、mean ± s.d.）一致。<span class="ev" data-ev="p.4 Fig.3c">原文 p.4</span></span></li>
+<li><b>d–e</b><span>三色编码策略与实拍编码液滴：把 768 种理论组合中的一个子集（<strong>100 种</strong>）编进液滴。</span></li>
+<li><b>f</b><span>3D 散点：<strong>31,598</strong> 个液滴数据点，颜色表示 sfGFP 强度。</span></li>
+<li><b>g</b><span>7 层全连接神经网络：输入是 12 个添加剂的 0/1，输出是归一化 sfGFP 产量。</span></li>
+<li><b>h</b><span>预测 vs 实测：Pearson <strong>r = 0.94</strong>（95% CI 0.87–0.97），测试集 <strong>R² = 0.88</strong>，P &lt; 0.0001；线性拟合截距 0.09、斜率 0.89。</span></li>
+<li><b>i</b><span>贡献分：>1.1 表示"加了它产量平均提高 >10%"。<strong>亚精胺、叶酸</strong>超过 1.1；PEP 在能量底物里得分最高（1.4）；NAD、腐胺、tRNA、K₂C₂O₄、CoA 被判为非必需。</span></li>
+</ul>
+</div>
+<aside class="callout caveat">
+<p class="callout-label">统计上的三个疑点</p>
+<ul>
+<li><b>训练/测试同分布</b>：100 种组合随机 70/30 划分，测试集组合都来自同一个 100 组合子空间，且每种组合有 >300 个液滴重复。这里的 R² = 0.88 是"同分布插值"能力，不能直接读成"能预测没做过的新添加剂组合"。<span class="ev" data-ev="p.10 Methods">原文 p.10</span></li>
+<li><b>n 的口径</b>：31,598 个液滴被分箱成 100 组，模型训练用的是<b>组均值</b>（Methods），所以有效样本量是 100 而不是 31,598；液滴级噪声被平均掉了，模型精度会被"抬高"。</li>
+<li><b>贡献分是模型量不是因果量</b>：Contribution<sub>x</sub> 是"含 x 与不含 x 的预测产量比的平均"，依赖模型本身。作者用成对组合分析（Supplementary Fig. 7）做了交叉检查，方向一致，但仍是相关性证据。</li>
+</ul>
+</aside>
+</figure>
+</section>
+
+<section id="sec-fig4">
+<h2 id="sec-fig4">图 4｜第二轮：浓度优化把成本打到 1/4</h2>
+
+<figure class="paper-fig" data-fig="fig4">
+<div class="pf-panels">
+<h4>逐面板解读</h4>
+<ul>
+<li><b>a–b</b><span>用三色编码把 PEP、亚精胺、叶酸的浓度组合做成 <strong>5³ = 125</strong> 种，筛出 <strong>49,148</strong> 个液滴数据点。</span></li>
+<li><b>c</b><span>换成 <strong>XGBoost</strong>（180 棵弱树）：连续浓度输入比神经网络更合适，抗过拟合。</span></li>
+<li><b>d–e</b><span>在更宽浓度范围内扫描 <strong>3780</strong> 种组合，最优预测落在 <strong>40 mM PEP / 130 μM 亚精胺 / 4 mM 叶酸</strong>。</span></li>
+<li><b>f</b><span>12 种蛋白（27–370 kDa）的产量倍数变化：5 种维持、TxtE 总量 4.5×/可溶 2.3×、CAR/Vlm 等提升；TEII、BesB 略降。<strong>注意</strong>：这是相对"原始配方"的倍数，不是绝对产量。</span></li>
+<li><b>g–i</b><span>代表性蛋白的 Western blot（Sfp、CAR）与 SDS-PAGE（Vlm1），M/T/S 分别为 marker、总蛋白、可溶组分。</span></li>
+</ul>
+</div>
+<aside class="callout insight">
+<p class="callout-label">核心数字的算法</p>
+<p>体外验证结果：产量 0.71 → <b>1.38 mg/mL</b>（1.9×）；添加剂成本 1.87 → <b>0.90 USD/mL</b>（2.1×）；单位成本 2.63 → <b>0.72 USD/mg</b>（4×）。<span class="ev" data-ev="p.6 Fig.4">原文 p.6</span> 这三个数字里，<b>4× 是"1.9× 产量"与"2.1× 添加剂省钱"相乘的结果</b>，不是独立测量。</p>
+</aside>
+<aside class="callout caveat">
+<p class="callout-label">作者的自我提示与我的补充</p>
+<p>作者明确写了 R² = 0.99 存在<b>数据泄漏（data leakage）风险</b>，这一点值得肯定。我的补充：25 个测试组合是从 125 个浓度网格里随机抽的，属于"网格内插值"；模型真正被检验的能力是"在已有浓度范围内找最优"，而不是"外推到范围之外"。另外 3780 个预测组合只在 5 个点上做了体外表征（Fig. 5e），高产区间的绝对产量仍以 bulk 验证为准。</p>
+</aside>
+</figure>
+</section>
+
+<section id="sec-fig5">
+<h2 id="sec-fig5">图 5｜迁移学习：换底盘还要重来一遍吗</h2>
+
+<figure class="paper-fig" data-fig="fig5">
+<div class="pf-panels">
+<h4>逐面板解读</h4>
+<ul>
+<li><b>a</b><span>迁移流程：先拿 E. coli 模型对 B. subtilis 数据生成基线预测，再把预测值作为<strong>额外特征</strong>喂给 XGBoost（特征增强），而不是重新训练网络。</span></li>
+<li><b>b</b><span>实验规模 vs 精度：迁移学习在 <strong>27、36 组</strong>实验时就能达到 R² &gt; 0.95；直接学习要到 <strong>≥75 组</strong>才接近。作者据此称可减少 2–3 倍实验量。</span></li>
+<li><b>c</b><span>36 组实验（3×4×3）对比：迁移模型 r = 0.99（95% CI 0.91–1.00）、R² = 0.99、斜率 1.01、截距 −0.008；直接学习 R² = 0.83、斜率 1.50、截距 −0.49。<strong>斜率 1.50 说明直接模型系统性压缩/放大预测</strong>，不只是噪声。</span></li>
+<li><b>d</b><span>扫描 3780 种浓度组合。</span></li>
+<li><b>e</b><span>挑 5 个组合做 bulk 验证：预测与实测的<strong>趋势一致</strong>，但绝对值没有完全对齐（作者原文承认 "exact yield levels did not perfectly match"）。</span></li>
+<li><b>f</b><span>最优 B. subtilis 配方（5 mM 亚精胺 / 100 μM 叶酸 / 35 mM PEP）：sfGFP <strong>0.24 mg/mL</strong>，约为原 B. subtilis 配方的 <strong>2 倍</strong>；比"把 E. coli 优化配方直接用于 B. subtilis"再高 14%。n = 6，双侧 t 检验。</span></li>
+<li><b>g</b><span>三种短抗菌肽的产量维持或提升。</span></li>
+</ul>
+</div>
+<aside class="callout caveat">
+<p class="callout-label">"迁移"到底迁移了什么</p>
+<p>严格说这是<b>特征增强的浅层迁移</b>：预训练模型只用来产生一个标量特征，XGBoost 仍完全重训。它成立的前提是"两个底盘共享同一组关键因子（亚精胺/叶酸/PEP）"，这对 E. coli → B. subtilis（都是细菌）成立；原文 Discussion 也承认核糖体丰度、RNA 聚合酶类型、tRNA 多样性、密码子偏好都可能破坏这个前提，真核体系未验证。<span class="ev" data-ev="p.8 Discussion">原文 p.8</span></p>
+</aside>
+<aside class="callout insight">
+<p class="callout-label">这一节最值得学的工程细节</p>
+<p>为了让"换底盘"可负担，作者没有追求"零样本迁移"，而是主动把新体系实验量压到 27–36 组（3 水平 × 3–4 水平 × 3 水平的网格）。对任何"平台 + AI"的工作，这个思路可复用：<b>用旧模型提供先验特征，用少量新数据校准，再用模型挑最值得做的实验</b>。</p>
+</aside>
+</figure>
+</section>
+
+<section id="sec-mechanism">
+<h2 id="sec-mechanism">机制重绘：FluoreCode 为什么能编码组合</h2>
+
+<figure class="schematic stepfig" id="sch-fluorecode" data-stepfig data-stepstart="all">
+<div class="sch-head">
+<span class="sch-badge">AI 重绘示意图 · 非原文图</span>
+<h3>四位九进制条码：生成 → 合并 → 解码 → 聚类</h3>
+</div>
+<div class="sch-canvas">
+<svg viewBox="0 0 960 440" role="img" aria-labelledby="schFlTitle schFlDesc">
+<title id="schFlTitle">FluoreCode 编码与解码示意</title>
+<desc id="schFlDesc">载流液滴与三个卫星液滴合并成一个四位条码液滴，四通道成像后解码成组合编号。</desc>
+<defs>
+<marker id="flArrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+<path d="M0 0 L10 5 L0 10 z" fill="var(--svg-ink-2)"/>
+</marker>
+</defs>
+<g font-family="inherit">
+<text x="480" y="20" text-anchor="middle" font-size="11.5" letter-spacing="2" fill="var(--svg-mute)">4 COLORS × 9 INTENSITY LEVELS = 6561 CODES</text>
+
+<!-- ① pools -->
+<g data-step="1">
+<text x="24" y="52" font-size="11.5" letter-spacing="1.2" fill="var(--svg-mute)">① 条件池（每个卫星滴随机取样）</text>
+<rect x="24" y="64" width="196" height="50" rx="8" fill="var(--svg-2-soft)" stroke="var(--svg-2)" stroke-width="1" data-tip="9 档染料浓度 = 九进制的 9 个取值" data-tip-kicker="第 1 位 · 黄通道"/>
+<text x="122" y="86" text-anchor="middle" font-size="12" fill="var(--svg-ink)">池 1 · 黄通道</text>
+<text x="122" y="103" text-anchor="middle" font-size="10.5" fill="var(--svg-ink-2)">9 档浓度 → 9 个编码值</text>
+<rect x="24" y="122" width="196" height="50" rx="8" fill="var(--svg-3-soft)" stroke="var(--svg-3)" stroke-width="1" data-tip="9 档染料浓度 = 九进制的 9 个取值" data-tip-kicker="第 2 位 · 蓝通道"/>
+<text x="122" y="144" text-anchor="middle" font-size="12" fill="var(--svg-ink)">池 2 · 蓝通道</text>
+<text x="122" y="161" text-anchor="middle" font-size="10.5" fill="var(--svg-ink-2)">9 档浓度 → 9 个编码值</text>
+<rect x="24" y="180" width="196" height="50" rx="8" fill="var(--svg-1-soft)" stroke="var(--svg-1)" stroke-width="1" data-tip="9 档染料浓度 = 九进制的 9 个取值" data-tip-kicker="第 3 位 · 青通道"/>
+<text x="122" y="202" text-anchor="middle" font-size="12" fill="var(--svg-ink)">池 3 · 青通道</text>
+<text x="122" y="219" text-anchor="middle" font-size="10.5" fill="var(--svg-ink-2)">9 档浓度 → 9 个编码值</text>
+<rect x="24" y="238" width="196" height="50" rx="8" fill="var(--svg-node)" stroke="var(--svg-ink-2)" stroke-width="1" data-tip="CFE 混合物 + 第 4 位编码（红通道）" data-tip-kicker="载流滴"/>
+<text x="122" y="260" text-anchor="middle" font-size="12" fill="var(--svg-ink)">载流滴 · 红通道</text>
+<text x="122" y="277" text-anchor="middle" font-size="10.5" fill="var(--svg-ink-2)">CFE 混合物 + 第 4 位编码</text>
+<text x="122" y="310" text-anchor="middle" font-size="10.5" fill="var(--svg-mute)">颜色 = 位次，强度 = 取值</text>
+</g>
+
+<!-- ② merge -->
+<g data-step="2">
+<text x="262" y="52" font-size="11.5" letter-spacing="1.2" fill="var(--svg-mute)">② 依次配对 → 电场合并</text>
+<circle cx="304" cy="150" r="25" fill="var(--svg-node)" stroke="var(--svg-ink-2)" stroke-width="1.3"/>
+<text x="304" y="155" text-anchor="middle" font-size="10" fill="var(--svg-ink-2)">载流</text>
+<circle cx="352" cy="112" r="13" fill="var(--svg-2-soft)" stroke="var(--svg-2)" stroke-width="1.2"/>
+<circle cx="376" cy="140" r="13" fill="var(--svg-3-soft)" stroke="var(--svg-3)" stroke-width="1.2"/>
+<circle cx="352" cy="170" r="13" fill="var(--svg-1-soft)" stroke="var(--svg-1)" stroke-width="1.2"/>
+<path d="M330 148 H 344M366 123 L 344 138M366 155 L 346 150" stroke="var(--svg-ink-2)" stroke-width="1.1" marker-end="url(#flArrow)"/>
+<text x="372" y="206" text-anchor="middle" font-size="10.5" fill="var(--svg-ink-2)">微齿 + 1.5 kVpp / 50 kHz</text>
+<text x="372" y="222" text-anchor="middle" font-size="10.5" fill="var(--svg-ink-2)">四滴合一，效率约 90%</text>
+<path d="M404 150 H 446" stroke="var(--svg-ink-2)" stroke-width="1.2" marker-end="url(#flArrow)"/>
+<!-- merged droplet -->
+<circle cx="545" cy="150" r="44" fill="var(--svg-node)" stroke="var(--svg-ink)" stroke-width="1.6" data-tip="合并后液滴 = 四位九进制条码" data-tip-kicker="FluoreCode"/>
+<path d="M545 106 A44 44 0 0 0 545 194 Z" fill="var(--svg-2-soft)"/>
+<path d="M545 106 A44 44 0 0 1 589 150 L545 150 Z" fill="var(--svg-3-soft)"/>
+<path d="M589 150 A44 44 0 0 1 545 194 L545 150 Z" fill="var(--svg-1-soft)"/>
+<circle cx="545" cy="150" r="13" fill="var(--svg-node)" stroke="var(--svg-ink)" stroke-width="1.1"/>
+<text x="545" y="154" text-anchor="middle" font-size="9.5" fill="var(--svg-ink)">CFE</text>
+<text x="545" y="218" text-anchor="middle" font-size="12" font-weight="700" fill="var(--svg-1)">四位九进制条码</text>
+<text x="545" y="236" text-anchor="middle" font-size="10.5" fill="var(--svg-ink-2)">颜色编码位次，强度编码取值</text>
+</g>
+
+<!-- ③ imaging -->
+<g data-step="3">
+<text x="648" y="52" font-size="11.5" letter-spacing="1.2" fill="var(--svg-mute)">③ 四通道成像 → 反解</text>
+<rect x="648" y="64" width="86" height="48" rx="7" fill="var(--svg-2-soft)" stroke="var(--svg-2)" data-tip="488 nm 通道" data-tip-kicker="荧光成像"/>
+<text x="691" y="93" text-anchor="middle" font-size="10.5" fill="var(--svg-ink)">488 通道</text>
+<rect x="744" y="64" width="86" height="48" rx="7" fill="var(--svg-3-soft)" stroke="var(--svg-3)" data-tip="546 nm 通道" data-tip-kicker="荧光成像"/>
+<text x="787" y="93" text-anchor="middle" font-size="10.5" fill="var(--svg-ink)">546 通道</text>
+<rect x="840" y="64" width="86" height="48" rx="7" fill="var(--svg-1-soft)" stroke="var(--svg-1)" data-tip="594 nm 通道" data-tip-kicker="荧光成像"/>
+<text x="883" y="93" text-anchor="middle" font-size="10.5" fill="var(--svg-ink)">594 通道</text>
+<rect x="744" y="120" width="86" height="48" rx="7" fill="var(--svg-node)" stroke="var(--svg-ink-2)" data-tip="647 nm 通道" data-tip-kicker="荧光成像"/>
+<text x="787" y="149" text-anchor="middle" font-size="10.5" fill="var(--svg-ink)">647 通道</text>
+<text x="787" y="188" text-anchor="middle" font-size="10.5" fill="var(--svg-ink-2)">另加 sfGFP 通道 → 产量</text>
+<text x="787" y="204" text-anchor="middle" font-size="10.5" fill="var(--svg-ink-2)">（编码与表型同滴读出）</text>
+</g>
+
+<!-- ④ decode -->
+<g data-step="4">
+<text x="648" y="244" font-size="11.5" letter-spacing="1.2" fill="var(--svg-mute)">④ 解码 → 分箱 → 簇</text>
+<circle cx="678" cy="290" r="3.6" fill="var(--svg-1)"/><circle cx="698" cy="276" r="3.6" fill="var(--svg-1)"/>
+<circle cx="706" cy="302" r="3.6" fill="var(--svg-2)"/><circle cx="726" cy="282" r="3.6" fill="var(--svg-2)"/>
+<circle cx="740" cy="304" r="3.6" fill="var(--svg-3)"/><circle cx="758" cy="278" r="3.6" fill="var(--svg-3)"/>
+<circle cx="766" cy="308" r="3.6" fill="var(--svg-1)"/><circle cx="788" cy="286" r="3.6" fill="var(--svg-2)"/>
+<circle cx="800" cy="310" r="3.6" fill="var(--svg-3)"/><circle cx="816" cy="290" r="3.6" fill="var(--svg-1)"/>
+<circle cx="834" cy="308" r="3.6" fill="var(--svg-2)"/><circle cx="850" cy="286" r="3.6" fill="var(--svg-3)"/>
+<circle cx="872" cy="304" r="3.6" fill="var(--svg-1)"/><circle cx="888" cy="282" r="3.6" fill="var(--svg-2)"/>
+<text x="787" y="342" text-anchor="middle" font-size="10.5" fill="var(--svg-ink-2)">6,527 个簇覆盖 99.5% 理论空间</text>
+</g>
+
+<!-- footer -->
+<text x="480" y="374" text-anchor="middle" font-size="11" fill="var(--svg-ink-2)">例：3-0-7-2 → 3×9³ + 0×9² + 7×9 + 2 号组合（解释性示例，非原文数据）</text>
+<text x="480" y="400" text-anchor="middle" font-size="10.5" fill="var(--svg-mute)">颜色编码"来自哪个池"，强度编码"池内第几档"；解码依赖颜色通道间的强度校准。</text>
+</g>
+</svg>
+</div>
+<div class="step-read">
+<div class="step-text" data-step="1"><h4><span class="step-n">1</span>条件池</h4><p>每种荧光颜色对应一个"位次"（池），同一颜色下的 9 档染料浓度对应九进制的 9 个取值。四个池（三卫星滴 + 载流滴）随机组合，空间为 9⁴。</p></div>
+<div class="step-text" data-step="2"><h4><span class="step-n">2</span>合并</h4><p>载流液滴依次与三个卫星液滴在微齿处由 1.5 kVpp/50 kHz 交流电场合并，四个液滴的染料留在同一个液滴里，形成四位条码。合并效率约 90%。</p></div>
+<div class="step-text" data-step="3"><h4><span class="step-n">3</span>成像与反解</h4><p>四通道成像读出每个通道的荧光强度，按强度档位反解出四位编码；同一个液滴的 sfGFP 通道给出表型（产量）。这是"编码 + 表型"同液滴配对的来源。</p></div>
+<div class="step-text" data-step="4"><h4><span class="step-n">4</span>聚类与建库</h4><p>按解码结果分箱：同一组合的液滴聚成一簇，簇内取平均得到该组合的产量。原文在 6561 组合上得到 6,527 个簇（99.5% 覆盖），随后用三色、125 组合做真实筛选。</p></div>
+</div>
+<figcaption class="sch-caption"><b>依据</b>：原文 Fig. 2、p.3–4、p.10 的方法描述重绘；数字为原文报告值。"例：3-0-7-2"是解释性示例，不代表原文数据。<span class="ev" data-ev="p.3 Fig.2">原文 p.3</span></figcaption>
+</figure>
+
+<aside class="callout method">
+<p class="callout-label">为什么"强度"可以当编码用</p>
+<p>九进制要求九个强度档在成像时可区分：原文用同一染料配 9 个浓度、验证强度分布出现 9 个主峰（Supplementary Fig. 1e），再用多带通滤波剔除边缘点。换句话说，<b>编码容量不是理论算出来的 9⁴，而是靠"强度可分辨"这个硬件条件撑住的</b>；换成不同染料/成像参数，容量会变。<span class="ev" data-ev="p.3 Fig.2c">原文 p.3</span></p>
+</aside>
+</section>
+
+<section id="sec-data">
+<h2 id="sec-data">数据重绘：4× 成本下降是怎么构成的</h2>
+
+<figure class="schematic" id="sch-cost">
+<div class="sch-head">
+<span class="sch-badge data">数据转录自原文 · 未重新分析</span>
+<h3>优化前后的三个关键量</h3>
+</div>
+<div class="sch-canvas">
+<svg viewBox="0 0 900 360" role="img" aria-labelledby="schCostTitle schCostDesc">
+<title id="schCostTitle">优化前后产量与成本对比</title>
+<desc id="schCostDesc">三个并列面板：sfGFP 产量、添加剂成本、单位成本，优化后分别为 1.38 mg/mL、0.90 USD/mL、0.72 USD/mg。</desc>
+<g font-family="inherit">
+<!-- panel 1: yield -->
+<g>
+<text x="150" y="36" text-anchor="middle" font-size="14" font-weight="700" fill="var(--svg-ink)">sfGFP 产量</text>
+<text x="150" y="54" text-anchor="middle" font-size="11" fill="var(--svg-mute)">mg/mL</text>
+<line x1="60" y1="250" x2="240" y2="250" stroke="var(--svg-rule)" stroke-width="1"/>
+<rect x="80" y="188" width="52" height="62" fill="var(--svg-mute)" data-tip="原始配方：0.71 mg/mL" data-tip-kicker="Fig. 4 / p.6"/>
+<rect x="168" y="130" width="52" height="120" fill="var(--svg-1)" data-tip="优化配方：1.38 mg/mL" data-tip-kicker="Fig. 4 / p.6"/>
+<text x="106" y="180" text-anchor="middle" font-size="12" fill="var(--svg-ink-2)">0.71</text>
+<text x="194" y="122" text-anchor="middle" font-size="12" font-weight="700" fill="var(--svg-1)">1.38</text>
+<text x="106" y="270" text-anchor="middle" font-size="11" fill="var(--svg-ink-2)">原始</text>
+<text x="194" y="270" text-anchor="middle" font-size="11" fill="var(--svg-ink-2)">优化</text>
+<text x="150" y="300" text-anchor="middle" font-size="13" font-weight="700" fill="var(--svg-1)">↑ 1.9×</text>
+</g>
+<!-- panel 2: additive cost -->
+<g>
+<text x="450" y="36" text-anchor="middle" font-size="14" font-weight="700" fill="var(--svg-ink)">添加剂成本</text>
+<text x="450" y="54" text-anchor="middle" font-size="11" fill="var(--svg-mute)">USD / mL 反应液</text>
+<line x1="360" y1="250" x2="540" y2="250" stroke="var(--svg-rule)" stroke-width="1"/>
+<rect x="380" y="124" width="52" height="126" fill="var(--svg-mute)" data-tip="原始配方：1.87 USD/mL" data-tip-kicker="Supplementary Table 1"/>
+<rect x="468" y="189" width="52" height="61" fill="var(--svg-2)" data-tip="优化配方：0.90 USD/mL" data-tip-kicker="Supplementary Table 1"/>
+<text x="406" y="116" text-anchor="middle" font-size="12" fill="var(--svg-ink-2)">1.87</text>
+<text x="494" y="181" text-anchor="middle" font-size="12" font-weight="700" fill="var(--svg-2)">0.90</text>
+<text x="406" y="270" text-anchor="middle" font-size="11" fill="var(--svg-ink-2)">原始</text>
+<text x="494" y="270" text-anchor="middle" font-size="11" fill="var(--svg-ink-2)">优化</text>
+<text x="450" y="300" text-anchor="middle" font-size="13" font-weight="700" fill="var(--svg-2)">↓ 2.1×</text>
+</g>
+<!-- panel 3: unit cost -->
+<g>
+<text x="750" y="36" text-anchor="middle" font-size="14" font-weight="700" fill="var(--svg-ink)">单位成本</text>
+<text x="750" y="54" text-anchor="middle" font-size="11" fill="var(--svg-mute)">USD / mg sfGFP</text>
+<line x1="660" y1="250" x2="840" y2="250" stroke="var(--svg-rule)" stroke-width="1"/>
+<rect x="680" y="80" width="52" height="170" fill="var(--svg-mute)" data-tip="原始配方：2.63 USD/mg" data-tip-kicker="Fig. 4 / p.6"/>
+<rect x="768" y="204" width="52" height="46" fill="var(--svg-accent)" data-tip="优化配方：0.72 USD/mg" data-tip-kicker="Fig. 4 / p.6"/>
+<text x="706" y="72" text-anchor="middle" font-size="12" fill="var(--svg-ink-2)">2.63</text>
+<text x="794" y="196" text-anchor="middle" font-size="12" font-weight="700" fill="var(--svg-accent)">0.72</text>
+<text x="706" y="270" text-anchor="middle" font-size="11" fill="var(--svg-ink-2)">原始</text>
+<text x="794" y="270" text-anchor="middle" font-size="11" fill="var(--svg-ink-2)">优化</text>
+<text x="750" y="300" text-anchor="middle" font-size="13" font-weight="700" fill="var(--svg-accent)">↓ 4.0×</text>
+</g>
+<text x="450" y="338" text-anchor="middle" font-size="11" fill="var(--svg-mute)">数据转录自原文 p.6 与 Supplementary Table 1；单位成本 ≈ 添加剂成本 ÷ 产量，未含提取物、DNA、人力与设备</text>
+</g>
+</svg>
+</div>
+<figcaption class="sch-caption"><b>读法</b>：三个面板的纵轴各自独立（数量级不同），横轴都是"原始 vs 优化"。4× 的单位成本降幅来自"添加剂便宜 2.1×"与"产量高 1.9×"的叠加，而不是单一变量的功劳。</figcaption>
+</figure>
+
+<aside class="callout caveat">
+<p class="callout-label">"4× 降本"的边界</p>
+<p>原文口径是"每毫克 sfGFP 的添加剂成本"，不含细胞提取物、质粒 DNA、人力、设备折旧与筛选本身的成本（液滴读取仪、成像时间）。若要做技术经济分析（TEA），需要把这些项补齐；对工业放大，提取物与 DNA 往往才是大头。<span class="ev" data-ev="p.6 Fig.4">原文 p.6</span></p>
+</aside>
+</section>
+
+<section id="sec-critique">
+<h2 id="sec-critique">批判性评估：哪些结论是硬的，哪些是推断</h2>
+
+<div class="appraisal">
+<div class="card pro">
+<h3>站得住的部分</h3>
+<ul>
+<li><b>工程可行性</b>：10 万液滴/25 μL/4 h 的规模与"96 孔板需 1 L、数天"的对比是硬事实，来自实际运行而非估算。</li>
+<li><b>闭环完整</b>：从编码、解码、建模到 bulk 验证全链路打通，且每个环节都有独立验证（Fig. 2 编码、Fig. 3 概念验证、Fig. 4/5 bulk）。</li>
+<li><b>可复现材料</b>：配方、染料浓度、超参数、代码与数据均公开（GitHub + Zenodo），Methods 参数密度高。</li>
+<li><b>诚实的自我提示</b>：作者主动写出 XGBoost 的 data leakage 风险与 B. subtilis 绝对值不匹配，这在同类论文中不常见。</li>
+</ul>
+</div>
+<div class="card unc">
+<h3>存疑 / 需要更多证据</h3>
+<ul>
+<li><b>统计单元混用</b>：31,598 个液滴 → 100 个组合均值 → 70/30 划分。有效 n 是组合数（100/125），不是液滴数；模型精度被"先平均后建模"抬高。</li>
+<li><b>解码准确率未逐滴验证</b>：99.5% 是簇覆盖率；错误解码会静默污染训练标签，原文没有给出混淆矩阵或错误率。</li>
+<li><b>4× 成本口径</b>：只算添加剂；未含筛选成本、设备与提取物。</li>
+<li><b>迁移的普适性</b>：E. coli → B. subtilis 共享关键因子；真核体系、不同培养条件未验证。</li>
+</ul>
+</div>
+<div class="card con">
+<h3>我认为的薄弱点</h3>
+<ul>
+<li><b>光学校准与串色</b>：四色 + 九级强度依赖通道间校准；原文用多带通滤波处理边缘点，但没有报告通道补偿矩阵或串色误差。这直接决定"编码对不对"。</li>
+<li><b>选择偏差</b>：第一轮只筛了 768 组合中的 100 个（作者按经验挑选），"12 个添加剂里只有 3 个必需"的结论受这个子集限制。</li>
+<li><b>最优点的稳健性</b>：3780 个预测组合只在 5 个点上做 bulk 验证（Fig. 5e），且预测与实测绝对值不一致；"40 mM PEP / 130 μM 亚精胺 / 4 mM 叶酸"是模型最优，未必是真实最优。</li>
+<li><b>蛋白泛化的机制</b>：12 种蛋白中 TEII、BesB 下降，作者用 sfGFP 融合解释；这说明配方可能仍偏向 sfGFP 这类快速折叠的报告蛋白。</li>
+</ul>
+</div>
+</div>
+
+<figure class="tbl">
+<figcaption><b>表 3</b>　如果我要复现/审稿，会追问的 8 个问题</figcaption>
+<div class="table-wrap">
+<table class="cmp-table">
+<thead><tr><th>#</th><th>问题</th><th>为什么重要</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>四通道解码的混淆矩阵/错误率是多少？</td><td>编码错误会直接污染监督标签</td></tr>
+<tr><td>2</td><td>液滴批次与成像批次是否作为随机效应建模？</td><td>批次效应可能被误读为"组合效应"</td></tr>
+<tr><td>3</td><td>模型训练用的是组合均值还是液滴级数据？</td><td>决定有效样本量与置信区间</td></tr>
+<tr><td>4</td><td>100 个初筛组合是如何从 768 中选出的？</td><td>选择偏差影响"必需性"结论</td></tr>
+<tr><td>5</td><td>XGBoost 的 25 个测试组合是否与训练集共享浓度水平？</td><td>网格内插值 vs 外推能力</td></tr>
+<tr><td>6</td><td>4× 成本是否包含筛选/设备/提取物？</td><td>决定工业放大可行性</td></tr>
+<tr><td>7</td><td>B. subtilis 的"原配方"具体指哪个配方、基线多少？</td><td>"2 倍提升"的分母需要明确</td></tr>
+<tr><td>8</td><td>12 种蛋白的产量是用同一标准曲线/同一 Western 定量口径吗？</td><td>跨蛋白比较的可靠性</td></tr>
+</tbody>
+</table>
+</div>
+<p class="table-note">问题 1–4 为方法学追问，5–8 为结论边界追问；均可在正文找到对应线索，但原文未完全回答。</p>
+</figure>
+</section>
+
+<section id="sec-relevance">
+<h2 id="sec-relevance">与我相关：对液滴 / DMF 与自动化平台的启示</h2>
+
+<p>如果你在做数字微流控（DMF）、液滴微流控或"AI + 实验平台"，这篇文章有三点可直接迁移：</p>
+
+<ol>
+<li><b>把"身份"编码进反应器本身</b>。DropAI 的核心不是液滴，而是"每个液滴自带组合编码"。DMF 的优势是电极寻址，天然可以为每个液滴分配坐标/时序编码；把"位置 + 时间"当作身份码，可能比荧光编码更稳、更省光学通道。</li>
+<li><b>用"可分辨级数"反推编码容量</b>。9 级强度不是凭空来的，而是由成像信噪比决定。工程上应先测"强度分辨极限"，再定编码进制；否则容量是纸面数字。</li>
+<li><b>迁移学习是跨平台复用的捷径</b>。换底盘/换设备时，用旧模型给新数据生成先验特征，再用 27–36 组实验校准——这个"少量校准 + 模型挑实验"的模式，对任何新平台冷启动都适用。</li>
+</ol>
+
+<aside class="callout insight">
+<p class="callout-label">[推断] 一个可检验的假设</p>
+<p>如果 DMF 的液滴操控精度足以做"单液滴配方混合 + 原位荧光读出"，那么 DropAI 的"编码-解码"环节可以被 DMF 的"地址寻址"替代——代价是通量（DMF 通常远低于 300 Hz），收益是无需荧光染料编码、可做多步反应（如裂解、孵育、洗涤）。对做 TFT-DMF 芯片的团队，这可能是比"追高通量"更现实的差异化路线。</p>
+</aside>
+</section>
+
+<section id="sec-glossary">
+<h2 id="sec-glossary">术语表</h2>
+
+<dl class="glossary">
+<div><dt>CFE（cell-free gene expression）</dt><dd>无细胞基因表达：用细胞裂解液在体外完成转录翻译，不需维持活细胞。</dd></div>
+<div><dt>FluoreCode</dt><dd>本文提出的荧光编码方案：4 种颜色 × 9 级强度 = 9⁴ = 6561 种组合编码。</dd></div>
+<div><dt>PANOx-SP</dt><dd>一种经典的 E. coli 裂解液 CFE 配方体系，本文以其为优化起点。</dd></div>
+<div><dt>sfGFP</dt><dd>超折叠绿色荧光蛋白，常用作 CFE 的报告蛋白，荧光强度可换算蛋白浓度。</dd></div>
+<div><dt>PEP（phosphoenolpyruvate）</dt><dd>磷酸烯醇式丙酮酸，糖酵解途径中的高能磷酸供体，本文选中的能量底物。</dd></div>
+<div><dt>MAPE</dt><dd>平均绝对百分比误差，本文神经网络的损失/评价指标（~5.6%）。</dd></div>
+<div><dt>XGBoost</dt><dd>梯度提升决策树实现，适合小样本、连续输入的回归；本文浓度优化用它。</dd></div>
+<div><dt>迁移学习（transfer learning）</dt><dd>把源体系训练好的模型用于目标体系；本文用"特征增强"方式迁移到 B. subtilis。</dd></div>
+<div><dt>TEA（techno-economic analysis）</dt><dd>技术经济分析；本报告用它提醒"4× 降本"的口径边界。</dd></div>
+<div><dt>DMF（digital microfluidics）</dt><dd>数字微流控：用电场在电极阵列上操控离散液滴，本文未使用，属"与我相关"的对照技术。</dd></div>
+</dl>
+</section>
+
+<section id="sec-refs">
+<h2 id="sec-refs">延伸阅读与引用</h2>
+
+<ol class="refs">
+<li>Zhu, J. et al. AI-driven high-throughput droplet screening of cell-free gene expression. <i>Nat. Commun.</i> <b>16</b>, 2720 (2025). <a href="https://doi.org/10.1038/s41467-025-58139-0" target="_blank" rel="noopener">doi:10.1038/s41467-025-58139-0</a></li>
+<li>数据与代码：<a href="https://github.com/Liulab2023/DropAI" target="_blank" rel="noopener">github.com/Liulab2023/DropAI</a>（含聚类、AI 模型与 in silico 筛选代码）</li>
+<li>Silverman, A. D., Karim, A. S. &amp; Jewett, M. C. Cell-free gene expression: an expanded repertoire of applications. <i>Nat. Rev. Genet.</i> <b>21</b>, 151–170 (2020).</li>
+<li>Karim, A. S. et al. In vitro prototyping and rapid optimization of biosynthetic enzymes for cell design. <i>Nat. Chem. Biol.</i> <b>16</b>, 912–919 (2020).</li>
+<li>本报告使用的图表裁切来自原文 PDF；SVG 示意图为依据原文文字/数字的解释性重绘，非原文图。</li>
+</ol>
+
+<aside class="callout quote">
+<p class="callout-label">报告使用说明</p>
+<p>原文图：PDF 页面裁切，保留原始面板标记；SVG 图：AI 重绘，用于解释机制；所有数字转录自原文，未重新分析。引用本报告观点时，请回溯原文页码核对。</p>
+</aside>
+</section>

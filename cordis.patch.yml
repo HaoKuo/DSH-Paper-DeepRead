@@ -1,0 +1,9 @@
+# DSH-Paper-DeepRead plugin row.
+#
+# One bundle row: its host half serves the bundled 文献精读库 library at
+# /paper-deepread, registers the `paper_deepread` model tool, and installs the
+# paper-deepread-html skill when the user has no copy yet. The browser half is
+# declared through `dsh.client` in package.json and adds the sidebar panel.
+- insert:
+    - id: paper-deepread
+      name: dsh-paper-deepread

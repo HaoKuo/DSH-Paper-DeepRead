@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "DSH-Paper-DeepRead",
+    "description": "内置「文献精读库」静态站点与 paper-deepread-html 精读技能：在侧边栏浏览交互式论文精读报告、打开原文 PDF，并让模型检索同一份书目。"
+  }
+}

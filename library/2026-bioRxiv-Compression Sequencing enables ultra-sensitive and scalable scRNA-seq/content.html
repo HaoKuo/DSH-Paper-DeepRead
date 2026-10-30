@@ -1,0 +1,742 @@
+<section id="sec-tldr">
+<h2 id="sec-tldr">结论先行：这篇论文把「对数压缩」从算法搬进了试管</h2>
+
+<p>测序仪很大程度上不是在"测量"，而是在<b>重复采样</b>：一个细胞里约 30 万–50 万个 mRNA 分子，不到 10% 的高表达基因占掉 &gt;95% 的读段，而占基因数 70% 的中低丰度基因只分到 &lt;1% 的读段、dropout 率 50–100% <span class="ev" data-ev="p.2">原文 p.2</span>。要忠实覆盖稀有转录本需要 1–2 M reads/cell，实际研究只给 1–2 万 reads/cell，差 50–100 倍 <span class="ev" data-ev="p.2">原文 p.2</span>。作者（Rice University，Yan Yan &amp; Mingjie Dai）的解法不是去丰度、不是做 panel 富集，而是<b>改写「丰度 → 读段」这条映射本身</b>：把非对称 PCR 的"限量引物"条件推到极致，让最终产物浓度与模板浓度的<b>对数</b>成正比，于是 5 个数量级的输入被压成 &lt;1 个数量级（R²=0.99）<span class="ev" data-ev="p.3 Fig.1k">原文 p.3</span>。</p>
+
+<p>把这一步作为 "add-on" 接在 10X 3′ 文库上，作者在 500–2,000 基因面板上报告：11 M reads 达到与 140 M reads 相近的饱和度（<b>100–140× 效率</b>），稀有基因 UMI 提高 <b>2–5×</b>；同一份压缩文库只测 0.7 M reads（<b>1/200×</b>，&lt;170 reads/cell）仍保住 79% 的 DEG 覆盖与 ARI 0.78 的细胞分型 <span class="ev" data-ev="p.4–7">原文 p.4–7</span>；在三例 AML 临床样本上复现了 FAB 亚型判读，并把测序成本估到 &lt;$5/样本 <span class="ev" data-ev="p.7–8 Fig.5">原文 p.7–8</span>。</p>
+
+<p>一句话：<b>它卖的不是"更深的测序"，而是"更聪明的读段分配"</b>——用一管引物，把测序预算从"已经被看得太多"的基因手里拿走，交给"几乎没被看到"的基因。</p>
+
+<div class="cover-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:22px 0">
+<div class="metric"><span class="metric-v">100–140×</span><span class="metric-l">测序效率提升</span><span class="metric-n">11 M vs 140 M reads 达相近饱和度</span></div>
+<div class="metric"><span class="metric-v">1/200×</span><span class="metric-l">Shallow 模式深度</span><span class="metric-n">0.7 M reads，&lt;170 reads/cell</span></div>
+<div class="metric"><span class="metric-v">2–5×</span><span class="metric-l">稀有基因 UMI 提升</span><span class="metric-n">低丰度基因平均 1.9×，最高 5×</span></div>
+<div class="metric"><span class="metric-v">$&lt;10</span><span class="metric-l">AML 单样本成本（作者估计）</span><span class="metric-n">测序 &lt;$5/样本，2–3 万细胞</span></div>
+</div>
+
+<figure class="tbl">
+<figcaption><b>表 A</b>　五条主结论与证据强度（"本报告判读"一栏为解读，非原文表述）</figcaption>
+<div class="table-wrap">
+<table class="cmp-table">
+<thead><tr><th>主结论</th><th>原文数字</th><th>证据位置</th><th>本报告判读</th></tr></thead>
+<tbody>
+<tr><td>cPCR 是一个可定量的"分子对数编码器"</td><td>输入 5 个 log → 输出 &lt;1 个 log（&gt;10,000 倍压缩），端点信号 vs 输入 R²=0.99；96 重靶标中 69/96（72%）R²&gt;0.95</td><td>p.3–4、Fig. 1j–m <span class="ev" data-ev="p.3 Fig.1k">原文 p.3</span></td><td><strong>最硬的一环。</strong>化学原理清楚（两相扩增）、公式可检验、在 5 个数量级上线性；但 96 重里 28% 靶标不达标，说明"多重化成功"仍依赖逐对引物</td></tr>
+<tr><td>接到 10X 3′ 文库上能压缩 1,000 倍动态范围</td><td>60 靶标试点：barcode 覆盖 &gt;99%、动态范围 ↓1,000×；148 靶标：on-target 40%→70%，高丰度抑制 500–1,000×、稀有富集 5–10×</td><td>p.4、Fig. 2c–d <span class="ev" data-ev="p.4 Fig.2c">原文 p.4</span></td><td><strong>成立但剂量小。</strong>这里报告的压缩/富集倍数是 10²–10³，与摘要的 "100× efficiency" 不是一个口径，后者混合了 panel 富集</td></tr>
+<tr><td>500 基因面板：读段减少 1/13 而稀有基因 UMI 增加 2–5×</td><td>11 M vs 140 M reads；低丰度读段占比 1.5%→7.4%，高丰度 43%→22%；UMI 覆盖中位数 64% vs 36%；两段模型过渡点 370 reads ≈150 UMIs</td><td>p.4–5、Fig. 2e–k <span class="ev" data-ev="p.5 Fig.2e">原文 p.5</span></td><td><strong>数字自洽且信息量最大的一张图。</strong>两段模型把"哪里压缩、哪里不压缩"讲清楚了，也顺带暴露了高丰度基因 UMI 反而变少的代价</td></tr>
+<tr><td>2,000 基因面板在 1/3 测序深度下多检出 21% DEG，且更可重复</td><td>51 M reads；稀有基因 10.6× reads / 2.5× UMIs；UMI 覆盖 67% vs 27%；四个细胞类型合计 DEG 554→669；两供体共有的"仅压缩检出" DEG 占 45% vs 10X-only 21%</td><td>p.6、Fig. 3 <span class="ev" data-ev="p.6 Fig.3c">原文 p.6</span></td><td><strong>论证链设计得最好的一条。</strong>"额外 DEG 是否假阳性"用跨供体重复率回答（45% vs 21%），比单看 DEG 数有说服力；但 Log2FC 斜率 0.70 的衰减仍需解释</td></tr>
+<tr><td>1/200× 深度仍可做细胞分型与 DEG；AML 亚型可复现</td><td>0.7 M reads：barcode &gt;96%、ARI 0.78（T+NK 合并后 0.97）、DEG 覆盖 79%（1/100× 下采样的 10X 只有 &lt;15%）；AML 600–800 reads/cell ARI 0.80–0.82，80 reads/cell 仍 85–92% 准确率</td><td>p.6–8、Fig. 4–5 <span class="ev" data-ev="p.7 Fig.4b">原文 p.7</span></td><td><strong>最有转化价值、样本最薄的一条。</strong>PBMC 只用了 2 个供体、AML 只有 3 例，且没有独立病理/随访验证；"复现诊断"是 3/3 但 n 太小</td></tr>
+</tbody>
+</table>
+</div>
+<p class="table-note">数字均转录自原文正文与图；"本报告判读"为解读，已在正文用 [推断] 标注。</p>
+</figure>
+
+<aside class="callout caveat">
+<p class="callout-label">读这份报告前必须知道的边界</p>
+<p>本次提供的 PDF 只有 <b>11 页主文 + 参考文献</b>：Methods、Supplementary Note 1–3、Supplementary Fig. 1–4、Extended Data Fig. 1–7、Supplementary Table 5 都<b>不在这个文件里</b>。因此本报告能核对的只有正文与五张主图；凡是涉及"反应条件怎么定、引物怎么筛、统计检验怎么做、成本怎么算"的细节，都属于<b>本文件无法核实</b>。文中引用 Extended Data / Supplementary 的地方，本报告只能转述作者说法，不能当作已验证证据。</p>
+</aside>
+</section>
+
+<section id="sec-problem">
+<h2 id="sec-problem">问题：测序预算被一小撮高丰度基因"征税"</h2>
+
+<p>scRNA-seq 的成本结构有一个非常反直觉的形状：<b>真正决定"能不能看见稀有转录本"的不是测序仪的通量，而是丰度分布的动态范围</b>。作者引用的数量级是：人细胞内 mRNA 丰度跨 5–6 个 log；在典型 scRNA-seq 里，低于中位表达的基因（约占基因数 70%）合计只占 &lt;1% 的读段，dropout 率 50–100%；而 &lt;10% 的高表达基因吃掉 &gt;95% 的读段 <span class="ev" data-ev="p.2">原文 p.2</span>。这意味着<b>你付的钱里绝大部分花在重复确认"β-actin 还是很高的"</b>。</p>
+
+<p>这个约束在"细胞数 × 深度"的乘积上是硬的。作者算了一笔账：10 M 细胞 × 50,000 reads/cell，仅测序就要 $120,000–250,000（UG100 或 NovaSeq X）<span class="ev" data-ev="p.2">原文 p.2</span>；而虚拟细胞模型需要的训练集是 30–100 M 细胞 <span class="ev" data-ev="p.2">原文 p.2</span>。所以问题不是"测序仪不够快"，而是"每次读取的边际信息量在下降"。</p>
+
+<p>已有的四条路线各自卡在不同的地方 <span class="ev" data-ev="p.2">原文 p.2</span>：</p>
+<ul>
+<li><b>靶向 panel 富集</b>（targeted Perturb-seq、HyPR-seq 等）：只测选中的基因，确实省，但它<b>不改变 panel 内部的动态范围</b>——panel 里高丰度基因依然霸占读段；</li>
+<li><b>杂交动力学归一化</b>（equalized cDNA library、normalized cDNA）：靠复性速率差压缩丰度，但只能削弱、不能定量，且序列依赖偏差大；</li>
+<li><b>DSN（双链特异核酸酶）消化</b>：同样依赖动力学，偏差与不可控性更强；</li>
+<li><b>直接加大深度</b>：线性花钱，且在高丰度端边际收益极低。</li>
+</ul>
+
+<aside class="callout insight">
+<p class="callout-label">[背景] 为什么这其实是一个"信号处理"问题</p>
+<p>把每个基因的丰度当成输入信号 <i>x</i>，测序仪的输出是"按 <i>x</i> 比例分配读段"，等价于一个<b>线性 ADC</b>：输入动态范围 5 个 log，而读段预算只有有限的比特数，于是小信号被量化噪声（dropout）淹没。作者的做法是在采样之前插一级<b>对数压缩（log companding）</b>：把 10<sup>5</sup> 的输入范围压到 &lt;10，再用同一套量化器去量化——这正是音频压扩、图像 gamma、HDR 编码（LogLuv）在做的事，作者也明确引了 Shannon、Huffman、Golomb 与 LogLuv 编码 <span class="ev" data-ev="p.2 refs 38–41">原文 p.2</span>。区别只在于：他们不是用电路，而是用<b>一管限量引物</b>实现这个非线性。</p>
+</aside>
+
+<p>理解这一点，就能理解本文真正的主张边界：<b>它不增加细胞里的分子数，也不增加总读段数；它只改变读段在基因之间的分配</b>。所有"更灵敏"的说法，都必须读成"在同样的总预算下，稀有基因分到的读段更多"。这个区别在后面批判性评估里会反复出现。</p>
+</section>
+
+<section id="sec-idea">
+<h2 id="sec-idea">核心思想：用「限量引物」把指数扩增变成对数读出</h2>
+
+<p>cPCR 的化学基础是<b>非对称 PCR</b>（asymmetric PCR / LATE-PCR）<span class="ev" data-ev="p.2 refs 42–43">原文 p.2</span>：正向与反向引物不等量。作者的关键改动是把"少量引物"从"副产品手段"变成<b>定量的标尺</b>，并刻意让反应进入一个很长、很稳的第二相。</p>
+
+<p>反应分两段。第一段（指数相）：两种引物都在，扩增是常规的指数增长，直到<b>限量引物 PL 被耗尽</b>。模板越多，PL 越早耗尽，留给第二段的时间越长。第二段（线性相）：只剩过量引物 PE，每一轮只延伸一条单链，产物<b>线性</b>增长。把两段接起来，终点产物是：</p>
+
+<p style="text-align:center;font-size:1.02em;margin:14px 0"><b>[Amp] = [P<sub>L</sub>]·(C + 1 − log<sub>2</sub>([P<sub>L</sub>]/[T])) = a·log<sub>2</sub>[T] + b</b> <span class="ev" data-ev="p.3 Fig.1g">原文 p.3 Fig.1g</span></p>
+
+<p>直觉版本：<b>指数相的长度本身就是 log<sub>2</sub>([P<sub>L</sub>]/[T]) 轮</b>，而总循环数 C 是固定的，所以"线性相 = C − 指数相"对 log[T] 是线性的。作者特别强调这与常规 qPCR 的"短暂线性相"不同——qPCR 的线性相是试剂耗尽的副产物，而这里是被设计成<b>贯穿剩余全部循环</b>的定量区间 <span class="ev" data-ev="p.2">原文 p.2</span>。</p>
+
+<figure class="schematic" data-stepfig data-stepmode="spotlight" data-stepstart="first">
+<div class="sch-head">
+<span class="sch-badge">AI 重绘示意图（非原文图）</span>
+<span class="sch-source">机制重绘自 Fig. 1f–i 与公式 1g · 分步演示（← / → 或点数字切换）</span>
+</div>
+<div class="sch-canvas">
+<svg viewBox="0 0 940 400" role="img" aria-labelledby="mechTitle mechDesc">
+<title id="mechTitle">cPCR 两相扩增如何实现分子层面的对数变换</title>
+<desc id="mechDesc">顶部是过量引物 PE 与限量引物 PL 的浓度差；中部是四条不同起始模板浓度的扩增曲线，它们在指数相结束后转为斜率相同的线性相，终点读段与起始模板浓度的 log2 成正比；右侧是转换公式。</desc>
+<defs>
+<marker id="mech-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="var(--svg-rule)"/></marker>
+<marker id="mech-arrow-1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="var(--svg-1)"/></marker>
+</defs>
+
+<!-- base layer: axes -->
+<rect x="90" y="340" width="530" height="1" fill="var(--svg-rule)"/>
+<line x1="90" y1="340" x2="90" y2="118" stroke="var(--svg-rule)" stroke-width="1"/>
+<text x="355" y="378" text-anchor="middle" fill="var(--svg-ink-2)" font-size="11">PCR 循环数 →</text>
+<text x="36" y="230" fill="var(--svg-ink-2)" font-size="11" transform="rotate(-90 36 230)">产物量 [Amp] →</text>
+<line x1="90" y1="200" x2="620" y2="200" stroke="var(--svg-3)" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="628" y="204" fill="var(--svg-3)" font-size="10.5">[P<tspan dy="3" font-size="8">L</tspan><tspan dy="-3">]</tspan></text>
+<text x="90" y="356" text-anchor="middle" fill="var(--svg-mute)" font-size="9.5">0</text>
+<text x="222" y="356" text-anchor="middle" fill="var(--svg-mute)" font-size="9.5">10</text>
+<text x="355" y="356" text-anchor="middle" fill="var(--svg-mute)" font-size="9.5">20</text>
+<text x="487" y="356" text-anchor="middle" fill="var(--svg-mute)" font-size="9.5">30</text>
+<text x="620" y="356" text-anchor="middle" fill="var(--svg-mute)" font-size="9.5">40</text>
+
+<!-- base layer: curves (4 template levels) -->
+<path d="M 90,336 C 150,331 182,268 196,200 L 620,107" fill="none" stroke="var(--svg-2)" stroke-width="1.8"/>
+<path d="M 90,338 C 185,334 252,278 275,200 L 620,124" fill="none" stroke="var(--svg-3)" stroke-width="1.8"/>
+<path d="M 90,340 C 225,337 322,296 355,200 L 620,142" fill="none" stroke="var(--svg-1)" stroke-width="1.8"/>
+<path d="M 90,342 C 270,339 398,318 444,200 L 620,161" fill="none" stroke="var(--svg-mute)" stroke-width="1.8"/>
+<circle cx="196" cy="200" r="3.4" fill="var(--svg-2)"/>
+<circle cx="275" cy="200" r="3.4" fill="var(--svg-3)"/>
+<circle cx="355" cy="200" r="3.4" fill="var(--svg-1)"/>
+<circle cx="444" cy="200" r="3.4" fill="var(--svg-mute)"/>
+<line x1="620" y1="96" x2="620" y2="340" stroke="var(--svg-rule)" stroke-width="1" stroke-dasharray="4 4"/>
+<text x="620" y="112" text-anchor="middle" fill="var(--svg-ink-2)" font-size="9.5">终点 C</text>
+
+<!-- step 1: primer asymmetry -->
+<g data-step="1" class="is-active">
+<rect x="90" y="34" width="330" height="13" rx="6.5" fill="var(--svg-1)" opacity=".85"/>
+<text x="430" y="46" fill="var(--svg-ink)" font-size="11" font-weight="600">PE 过量（excess primer）</text>
+<rect x="90" y="62" width="66" height="13" rx="6.5" fill="var(--svg-3)" opacity=".9"/>
+<text x="166" y="74" fill="var(--svg-ink)" font-size="11" font-weight="600">PL 限量（limiting primer）</text>
+<text x="430" y="74" fill="var(--svg-ink-2)" font-size="10">浓度比 PE/PL 是压缩倍数的"旋钮"</text>
+<rect x="670" y="34" width="250" height="52" rx="10" fill="var(--svg-2-soft)" stroke="var(--svg-2)" stroke-width="1"/>
+<text x="684" y="55" fill="var(--svg-ink)" font-size="10.5" font-weight="600">为什么不多不少刚刚好</text>
+<text x="684" y="73" fill="var(--svg-ink-2)" font-size="9.5">PL 太多→线性相不够；太少→底端无信号</text>
+</g>
+
+<!-- step 2: exponential phase -->
+<g data-step="2">
+<rect x="90" y="118" width="268" height="222" fill="var(--svg-2-soft)" opacity=".55"/>
+<text x="100" y="136" fill="var(--svg-2)" font-size="10.5" font-weight="700">② 指数相</text>
+<text x="100" y="152" fill="var(--svg-ink-2)" font-size="9.5">双引物都在，PL 未耗尽</text>
+<text x="100" y="167" fill="var(--svg-ink-2)" font-size="9.5">模板越多 → 越早耗尽 PL</text>
+</g>
+
+<!-- step 3: linear phase -->
+<g data-step="3">
+<rect x="358" y="118" width="262" height="222" fill="var(--svg-1-soft)" opacity=".6"/>
+<text x="368" y="136" fill="var(--svg-1)" font-size="10.5" font-weight="700">③ 线性相（被设计得很长）</text>
+<text x="368" y="152" fill="var(--svg-ink-2)" font-size="9.5">只剩 PE：每轮只延伸一条单链</text>
+<text x="368" y="167" fill="var(--svg-ink-2)" font-size="9.5">四条曲线斜率相同、高度错开</text>
+<text x="368" y="182" fill="var(--svg-ink-2)" font-size="9.5">错开量 = log2(模板浓度比)</text>
+</g>
+
+<!-- step 4: readout -->
+<g data-step="4">
+<rect x="654" y="118" width="266" height="150" rx="12" fill="var(--svg-node)" stroke="var(--svg-2)" stroke-width="1.2"/>
+<text x="668" y="140" fill="var(--svg-2)" font-size="10.5" font-weight="700">④ 终点读出</text>
+<text x="668" y="164" fill="var(--svg-ink)" font-size="11">[Amp] = [P<tspan dy="3" font-size="8">L</tspan><tspan dy="-3">]·(C + 1 − log</tspan><tspan dy="3" font-size="8">2</tspan><tspan dy="-3">([P</tspan><tspan dy="3" font-size="8">L</tspan><tspan dy="-3">]/[T]))</tspan></text>
+<text x="668" y="186" fill="var(--svg-ink)" font-size="11">= a·log<tspan dy="3" font-size="8">2</tspan><tspan dy="-3">[T] + b</tspan></text>
+<text x="668" y="210" fill="var(--svg-ink-2)" font-size="9.5">产物 ∝ log(模板)：两端等距，中间压缩</text>
+<text x="668" y="228" fill="var(--svg-ink-2)" font-size="9.5">高丰度被压，稀有基因相对"浮起来"</text>
+<text x="668" y="252" fill="var(--svg-mute)" font-size="9">示意：四条曲线代表四个起始模板浓度</text>
+<line x1="628" y1="170" x2="648" y2="170" stroke="var(--svg-2)" stroke-width="1.6" marker-end="url(#mech-arrow)"/>
+</g>
+</svg>
+</div>
+<div class="step-read">
+<div class="step-text is-active" data-step="1">
+<h4><span class="step-n">1</span>先把两种引物做成不对称的</h4>
+<p>过量引物 PE 决定"线性相能跑多快"，限量引物 PL 决定"指数相什么时候停"。两者的浓度比是这套方法的<b>唯一主旋钮</b>：PE/PL 越大，压缩越狠；作者在原理验证里用 50，在高度多重化时降到 10，并进一步把 PL 降到 7.5 nM <span class="ev" data-ev="p.3–4">原文 p.3–4</span>。</p>
+</div>
+<div class="step-text" data-step="2">
+<h4><span class="step-n">2</span>指数相：模板越多，越早耗尽 PL</h4>
+<p>这一段与普通 PCR 无异。关键性质是<b>指数相的长度由模板浓度决定</b>：起始模板越高，到达 PL 耗尽所需的循环数越少，因此剩余给线性相的循环数越少——但注意，模板高时线性相期间每轮新起的单链也更多，两个效应合并后，终点值仍单调上升，只是上升被 log 压平。</p>
+</div>
+<div class="step-text" data-step="3">
+<h4><span class="step-n">3</span>线性相：把"指数"换成"线性"，信息就留在 log 里</h4>
+<p>PL 耗尽后只剩 PE，产物线性增长。四条曲线在图上变成<b>彼此平行、高度错开</b>的直线（Fig. 1i 的原始观察）：错开的距离正比于 log₂(模板浓度比)。这就是"对数编码"在物理上的样子——不是算出 log，而是让反应<b>只跑 log 那么多轮指数</b>。</p>
+</div>
+<div class="step-text" data-step="4">
+<h4><span class="step-n">4</span>终点读出：产物浓度是模板对数的仿射函数</h4>
+<p>公式里 a、b 是常数 <span class="ev" data-ev="p.3 Fig.1g">原文 p.3</span>。作者在合成模板上实测：输入跨 5 个 log，端点信号与之线性相关 R²=0.99，整个 5 log 区间被压成 &lt;1 log <span class="ev" data-ev="p.3 Fig.1k">原文 p.3</span>。注意这个变换是<b>逐基因独立</b>的：反应不关心"你是高表达还是低表达"，只关心"你和我的 PL 谁先耗尽"。</p>
+</div>
+</div>
+<figcaption><p class="sch-caption"><b>这张图要记住的一点</b>：压缩不是靠"识别高丰度基因再抑制它"，而是靠一个<b>饱和机制</b>——PL 被耗尽的时刻本身就是丰度的函数。因此它对所有基因一视同仁，也就不需要事先知道哪些基因该压（这正是作者强调的 "unbiased"）<span class="ev" data-ev="p.2">原文 p.2</span>。</p></figcaption>
+</figure>
+
+<p>作者把 cPCR 的性质归纳为三条 <span class="ev" data-ev="p.2">原文 p.2</span>：<b>(i) 无偏</b>——压缩机制不依赖对表达水平的预设；<b>(ii) 定量且逐基因独立</b>——多重反应里每个靶标各自完成对数压缩，保留各自的定量关系；<b>(iii) 可调</b>——压缩程度由 PL 浓度等条件控制，可以在"省测序"与"保灵敏度"之间选点。这三条里，第 (ii) 条是最强的假设，也是后面批判性评估要重点查的地方：<b>"逐基因独立"要求每个引物对的 a、b 足够接近，否则跨基因比较会被引物效率污染</b>。</p>
+
+<aside class="callout method">
+<p class="callout-label">与既有方法的差别（读文献时最容易混淆的三点）</p>
+<p><b>① 不是"抑制高丰度"（suppression），是"重标定"（re-scaling）。</b>DSN 与复性归一化是<b>去除</b>高丰度分子，会损失绝对定量；cPCR 不丢分子，只让每个分子的"读段权重"变成 log 函数。<b>② 不是 LATE-PCR 的直接套用。</b>LATE-PCR 关注的是"线性相做熔解曲线/定量"，本文关注的是"线性相的长度差编码了 log 丰度"，并把它推到 &gt;5 个数量级与几百重靶标。<b>③ 与 targeted panel 是正交的两件事。</b>cPCR 必须靠引物才能实施（因此天然是 panel），但 panel 只是它的"载体"；panel 决定"测哪些基因"，压缩决定"panel 内部怎么分配读段"。这个区分在第 11 节会成为主要批评点。</p>
+</aside>
+</section>
+
+<section id="sec-method">
+<h2 id="sec-method">方法：把一个现成的 10X 文库变成「可压缩文库」</h2>
+
+<p>把 cPCR 接到 scRNA-seq 上的难点非常具体：<b>扩增产物必须同时携带细胞身份（barcode）与分子身份（UMI）</b>，否则压缩之后无法回到单细胞。作者的 "add-on" 设计如下 <span class="ev" data-ev="p.4 Fig.2a">原文 p.4 Fig.2a</span>：</p>
+
+<ul>
+<li><b>基因特异引物 PL</b> 落在 mRNA 转录本上、poly-A 位点上游 100–200 nt 处；</li>
+<li><b>通用引物 PC</b> 放在 Illumina read primer（R1）里，方向朝 barcode 一侧；</li>
+<li>于是扩增子 = R1 + <b>barcode + UMI</b> + poly-T + 一段基因特异序列，压缩后的分子仍可被 CellRanger 按 barcode/UMI 计数；</li>
+<li><b>嵌套 PCR（PL2/PC2）</b>替代原来的"单链转双链"步骤，把 on-target 读段占比从 40% 提到 70% <span class="ev" data-ev="p.4">原文 p.4</span>；</li>
+<li>因为 PC 是所有基因共享的，在 500 基因面板里 PC/PL ≈ 500 × 15 = 7,500 倍 <span class="ev" data-ev="p.4">原文 p.4</span>——这个极端的不对称逼着作者重做引物设计（热力学 + 二聚体最小化，改编自 SADDLE 的模拟退火算法）<span class="ev" data-ev="p.4 refs 44–45">原文 p.4</span>。</li>
+</ul>
+
+<figure class="schematic">
+<div class="sch-head">
+<span class="sch-badge">AI 重绘示意图（非原文图）</span>
+<span class="sch-source">流程重绘自 Fig. 2a–b 与 Fig. 1f · 悬停各阶段查看说明</span>
+</div>
+<div class="sch-canvas">
+<svg viewBox="0 0 980 348" role="img" aria-labelledby="wfTitle wfDesc">
+<title id="wfTitle">Compression Sequencing 作为 add-on 接入 10X 单细胞文库的五步流程</title>
+<desc id="wfDesc">五步流程：10X 3′ 文库、外层 cPCR、嵌套 PCR、文库制备与测序、与参考共用 barcode 的分析；下方展示扩增子结构（R1、barcode、UMI、poly-T、3′ 基因序列、poly-A）与两套引物位置，底部用一条双向虚线标出“同一文库可拆成标准与压缩两份、barcode 相同”。</desc>
+<defs>
+<marker id="wf-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="var(--svg-rule)"/></marker>
+<marker id="wf-arrow-accent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="var(--svg-1)"/></marker>
+<marker id="wf-arrow-both" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="var(--svg-1)"/></marker>
+</defs>
+
+<g data-tip-kicker="阶段 01" data-tip="10X 3′ mRNA 文库：已经带 barcode 与 UMI 的 cDNA。压缩是在这个文库上做的，所以不需要重新分细胞、也不需要重新 barcode。" tabindex="0">
+<rect x="20" y="34" width="156" height="112" rx="12" fill="var(--svg-node)" stroke="var(--svg-rule)"/>
+<circle cx="58" cy="62" r="15" fill="var(--svg-1)" opacity=".18"/>
+<text x="58" y="67" text-anchor="middle" fill="var(--svg-1)" font-size="11" font-weight="700">01</text>
+<text x="96" y="62" fill="var(--svg-ink)" font-size="12.5" font-weight="600">10X 3′ 文库</text>
+<text x="96" y="82" fill="var(--svg-ink-2)" font-size="9.5">已带 BC / UMI</text>
+<text x="96" y="98" fill="var(--svg-ink-2)" font-size="9.5">不重新分细胞</text>
+<text x="96" y="114" fill="var(--svg-ink-2)" font-size="9.5">add-on，可拆半</text>
+</g>
+<line x1="180" y1="90" x2="206" y2="90" stroke="var(--svg-rule)" stroke-width="1.6" marker-end="url(#wf-arrow)"/>
+
+<g data-tip-kicker="阶段 02" data-tip="外层 cPCR：基因特异限量引物 PL（距 poly-A 100–200 nt）与通用过量引物 PC（位于 R1 内）。PC/PL 比例随面板基因数放大（500 基因约 7,500 倍）。" tabindex="0">
+<rect x="210" y="34" width="156" height="112" rx="12" fill="var(--svg-node)" stroke="var(--svg-1)"/>
+<circle cx="248" cy="62" r="15" fill="var(--svg-1)" opacity=".18"/>
+<text x="248" y="67" text-anchor="middle" fill="var(--svg-1)" font-size="11" font-weight="700">02</text>
+<text x="286" y="62" fill="var(--svg-ink)" font-size="12.5" font-weight="600">外层 cPCR</text>
+<text x="286" y="82" fill="var(--svg-ink-2)" font-size="9.5">PL 限量 / PC 过量</text>
+<text x="286" y="98" fill="var(--svg-ink-2)" font-size="9.5">两相：指数→线性</text>
+<text x="286" y="114" fill="var(--svg-ink-2)" font-size="9.5">对数压缩发生处</text>
+</g>
+<line x1="370" y1="90" x2="396" y2="90" stroke="var(--svg-rule)" stroke-width="1.6" marker-end="url(#wf-arrow)"/>
+
+<g data-tip-kicker="阶段 03" data-tip="嵌套 PCR：用 PL2/PC2 再扩一次，替代单链转双链。作者报告 on-target 读段占比从 40% 提升到 70%，这是高度多重化时的关键一步。" tabindex="0">
+<rect x="400" y="34" width="156" height="112" rx="12" fill="var(--svg-node)" stroke="var(--svg-1)"/>
+<circle cx="438" cy="62" r="15" fill="var(--svg-1)" opacity=".18"/>
+<text x="438" y="67" text-anchor="middle" fill="var(--svg-1)" font-size="11" font-weight="700">03</text>
+<text x="476" y="62" fill="var(--svg-ink)" font-size="12.5" font-weight="600">嵌套 PCR</text>
+<text x="476" y="82" fill="var(--svg-ink-2)" font-size="9.5">PL2 / PC2</text>
+<text x="476" y="98" fill="var(--svg-ink-2)" font-size="9.5">on-target 40%→70%</text>
+<text x="476" y="114" fill="var(--svg-ink-2)" font-size="9.5">+ 掺入参考序列</text>
+</g>
+<line x1="560" y1="90" x2="586" y2="90" stroke="var(--svg-rule)" stroke-width="1.6" marker-end="url(#wf-arrow)"/>
+
+<g data-tip-kicker="阶段 04" data-tip="文库制备、index PCR、QC，然后上机。原文分别测了 11 M（Deep）、0.7 M（Shallow）、51 M（2,000 基因面板）等深度。" tabindex="0">
+<rect x="590" y="34" width="156" height="112" rx="12" fill="var(--svg-node)" stroke="var(--svg-rule)"/>
+<circle cx="628" cy="62" r="15" fill="var(--svg-1)" opacity=".18"/>
+<text x="628" y="67" text-anchor="middle" fill="var(--svg-1)" font-size="11" font-weight="700">04</text>
+<text x="666" y="62" fill="var(--svg-ink)" font-size="12.5" font-weight="600">文库 / 测序</text>
+<text x="666" y="82" fill="var(--svg-ink-2)" font-size="9.5">index PCR + QC</text>
+<text x="666" y="98" fill="var(--svg-ink-2)" font-size="9.5">深度可自由选</text>
+<text x="666" y="114" fill="var(--svg-ink-2)" font-size="9.5">11 M / 0.7 M / 51 M</text>
+</g>
+<line x1="750" y1="90" x2="776" y2="90" stroke="var(--svg-rule)" stroke-width="1.6" marker-end="url(#wf-arrow)"/>
+
+<g data-tip-kicker="阶段 05" data-tip="分析：因为 barcode 没变，压缩数据可以直接落在参考数据的 UMAP 上（原文用 Harmony 共聚类），逐细胞、逐基因对比 10X 与压缩结果。" tabindex="0">
+<rect x="780" y="34" width="180" height="112" rx="12" fill="var(--svg-node)" stroke="var(--svg-rule)"/>
+<circle cx="818" cy="62" r="15" fill="var(--svg-1)" opacity=".18"/>
+<text x="818" y="67" text-anchor="middle" fill="var(--svg-1)" font-size="11" font-weight="700">05</text>
+<text x="856" y="62" fill="var(--svg-ink)" font-size="12.5" font-weight="600">分析</text>
+<text x="856" y="82" fill="var(--svg-ink-2)" font-size="9.5">BC 不变 → 可映射</text>
+<text x="856" y="98" fill="var(--svg-ink-2)" font-size="9.5">两段模型反解</text>
+<text x="856" y="114" fill="var(--svg-ink-2)" font-size="9.5">DEG / 分型 / 分群</text>
+</g>
+
+<!-- amplicon structure -->
+<text x="20" y="186" fill="var(--svg-ink-2)" font-size="10.5" font-weight="600">扩增子结构（压缩后仍保留 BC 与 UMI）</text>
+<rect x="20" y="200" width="82" height="30" fill="var(--svg-mute)" opacity=".28"/>
+<text x="61" y="219" text-anchor="middle" fill="var(--svg-ink)" font-size="10">R1</text>
+<rect x="102" y="200" width="86" height="30" fill="var(--svg-1)" opacity=".28"/>
+<text x="145" y="219" text-anchor="middle" fill="var(--svg-ink)" font-size="10">BC</text>
+<rect x="188" y="200" width="76" height="30" fill="var(--svg-1)" opacity=".45"/>
+<text x="226" y="219" text-anchor="middle" fill="var(--svg-ink)" font-size="10">UMI</text>
+<rect x="264" y="200" width="56" height="30" fill="var(--svg-mute)" opacity=".28"/>
+<text x="292" y="219" text-anchor="middle" fill="var(--svg-ink)" font-size="10">pT</text>
+<rect x="320" y="200" width="300" height="30" fill="var(--svg-2)" opacity=".26"/>
+<text x="470" y="219" text-anchor="middle" fill="var(--svg-ink)" font-size="10">3′ 基因特异序列</text>
+<rect x="620" y="200" width="66" height="30" fill="var(--svg-mute)" opacity=".28"/>
+<text x="653" y="219" text-anchor="middle" fill="var(--svg-ink)" font-size="10">poly-A</text>
+
+<!-- primer annotations -->
+<text x="20" y="266" fill="var(--svg-2)" font-size="10">PC（通用，过量；位于 R1 内）</text>
+<line x1="60" y1="252" x2="60" y2="234" stroke="var(--svg-2)" stroke-width="1.6" marker-end="url(#wf-arrow-accent)"/>
+<text x="360" y="266" fill="var(--svg-3)" font-size="10">PL（基因特异，限量；距 poly-A 100–200 nt）</text>
+<line x1="600" y1="252" x2="600" y2="234" stroke="var(--svg-3)" stroke-width="1.6" marker-end="url(#wf-arrow)"/>
+<text x="700" y="212" fill="var(--svg-ink-2)" font-size="9.5">嵌套引物 PC2 / PL2</text>
+<text x="700" y="228" fill="var(--svg-ink-2)" font-size="9.5">分别更靠 R1 内侧 / 更靠 3′ 端</text>
+
+<!-- pairing bracket -->
+<line x1="40" y1="312" x2="940" y2="312" stroke="var(--svg-1)" stroke-width="1.6" stroke-dasharray="6 5" marker-start="url(#wf-arrow-both)" marker-end="url(#wf-arrow-both)"/>
+<text x="490" y="300" text-anchor="middle" fill="var(--svg-1)" font-size="10.5" font-weight="600">同一份 10X 文库拆两半：一半标准测序做参考、一半压缩 —— barcode 相同，可逐细胞配对</text>
+</svg>
+</div>
+<figcaption><p class="sch-caption"><b>这张图的要点不是"五个步骤"，而是 01 与 05 之间的那条虚线</b>：压缩发生在 barcode 已经打好之后，因此参考数据与压缩数据<b>共享同一套细胞编号</b>，可以做到逐细胞、逐基因的配对比较——这是本文所有"R²=0.94/0.95/0.98"类论证能够成立的方法学前提。换一种说法：它不是一个新的单细胞平台，而是<b>一个可以随时插入现有流程的"读段重分配插件"</b>。</p></figcaption>
+</figure>
+
+<figure class="tbl">
+<figcaption><b>表 B</b>　可复现参数一览（全部转录自正文；Methods 不在本 PDF 内，故无法补全实验细节）</figcaption>
+<div class="table-wrap">
+<table class="cmp-table">
+<thead><tr><th>环节</th><th>参数 / 规模</th><th>出处</th></tr></thead>
+<tbody>
+<tr><td>原理验证（合成模板）</td><td>PE/PL = 50；Taq + TaqMan 探针读出；输入 10 pM–100 aM（5 个 log）；每档 3 重复</td><td>p.3 Fig.1j–k</td></tr>
+<tr><td>多重化优化</td><td>Taq 聚合酶 + Bio-Rad SsoAdvanced 抑菌缓冲液；4 重靶标测试</td><td>p.3</td></tr>
+<tr><td>8 靶标验证</td><td>PL = 15 nM，PE/PL = 10；R²=0.94–0.99</td><td>p.4</td></tr>
+<tr><td>96 / 192 靶标</td><td>96 个能量平衡引物，10 fM–100 aM；69/96 R²&gt;0.95（83% R²&gt;0.90）；人+酵母 96+96 双物种 R²&gt;0.98</td><td>p.4 Fig.1l–m</td></tr>
+<tr><td>单细胞面板（试点）</td><td>60 靶标（无嵌套）；barcode 覆盖 &gt;99%（10 万 reads 内）</td><td>p.4 Fig.2c</td></tr>
+<tr><td>单细胞面板（148 靶标）</td><td>嵌套 PCR；on-target 40%→70%；高丰度抑制 500–1,000×、稀有富集 5–10×</td><td>p.4</td></tr>
+<tr><td>500 基因免疫面板</td><td>486 基因 / 533 个 3′ 端 / 512 对引物（成功率 93%，覆盖 457 基因）；PL = 7.5 nM；测 11 M reads</td><td>p.4</td></tr>
+<tr><td>2,000 基因面板</td><td>2,086 基因（占总丰度 18.7%）；2,395 个 3′ 序列；4 个 ~500 基因子面板；186 个重复靶标；测 51 M reads</td><td>p.6</td></tr>
+<tr><td>参考数据集</td><td>10X 3′ mRNA；140 M reads；4,200 个细胞；≈33,000 reads/cell</td><td>p.4</td></tr>
+<tr><td>Shallow 模式</td><td>0.7 M reads（1/200×）；&lt;170 reads/cell</td><td>p.7</td></tr>
+<tr><td>AML 临床样本</td><td>Fluent（Illumina）PIP-seq；4 个样本（S0 健康、S1/S2 AML-M4、S3 AML-M2）；参考 38,000 reads/cell；压缩 600–800 reads/cell（1/50–60×）；最低下采样到 80 reads/cell（1/500×）</td><td>p.7–8</td></tr>
+<tr><td>AML 面板</td><td>1,000 基因免疫标记 panel（952 基因，1,084 靶标）</td><td>p.7</td></tr>
+<tr><td>分析工具</td><td>CellRanger 比对 + 自定义程序；Harmony 共聚类；preseq 估计文库复杂度；两段模型拟合（Supplementary Note 3）</td><td>p.6–7</td></tr>
+</tbody>
+</table>
+</div>
+<p class="table-note">表中缺的是"怎么定"：引物筛选阈值、反应体积/循环数、纯化方式、测序饱和度口径、统计检验与多重比较校正，都在未提供的 Methods 里。</p>
+</figure>
+
+<aside class="callout caveat">
+<p class="callout-label">Add-on 的隐性成本：这张流程图表没画的部分</p>
+<p>流程看上去只多了两步 PCR，但真正的成本在<b>引物池</b>：500–2,000 对引物要设计、合成、验证、平衡（原文 96 重的成功率只有 72%，500 基因的面板引物成功率 93%）；嵌套 PCR 多一轮循环与纯化；每个新 panel 都要重新做能量平衡与二聚体优化。作者的"&lt;$5 测序成本"只覆盖测序本身，<b>不含引物与人力</b> <span class="ev" data-ev="p.8">原文 p.8</span>。这一点在读成本结论时要一直记着。</p>
+</aside>
+</section>
+<section id="sec-fig1">
+<h2 id="sec-fig1">第一张图：先证明"分子真的能做对数变换"</h2>
+
+<p>Fig. 1 是全文的地基：如果 cPCR 不是精确的 log 编码器，后面所有单细胞结论都不成立。它分三层论证——<b>概念</b>（a–e：为什么压缩读段分配是可行的）、<b>机制</b>（f–i：两相扩增为什么等于对数）、<b>实测</b>（j–m：在合成模板与 96 重体系里到底准不准）。</p>
+
+<figure class="paper-fig" data-fig="fig1">
+<div class="pf-panels">
+<h4>逐面板解读</h4>
+<ul>
+<li><b>a–b</b><span><strong>压缩前后的基因丰度分布</strong>：横轴是拷贝数（1× 到 10<sup>5–6</sup>×），纵轴是基因数。a 是原始分布——典型的右偏长尾；b 是压缩后——分布被挤成一个窄峰（1×–100×），左右两个灰色箭头写明机制：<strong>左侧富集（enrich）、右侧抑制（suppress）</strong>。这是概念图，不含量化数据。<span class="ev" data-ev="p.3 Fig.1a–b">原文 p.3</span></span></li>
+<li><b>c</b><span><strong>跨领域的类比</strong>：(i) 图像处理里像素值有 90×/9×/1× 三级，压缩后统一；(ii) 测序里各序列的丰度条长短相差几个 log，压缩后差不多齐平。作者用这个面板把"压缩测序"接到 Shannon 以来的编码传统上——它不是生物学的发明，而是把信号处理的一条老原则搬进了试管 <span class="ev" data-ev="p.2 refs 38–41">原文 p.2</span>。</span></li>
+<li><b>d</b><span><strong>问题有多大（真实 10X 数据）</strong>：(i) PBMC 单细胞数据里基因表达呈双峰分布，横轴跨约 5 个 log；(ii) 累积读段曲线——<strong>前 10% 的基因吃掉约 80% 的读段</strong>，剩下 90% 的基因分 20%。这两张小图就是全文的成本论证：阴影区那撮基因决定了测序深度，却几乎不提供分型信息。<span class="ev" data-ev="p.3 Fig.1d">原文 p.3</span></span></li>
+<li><b>e</b><span><strong>压缩后会长什么样（模拟）</strong>：(i) 分布变成单峰窄分布（注意横轴仍是 10<sup>−8</sup>–1 的同一刻度）；(ii) 累积读段曲线接近线性——读段按基因数均匀分配。这是<strong>模拟</strong>，不是实验；它的作用是定义"理想压缩"的靶子。<span class="ev" data-ev="p.3 Fig.1e">原文 p.3</span></span></li>
+<li><b>f</b><span><strong>cPCR 的分子流程</strong>：PE（过量）与 PL（限量）夹住同一段模板 → 双引物指数扩增（Exp）→ PL 耗尽后只剩 PE 延伸，产生单链（Linear Amp.）→ 转成双链 → 上机。注意图里<strong>"Prolonged ('True') Linear Phase"</strong>的措辞：作者刻意把它与 qPCR 里"试剂耗尽的短暂线性段"区分开。<span class="ev" data-ev="p.3 Fig.1f">原文 p.3</span></span></li>
+<li><b>g</b><span><strong>转换公式</strong>：[Amp] = [P<sub>L</sub>]·(C + 1 − log<sub>2</sub>([P<sub>L</sub>]/[T])) = a·log<sub>2</sub>[T] + b。它把"两相扩增"翻译成一个仿射变换：<strong>斜率 a 由循环数与引物化学决定，截距 b 由 PL 浓度决定</strong>。这个公式是本文所有"定量"主张的源头。<span class="ev" data-ev="p.3 Fig.1g">原文 p.3</span></span></li>
+<li><b>h–i</b><span><strong>决定性的对照</strong>：h 是标准 PCR——不同起始浓度的曲线都是 <strong>S 形</strong>，终点全部饱和到同一平台，所以终点读不出起始量（只能靠 Ct 值，而 Ct 在高循环数下不再线性）；i 是 cPCR——不同起始浓度变成<strong>一组平行直线</strong>，在固定终点循环处读数，高低由起点决定。这一对面板是全文最漂亮的地方：<strong>同样一台 qPCR 仪、同样的终点读数，只有引入限量引物，输出才从"饱和"变成"对数"</strong>。<span class="ev" data-ev="p.3 Fig.1h–i">原文 p.3</span></span></li>
+<li><b>j</b><span><strong>原理验证的实时曲线</strong>：10 pM 到 100 aM 五个数量级 + NTC，每档 3 重复。可以看到 (1) 浓度越低曲线越晚起（指数相更长）；(2) 起得晚的最终也低，但差距被压得很小；(3) NTC 也有微弱信号——qPCR 的典型背景。<span class="ev" data-ev="p.3 Fig.1j">原文 p.3</span></span></li>
+<li><b>k</b><span><strong>端点读数 vs 输入浓度</strong>：双对数坐标上是一条直线，跨 10<sup>−4</sup>–10<sup>1</sup> pM（5 个 log），R²=0.99。<strong>这是"分子对数编码器"成立的直接证据</strong>：输入变化 10<sup>5</sup> 倍，输出只变化 &lt;10 倍 <span class="ev" data-ev="p.3">原文 p.3</span>。<span class="ev" data-ev="p.3 Fig.1k">原文 p.3</span></span></li>
+<li><b>l</b><span><strong>96 重体系的准确性</strong>：每一条彩色细线是一个靶标，横轴是靶标浓度（10 fM → 0.1 fM，即 100 aM），纵轴是归一化读段数。理想情况下 96 条线应该重合——图里确实收拢成一条带，但注意<strong>带很宽</strong>，且浓度越低越散。<span class="ev" data-ev="p.4 Fig.1l">原文 p.4</span></span></li>
+<li><b>m</b><span><strong>拟合残差</strong>：log<sub>10</sub> 残差基本落在 ±0.1 以内（虚线），换算成线性尺度是 CV&lt;30%。这是对"定量精度"最接近正面回答的面板——30% 的 CV 对 UMI 计数够用，对需要 2 倍效应的实验就偏粗了。<span class="ev" data-ev="p.4 Fig.1m">原文 p.4</span></span></li>
+</ul>
+</div>
+<aside class="callout caveat">
+<p class="callout-label">读图注意：这张图证明了什么、没证明什么</p>
+<p><b>它证明的是</b>：在纯化的合成模板 + 单重/96 重条件下，终点信号确实与模板浓度的 log 线性相关，且这种关系在 5 个数量级上成立。<b>它没有证明</b>：① 在真实细胞裂解液、几千种 cDNA 混杂的背景下还能保持；② 每个基因的 a、b 足够一致（图 l 的带宽本身就是反证的一半）；③ 压缩后的"读段数"仍然可以跨基因比较。<strong>第 ③ 点是全文最容易被读者自行补全、但原文并未直接证明的假设</strong> [推断]。另外，Fig. 1k 的 R²=0.99 是<strong>单重</strong>结果，多重化的 96 重里只有 72% 靶标达到 R²&gt;0.95 <span class="ev" data-ev="p.4">原文 p.4</span>——两个数字经常被混着引用。</p>
+</aside>
+<aside class="callout insight">
+<p class="callout-label">这张图在论证链上的位置</p>
+<p>它承担的是"<b>原理可行性</b>"这一环，而且承担得很干净：用 qPCR 仪这种人人有的设备、用合成模板这种人人能重复的体系，把"两相扩增 = 对数编码"从一个比喻变成一个可测的斜率。后面所有单细胞实验都建立在这个斜率上；如果斜率会随背景漂移，后面的一切都要重新标定。</p>
+</aside>
+</figure>
+
+<p>多重化的代价在这张图里已经露头：96 个"能量平衡"的引物、未做逐对优化的情况下，只有 <b>69/96（72%）</b>靶标达到 R²&gt;0.95，<b>83%</b> 达到 R²&gt;0.90 <span class="ev" data-ev="p.4">原文 p.4</span>；两物种混合实验（96 人 + 96 酵母）里固定组信号保持恒定、变化组 R²&gt;0.98 <span class="ev" data-ev="p.4">原文 p.4</span>。这说明：<b>cPCR 本身是稳的，但"多重化"这一步会掉靶</b>——而掉靶不是随机的，后面会看到它与引物效率、丰度都有关。</p>
+</section>
+
+<section id="sec-deep">
+<h2 id="sec-deep">第二张图：500 基因面板上的"Deep Sequencing"</h2>
+
+<p>这是全文信息量最大的一组实验。设计是：在同一个 PBMC 的 10X 3′ 文库上，先测一份 140 M reads 的标准参考（4,200 个细胞，≈33,000 reads/cell），再做一份 500 基因面板的压缩文库，测到 11 M reads（<b>约为参考的 1/13</b>），然后逐基因、逐 UMI 地比较 <span class="ev" data-ev="p.4 Fig.2e">原文 p.4</span>。</p>
+
+<p>面板本身值得单独看：作者从 RefSeq 里所有注释剪接异构体出发，取 486 个基因的 <b>533 个唯一 3′ 端序列</b>，设计出 512 对 cPCR 引物（<b>成功率 93%</b>，最终覆盖 457 个基因）<span class="ev" data-ev="p.4">原文 p.4</span>。也就是说，从一开始就有约 7% 的基因"设计不出来"或"验证不过"——这是 panel 方法的结构性偏差，原文没有分析失败基因是否集中在某些丰度段。</p>
+
+<figure class="paper-fig" data-fig="fig2">
+<div class="pf-panels">
+<h4>逐面板解读</h4>
+<ul>
+<li><b>a</b><span><strong>Workflow 与扩增子结构</strong>：10X mRNA → Compression Sequencing → NGS → 单细胞分析。放大框里画的是引物位置：<strong>P<sub>C</sub>（通用过量）在 R1 一侧、P<sub>L</sub>（基因特异限量）在 3′ 基因序列一侧</strong>，中间依次是 BC（barcode）、UMI、pT（poly-T）。这解释了为什么压缩后还能按细胞计数。<span class="ev" data-ev="p.5 Fig.2a">原文 p.5</span></span></li>
+<li><b>b</b><span><strong>四步实验流程</strong>：10X 文库 → Compression PCR → Nested PCR → 文库制备/QC → Illumina 测序。嵌套 PCR 是"可扩展性"的关键补丁（见文字部分）。<span class="ev" data-ev="p.5 Fig.2b">原文 p.5</span></span></li>
+<li><b>c</b><span><strong>Barcode 覆盖</strong>：Venn 图，两套数据共享 <strong>3,757</strong> 个 barcode，10X 独有 317、压缩独有 258。原文另称"从 10 万 reads 起 barcode 覆盖 &gt;99%" <span class="ev" data-ev="p.4">原文 p.4</span>。读法上要注意：<strong>共享 3,757 并不等于"99% 覆盖"</strong>——两者来自不同的稀释曲线口径，不能互换引用。<span class="ev" data-ev="p.5 Fig.2c">原文 p.5</span></span></li>
+<li><b>d</b><span><strong>动态范围压缩的直接可视化</strong>：蓝线是 10X 的丰度分布（横跨约 5 个 log），橙线是压缩后的（约 2 个 log），图上标了 <strong>~5 logs → ~2 logs</strong>。这是全文最直观的一张"前后对比"，对应文字里的"~1,000 倍动态范围压缩"。<span class="ev" data-ev="p.5 Fig.2d">原文 p.5</span></span></li>
+<li><b>e</b><span><strong>总读段与逐基因读段的双向变化（log₂ 尺度）</strong>：Total 一列是负值（总 reads 约 −4.2、mapped 约 −4.6），Per-gene 一列是正值（reads 约 +2.7、UMIs 约 +0.9），右侧橙色箭头写 <strong>140× boost</strong>。这是全文最关键、也最容易被误读的一张柱状图：<strong>它把"总预算减少"和"单基因得到更多"并列</strong>，图注称两者合并为 140× overall enrichment。注意 140 不是"精度提升 140 倍"：把两个 log₂ 比值粗乘约得 10² 量级，精确分解依赖未随本文件提供的 Supplementary Note 3 [推断]。<span class="ev" data-ev="p.5 Fig.2e">原文 p.5</span></span></li>
+<li><b>f</b><span><strong>读段重新分配（箱内视角）</strong>：低丰度基因的读段占比 <strong>1.5% → 7.4%（5×）</strong>，高丰度基因 <strong>43% → 22%（约 2×）</strong>。这才是在 panel <strong>内部</strong>能测到的纯压缩效应，量级是 2–5×，与 headline 的 100× 差两个数量级（见第 11 节）。<span class="ev" data-ev="p.5 Fig.2f">原文 p.5</span></span></li>
+<li><b>g</b><span><strong>逐基因散点</strong>：横轴 10X 表达（reads），纵轴压缩后 reads。虚线给出压缩趋势，图中标注"compressed（~1.5 logs）vs original（~3 logs）"——原始 3 个 log 的跨度被压到 1.5 个 log。低丰度端（左下）明显偏离趋势线向上，即"被放大"。<span class="ev" data-ev="p.5 Fig.2g">原文 p.5</span></span></li>
+<li><b>h</b><span><strong>分箱 + 两段拟合（reads）</strong>：把 g 的散点按丰度分箱画箱线图，再叠一条两段模型曲线：<strong>低丰度段斜率≈1（线性放大），高丰度段斜率&lt;1（对数压缩）</strong>，拟合参数 k=6.1，<strong>过渡点标在 370 reads</strong>。这是"压缩是自靶向的"这一解释的原始出处。<span class="ev" data-ev="p.5 Fig.2h">原文 p.5</span></span></li>
+<li><b>i</b><span><strong>同上的 UMI 版本</strong>：纵轴换成压缩后 UMI，k=1.8，过渡点 <strong>220 UMIs</strong>。UMI 的压缩比 reads 温和——因为 UMI 计数还叠了一层"读段随机抽样"，稀释了压缩。<strong>这一张是"灵敏度"主张的核心图</strong>：低丰度端 UMI 被抬高。<span class="ev" data-ev="p.5 Fig.2i">原文 p.5</span></span></li>
+<li><b>j</b><span><strong>UMI 层面逐基因解剖（8 个例子）</strong>：每个基因给出 UMI 交集（蓝=10X、橙=压缩）与"每 UMI 的读段数"散点，右下角 k 是压缩因子。左侧高丰度基因（CD52 32,000 UMIs，k=0.60）压缩后 UMI <strong>反而少了</strong>（25.1k+6.9k → 6.9k+6.1k，约 32k→13k）；右侧稀有基因（CXCL3 80、CCL23 3）压缩后 UMI 多出约 3–12 倍（k=14–23）。<strong>这张图是全文最诚实的图</strong>：它自己把"信息不是单调增加，而是重新分配"画了出来。<span class="ev" data-ev="p.5 Fig.2j">原文 p.5</span></span></li>
+<li><b>k</b><span><strong>UMI 覆盖率的总体分布</strong>：小提琴图，10X 中位数 <strong>36%</strong>，压缩 <strong>64%</strong>。注意这是"互相交集"估计出的覆盖率（以两套数据 UMI 集合的并/交推算），<strong>不是绝对真值</strong>——原文未在本 PDF 中说明估计公式。<span class="ev" data-ev="p.5 Fig.2k">原文 p.5</span></span></li>
+<li><b>l</b><span><strong>面板规模的稳健性</strong>：整块 500 基因面板 vs 三个 250 基因子集，R²=0.92–0.96。说明"抽掉一半靶标"不会显著改变压缩后的读数——这是对多重化互相干扰的一个间接检验。<span class="ev" data-ev="p.5 Fig.2l">原文 p.5</span></span></li>
+</ul>
+</div>
+<aside class="callout caveat">
+<p class="callout-label">读图注意：三个最容易踩的坑</p>
+<p><b>① 140× 不是"测量精度提升 140 倍"。</b>它是"总读段省了约 13–18 倍"乘"每个基因分到的读段多了约 6.5 倍"的乘积；前者来自"只测 457 个基因"，后者才部分来自压缩。把它读成"灵敏度 ×140"会高估方法本身。</p>
+<p><b>② UMI 覆盖率 64% vs 36% 不是"压缩让分子变多"。</b>分子数没变，变的是"被抽样到的概率"。而覆盖率的中位数掩盖了分布：高丰度基因的覆盖率在压缩后是下降的（见 j 的 CD52）。</p>
+<p><b>③ 过渡点 370 reads / 150 UMIs 是拟合出来的，不是设计出来的。</b>它取决于 PL 浓度、细胞数、panel 组成与测序深度；换一个 panel 或换一个细胞数，这个点会移动。原文没有给出"如何为新 panel 估计过渡点"的配方（Supplementary Note 3 不在本文件内）。</p>
+</aside>
+<aside class="callout insight">
+<p class="callout-label">这张图真正的说服力在哪</p>
+<p>不在 140×，而在 <b>j 面板的诚实</b>：作者主动展示了 CD52 这类高丰度基因损失了一半以上的 UMI。一个只想卖方法的人不会放这张图。从证据角度，这反而让"信息重新分配、而非凭空增加"的核心叙事可信——读者可以用它反推方法的适用边界：<strong>如果你关心的是高丰度基因的精确计数，压缩是负收益；如果你关心的是稀有基因的检出与分型，压缩是正收益</strong>。</p>
+</aside>
+</figure>
+</section>
+
+<section id="sec-model">
+<h2 id="sec-model">机制：压缩为什么是「自靶向」的</h2>
+
+<p>Fig. 2h–i 的两段模型值得单独拆开讲，因为它是全文唯一一个"机制解释 + 定量拟合"同时给出的地方，也是所有"为什么能省"论证的枢纽。</p>
+
+<p>模型只有一句话：<b>低丰度基因在整个反应里都没能让 PL 耗尽，所以它走完指数相、产物与输入成正比（等价于普通 PCR）；高丰度基因提前耗尽 PL，被迫进入对数段</b>。于是压缩这件事自动只作用于"高丰度那一侧"——不需要事先知道哪些基因高，也不需要按表达水平做任何预设。作者称这一点为 "unbiased" <span class="ev" data-ev="p.2">原文 p.2</span>，从机制上说确实是自洽的。</p>
+
+<figure class="schematic">
+<div class="sch-head">
+<span class="sch-badge data">数据转录自 Fig. 2h–i（未重新分析）</span>
+<span class="sch-source">两段模型示意 · 过渡点与倍数取自原文 p.4–5</span>
+</div>
+<div class="sch-canvas">
+<svg viewBox="0 0 940 380" role="img" aria-labelledby="segTitle segDesc">
+<title id="segTitle">压缩后读段与输入表达量的两段关系：低丰度线性放大、高丰度对数压缩</title>
+<desc id="segDesc">双对数坐标示意图。低丰度区间压缩后读段与输入成比例（线性放大，约 6 倍）；在过渡点约 370 reads（约 150 UMIs）之后转为对数压缩，中高丰度基因的读段被压低，动态范围被压缩约 30 倍。灰虚线表示如果全范围都做对数压缩，低丰度基因会被一并压低、灵敏度反而更差。</desc>
+<defs>
+<marker id="seg-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="var(--svg-1)"/></marker>
+<marker id="seg-arrow-accent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="var(--svg-accent)"/></marker>
+</defs>
+
+<!-- axes -->
+<line x1="80" y1="280" x2="620" y2="280" stroke="var(--svg-rule)" stroke-width="1" marker-end="url(#seg-arrow)"/>
+<line x1="80" y1="280" x2="80" y2="76" stroke="var(--svg-rule)" stroke-width="1" marker-end="url(#seg-arrow)"/>
+<text x="360" y="314" text-anchor="middle" fill="var(--svg-ink-2)" font-size="11">输入表达量（10X reads，log）→</text>
+<text x="30" y="178" text-anchor="middle" fill="var(--svg-ink-2)" font-size="11" transform="rotate(-90 30 178)">压缩后 reads（log）→</text>
+<text x="80" y="296" text-anchor="middle" fill="var(--svg-mute)" font-size="9.5">1</text>
+<text x="184" y="296" text-anchor="middle" fill="var(--svg-mute)" font-size="9.5">10</text>
+<text x="288" y="296" text-anchor="middle" fill="var(--svg-mute)" font-size="9.5">10²</text>
+<text x="392" y="296" text-anchor="middle" fill="var(--svg-mute)" font-size="9.5">10³</text>
+<text x="496" y="296" text-anchor="middle" fill="var(--svg-mute)" font-size="9.5">10⁴</text>
+<text x="600" y="296" text-anchor="middle" fill="var(--svg-mute)" font-size="9.5">10⁵</text>
+
+<!-- counterfactual -->
+<line x1="122" y1="172" x2="600" y2="117" stroke="var(--svg-mute)" stroke-width="1.2" stroke-dasharray="5 4"/>
+
+<!-- transition guides -->
+<line x1="347" y1="146" x2="347" y2="280" stroke="var(--svg-3)" stroke-width="1.1" stroke-dasharray="4 4"/>
+<line x1="80" y1="146" x2="347" y2="146" stroke="var(--svg-3)" stroke-width="1.1" stroke-dasharray="4 4" opacity=".55"/>
+
+<!-- segment 1 -->
+<line x1="122" y1="233" x2="347" y2="146" stroke="var(--svg-1)" stroke-width="8" opacity=".12"/>
+<line x1="122" y1="233" x2="347" y2="146" stroke="var(--svg-1)" stroke-width="2.2"/>
+<!-- segment 2 -->
+<line x1="347" y1="146" x2="600" y2="117" stroke="var(--svg-2)" stroke-width="8" opacity=".16"/>
+<line x1="347" y1="146" x2="600" y2="117" stroke="var(--svg-2)" stroke-width="2.2"/>
+<circle cx="347" cy="146" r="4.2" fill="var(--svg-3)"/>
+
+<!-- read reallocation arrow -->
+<path d="M 585 262 C 500 250, 330 250, 250 262" fill="none" stroke="var(--svg-accent)" stroke-width="1.5" marker-end="url(#seg-arrow-accent)"/>
+<text x="418" y="248" text-anchor="middle" fill="var(--svg-accent)" font-size="10">读段从高丰度一侧挪到稀有基因一侧</text>
+
+<!-- legend / annotations -->
+<text x="636" y="104" fill="var(--svg-ink)" font-size="10.5" font-weight="700">读法</text>
+<line x1="636" y1="124" x2="660" y2="124" stroke="var(--svg-1)" stroke-width="2.6"/>
+<text x="668" y="128" fill="var(--svg-ink)" font-size="10">① 低丰度：线性放大（≈6×）</text>
+<text x="668" y="144" fill="var(--svg-ink-2)" font-size="9.5">PL 未耗尽 → 走完指数相</text>
+<line x1="636" y1="166" x2="660" y2="166" stroke="var(--svg-2)" stroke-width="2.6"/>
+<text x="668" y="170" fill="var(--svg-ink)" font-size="10">② 高丰度：对数压缩</text>
+<text x="668" y="186" fill="var(--svg-ink-2)" font-size="9.5">PL 提前耗尽 → 中高丰度范围压 ~30×</text>
+<line x1="636" y1="208" x2="660" y2="208" stroke="var(--svg-mute)" stroke-width="1.6" stroke-dasharray="5 4"/>
+<text x="668" y="212" fill="var(--svg-ink)" font-size="10">反事实：全范围都做 log</text>
+<text x="668" y="228" fill="var(--svg-ink-2)" font-size="9.5">低丰度会被一并压低，灵敏度更差</text>
+<text x="636" y="254" fill="var(--svg-3)" font-size="10" font-weight="600">过渡点 ≈370 reads</text>
+<text x="636" y="270" fill="var(--svg-3)" font-size="9.5">≈150 UMIs（0.035/cell）</text>
+<text x="636" y="300" fill="var(--svg-ink-2)" font-size="9.5">自靶向：耗尽 PL 的时刻</text>
+<text x="636" y="316" fill="var(--svg-ink-2)" font-size="9.5">本身就是丰度的函数，</text>
+<text x="636" y="332" fill="var(--svg-ink-2)" font-size="9.5">反应不需要知道谁高谁低。</text>
+<text x="636" y="360" fill="var(--svg-mute)" font-size="9">示意：曲线形状非精确数据</text>
+</svg>
+</div>
+<figcaption><p class="sch-caption"><b>读法</b>：两段线都是"读段随输入增长"，但斜率不同。低丰度段斜率≈1（输入翻倍、读段翻倍，跟普通 PCR 一样）；高丰度段斜率&lt;1（输入翻 100 倍，读段只翻几倍）。<strong>虚线是个"反事实"：如果没有这个拐点、全范围都做 log，低丰度基因会被一并压低，灵敏度反而更差</strong>——两段结构才是这个方法的精髓。</p></figcaption>
+</figure>
+
+<p>把 Fig. 2e–k 的数字按这个模型排一遍，逻辑就清楚了：</p>
+
+<ul>
+<li><b>低丰度端</b>：线性放大 ≈6× 读段；再叠加"只测 panel 内基因"带来的读段集中，最终单基因读段增益约 6.5×，稀有基因的 UMI 平均 +1.9×、最高 +5× <span class="ev" data-ev="p.4">原文 p.4</span>。</li>
+<li><b>高丰度端</b>：读段被压 30× 的动态范围，高丰度读段占比 43%→22% <span class="ev" data-ev="p.4">原文 p.4</span>；代价是这些基因的 UMI 减少（CD52 例）。</li>
+<li><b>整体</b>：总 reads 约 1/13–1/18 而每基因 reads 约 6.5×，作者表述为"140× 总体富集" <span class="ev" data-ev="p.5 Fig.2e">原文 p.5</span>。</li>
+</ul>
+
+<p>[推断] 这套机制解释里最弱的一环是 <b>"逐基因的 a、b 相同"</b>。公式对每个基因都成立，但 a（斜率）与 b（截距）实际由引物对的扩增效率、Tm、二聚体倾向决定。作者用"能量平衡引物 + 逐对热力学优化"压低这种差异，并用掺入参考序列做浓度校准 <span class="ev" data-ev="p.4">原文 p.4</span>，但本 PDF 没有给出"96 个靶标的 a、b 分布"。Fig. 1l 里 96 条线并不完全重合（带宽较宽），提示逐基因差异是真实存在的——这也是为什么后面的单细胞比较都是"逐基因 vs 10X 的同基因"，而不是"跨基因比较绝对水平"。</p>
+</section>
+<section id="sec-fig3">
+<h2 id="sec-fig3">第三张图：2,000 基因面板与"更有底气的 DEG"</h2>
+
+<p>500 基因面板证明"能压"，2,000 基因面板要证明"压完还能做真正的免疫学分析"。面板构成：<b>2,086 个免疫标记/签名基因</b>，合计占 10X 文库总丰度的 <b>18.7%</b>；拆成 4 个约 500 基因的子面板并行做，其中 186 个靶标在四个子面板里重复出现，用来做跨面板一致性检验 <span class="ev" data-ev="p.6">原文 p.6</span>。压缩文库测到 <b>51 M reads（约为参考的 1/3）</b>。</p>
+
+<p>结果的关键数字：读段从高丰度端向低丰度端重新分配（高丰度 <b>4.4×</b> 减少、低丰度 <b>5.1×</b> 富集）；稀有基因获得 <b>10.6× reads / 2.5× UMIs</b>；动态范围压缩 <b>30×</b>；UMI 覆盖 <b>67% vs 27%</b> <span class="ev" data-ev="p.6">原文 p.6</span>。这些与 500 基因实验方向一致、量级略有差异，说明压缩行为随 panel 规模变化但不会失效。</p>
+
+<figure class="paper-fig" data-fig="fig3">
+<div class="pf-panels">
+<h4>逐面板解读</h4>
+<ul>
+<li><b>a</b><span><strong>不同面板规模下的富集倍数</strong>：四组柱（Immune 500、Immune 1,000、Gene Signature 1,000、Combined 2,000），绿=reads、黄=UMIs。读数：reads 富集约 <strong>6× / 6.8× / 12.5× / 10.6×</strong>，UMIs 约 <strong>2.1× / 2.0× / 3.1× / 2.5×</strong>。注意 <strong>reads 富集明显高于 UMI 富集</strong>——因为"多读段"并不能自动变成"多分子检出"，这一差距本身就是方法的天花板（见 i 面板的随机抽样项）。<span class="ev" data-ev="p.6 Fig.3a">原文 p.6</span></span></li>
+<li><b>b</b><span><strong>富集倍数 vs 表达丰度</strong>：横轴 10X 表达（UMIs），纵轴富集倍数（log）。低丰度端富集约 6–10×，随丰度升高下降，<strong>过渡点标在 210 UMI</strong>；高丰度端降到 1 以下（即"被压缩"）。这张图是 500 基因面板 Fig. 2h 的复现，说明两段行为不是单次实验的偶然。<span class="ev" data-ev="p.6 Fig.3b">原文 p.6</span></span></li>
+<li><b>c</b><span><strong>DEG 重叠（核心图）</strong>：五个 Venn，分别对应 B / T / NK / Monocytes / All cells；蓝=仅 10X，橙=仅压缩，中间=共有。读数：B 13/48/23、T 20/156/70、NK 14/86/42、Mono 32/185/59、All <strong>79/475/194</strong>。合计 DEG 从 <strong>554（10X）</strong> 增加到 <strong>669（压缩）</strong>，即 <strong>+21%</strong>。四个细胞类型分别为 +12% 到 +28%（原文 p.6）。<span class="ev" data-ev="p.6 Fig.3c">原文 p.6</span></span></li>
+<li><b>d</b><span><strong>多出来的 DEG 在哪个丰度段</strong>：横轴是 10X 的每个细胞 UMI 丰度分箱（0–0.01、0.01–0.1、0.1–1.0、1.0–10、10–100），纵轴 DEG 数，颜色分细胞类型，橙框=cPCR、蓝框=10X。关键读数：<strong>增量几乎全部落在 0.1–1.0 UMI/cell 这一箱</strong>（<1 个 UMI 的基因在 10X 里本来就没法稳定检出）。这正面回答了"多出的 DEG 是不是靠不住的低表达基因"——是低表达基因，但恰恰是压缩声称要救的那一段。<span class="ev" data-ev="p.6 Fig.3d">原文 p.6</span></span></li>
+<li><b>e</b><span><strong>共享 DEG 的效应量一致性</strong>：横轴 10X 的 Log2FC，纵轴压缩后的 Log2FC；图内标注 R²=0.94，拟合 <strong>y = 0.70x − 0.03</strong>。注意：<strong>正文同一处写的是“Log2FC R²=0.98”</strong>（p.6），与图内 0.94 不一致；正文还并列引用了 Extended Data Fig. 3p，两个数字可能来自不同比较，但本 PDF 无法核对 [推断]。这是全文最重要、也最被轻描淡写的一个数字：<strong>斜率 0.70 意味着压缩后的效应量整体被衰减约 30%</strong>。作者解释为"10X 在近零 UMI 时比值膨胀"<span class="ev" data-ev="p.6">原文 p.6</span>，但压缩本身也会衰减 log 尺度上的差异（见第 11 节）。<span class="ev" data-ev="p.6 Fig.3e">原文 p.6</span></span></li>
+<li><b>f</b><span><strong>跨样本可重复性（全文最巧的对照）</strong>：同一套流程在两个生物学独立供体上各做一次标准 + 压缩测序，取"两个样本都检出"的 DEG 数。读数：B 约 5 vs 10、T 约 38 vs 14、NK 约 40 vs 10、Mono 约 50 vs 18、合计 <strong>约 115 vs 40</strong>（压缩 vs 10X）。更关键的是重叠率：<strong>压缩独有的 DEG 在两个供体间重合 45%，而 10X 独有的只重合 21%</strong> <span class="ev" data-ev="p.6">原文 p.6</span>。如果压缩多出的 DEG 是噪声，跨供体不该重合——这是"多出来的 DEG 是真的"最有力的间接证据。<span class="ev" data-ev="p.6 Fig.3f">原文 p.6</span></span></li>
+</ul>
+</div>
+<aside class="callout caveat">
+<p class="callout-label">读图注意：<b>c</b> 与 <b>e</b> 面板的两处"技术性陷阱"</p>
+<p><b>① Venn 图的数字不能直接相加比较"谁更强"。</b>"仅压缩检出"的 194 个 DEG 中，会有一部分在更深的 10X 里也能检出（只是没达到显著阈）；反过来，"仅 10X"的 79 个在压缩里可能是引物失败或压缩后 UMI 太少。真正可比的是"在<strong>相同测序预算</strong>下谁多"——而这点本文是用"1/3 深度 vs 全深度"做的，属于对压缩有利的不对称比较。</p>
+<p><b>② 斜率 0.70 不是小事。</b>如果读者要把压缩数据直接塞进现成的差异分析流程、并沿用同一套 fold-change 阈值（比如 |log2FC|&gt;1），<strong>压缩数据会系统性地更难通过阈值</strong>。原文只在讨论里用一句"ratio inflation"带过，没有给出校正方案——这是本 PDF 主文里最明显的一个"未完成接口"。</p>
+</aside>
+<aside class="callout insight">
+<p class="callout-label">为什么我认为 <b>f</b> 面板是这篇论文最该被同行学走的设计</p>
+<p>"我的新方法检出更多差异基因"是单细胞方法论文里最廉价的主张，因为更深的测序、更宽松的阈值、更大的细胞数都能做到。本文的 45% vs 21% 提供了一个<b>不依赖 ground truth 的判别器</b>：如果新增检出是真信号，它应该在独立生物学重复里重现；如果是噪声，重现率会掉到随机水平。这个对照不需要额外的湿实验，只需要再做一次样本 —— 任何声称"更灵敏"的方法都应该补这一张图。</p>
+</aside>
+</figure>
+</section>
+
+<section id="sec-fig4">
+<h2 id="sec-fig4">第四张图：把省下来的深度花在"更多细胞"上</h2>
+
+<p>同一套化学可以往另一个方向用：不追求"更深"，而是把压缩带来的效率换成"更浅但更多"。作者把 500 基因面板的压缩文库只测到 <b>0.7 M reads</b>——相对 140 M 的参考是 <b>1/200×</b>，相当于每个细胞 <b>&lt;170 reads</b> <span class="ev" data-ev="p.7">原文 p.7</span>——然后问：这么浅还能不能分细胞、找 DEG？</p>
+
+<figure class="schematic">
+<div class="sch-head">
+<span class="sch-badge">AI 重绘示意图（非原文图）</span>
+<span class="sch-source">两种用法对照 · 数字转录自 p.4–8 正文</span>
+</div>
+<div class="sch-canvas">
+<svg viewBox="0 0 940 320" role="img" aria-labelledby="modeTitle modeDesc">
+<title id="modeTitle">同一份压缩文库的两种用法：Deep 与 Shallow</title>
+<desc id="modeDesc">压缩文库可分成两条路径：测 1100 万 reads 的 Deep 模式用于提高稀有转录本灵敏度；测 70 万 reads 的 Shallow 模式用于降低单细胞成本、扩大细胞数。AML 实例中 60–80 万 reads/cell 仍能保持细胞分型准确。</desc>
+<defs>
+<marker id="mode-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="var(--svg-rule)"/></marker>
+</defs>
+<rect x="356" y="18" width="228" height="52" rx="12" fill="var(--svg-1-soft)" stroke="var(--svg-1)"/>
+<text x="470" y="40" text-anchor="middle" fill="var(--svg-ink)" font-size="12" font-weight="700">同一份压缩文库</text>
+<text x="470" y="58" text-anchor="middle" fill="var(--svg-ink-2)" font-size="9.5">压缩程度由 PL 浓度预先设定</text>
+<path d="M 420 70 L 250 116" stroke="var(--svg-rule)" stroke-width="1.6" marker-end="url(#mode-arrow)"/>
+<path d="M 520 70 L 690 116" stroke="var(--svg-rule)" stroke-width="1.6" marker-end="url(#mode-arrow)"/>
+
+<rect x="60" y="120" width="380" height="132" rx="12" fill="var(--svg-node)" stroke="var(--svg-1)" stroke-width="1.2"/>
+<text x="76" y="144" fill="var(--svg-1)" font-size="12" font-weight="700">Deep Sequencing · 买灵敏度</text>
+<text x="76" y="166" fill="var(--svg-ink)" font-size="10">11 M reads（≈1/13 参考）</text>
+<text x="76" y="184" fill="var(--svg-ink)" font-size="10">效率 100–140×；稀有基因 UMI 2–5×</text>
+<text x="76" y="202" fill="var(--svg-ink)" font-size="10">DEG +21%；UMI 覆盖 64% vs 36%</text>
+<text x="76" y="228" fill="var(--svg-ink-2)" font-size="9.5">用途：稀有转录本、低表达 TF / 趋化因子、</text>
+<text x="76" y="242" fill="var(--svg-ink-2)" font-size="9.5">小亚群、机制发现</text>
+
+<rect x="500" y="120" width="380" height="132" rx="12" fill="var(--svg-node)" stroke="var(--svg-2)" stroke-width="1.2"/>
+<text x="516" y="144" fill="var(--svg-2)" font-size="12" font-weight="700">Shallow Sequencing · 买细胞数</text>
+<text x="516" y="166" fill="var(--svg-ink)" font-size="10">0.7 M reads（1/200×）；&lt;170 reads/cell</text>
+<text x="516" y="184" fill="var(--svg-ink)" font-size="10">DEG 覆盖 79%；ARI 0.78（T+NK 合并 0.97）</text>
+<text x="516" y="202" fill="var(--svg-ink)" font-size="10">Log2FC 一致性 R²=0.95，斜率 0.95</text>
+<text x="516" y="228" fill="var(--svg-ink-2)" font-size="9.5">用途：大规模筛查、图谱、</text>
+<text x="516" y="242" fill="var(--svg-ink-2)" font-size="9.5">临床分型（AML 实例 1/50–1/500×）</text>
+
+<text x="470" y="288" text-anchor="middle" fill="var(--svg-ink-2)" font-size="10">AML：600–800 reads/cell（1/50–60×）ARI 0.80–0.82；下采样到 80 reads/cell（1/500×）仍 85–92% 准确率</text>
+<text x="470" y="306" text-anchor="middle" fill="var(--svg-mute)" font-size="9">同一化学、同一 panel：选择"测多深"等于选择"买灵敏度还是买样本量"</text>
+</svg>
+</div>
+<figcaption><p class="sch-caption"><b>读法</b>：这不是两种方法，而是同一个方法的两个操作点。作者的核心卖点也在这里——<strong>压缩把"深度"从硬约束变成了可调参数</strong>。但也因此，Deep 与 Shallow 的所有数字都绑定在"500–2,000 基因 panel"这个前提下，不能外推到全转录组（作者自己把全转录组列为 future work）。</p></figcaption>
+</figure>
+
+<figure class="paper-fig" data-fig="fig4">
+<div class="pf-panels">
+<h4>逐面板解读</h4>
+<ul>
+<li><b>a</b><span><strong>UMAP 对比</strong>：(i) 是 10X 全深度（140 M reads），(ii) 是压缩浅测（0.7 M，1/200×），坐标是同一套投影。四类细胞（B、T、NK、Monocytes）位置基本一致——<strong>但要注意 (ii) 是把压缩数据"映射"到 10X 的投影上</strong>，不是独立降维后再比，所以这张图证明的是"标签可迁移"，不是"独立聚类得到同样结构"。<span class="ev" data-ev="p.7 Fig.4a">原文 p.7</span></span></li>
+<li><b>b</b><span><strong>DEG 覆盖（最有信息量的柱状图）</strong>：四组柱分别是 10X 全深度、10X 1/10×、10X 1/100×、cPCR 1/200×。读数：B 细胞四组约 75 / 40 / 8 / 55；T 约 125 / 75 / 20 / 100；NK 约 100 / 55 / 20 / 90；Monocytes 约 170 / 135 / 45 / 130；Total 约 470 / 310 / 95 / <strong>370（79%）</strong>。关键对比：<strong>cPCR 在 1/200× 的深度下，DEG 覆盖超过了 10X 在 1/10× 的深度、远高于 1/100× 的 10X（&lt;15%）</strong>。这比"跟全深度比"公平得多。<span class="ev" data-ev="p.7 Fig.4b">原文 p.7</span></span></li>
+<li><b>c</b><span><strong>效应量一致性</strong>：共享 DEG 的 Log2FC 对比，R²=0.95、斜率 0.95。注意与 Fig. 3e 的对比：<strong>浅测模式的斜率是 0.95，深测模式是 0.70</strong>。同一方法、同一 panel，斜率随深度变化——这提示斜率 0.70 更可能与"高丰度基因在深测模式下被压缩"有关，而不只是 10X 的比值膨胀（见第 11 节）。<span class="ev" data-ev="p.7 Fig.4c">原文 p.7</span></span></li>
+<li><b>d</b><span><strong>火山图互检</strong>：(i) 是 10X 的火山图，(ii) 是压缩的火山图；蓝点 = 压缩检出的 top 100 基因，(ii) 里橙点 = 10X 检出的 top 100，灰点是其余。两侧的"对方 top 100"都落在自己火山图的显著臂上，说明<strong>两种方法挑出的强信号高度互认</strong>。这是一个 rank-based 的一致性检验，不做绝对阈值假设。<span class="ev" data-ev="p.7 Fig.4d">原文 p.7</span></span></li>
+</ul>
+</div>
+<aside class="callout caveat">
+<p class="callout-label">读图注意：<b>b</b> 面板的对照设计值得学，但有一个口径要问清楚</p>
+<p>b 面板是全文唯一把"同等深度下的 10X 下采样"和"压缩"放在一起比的地方，这是正确的对照思想。但 <b>1/100× 的 10X 与 1/200× 的 cPCR 并不是"同等深度"</b>——前者是 1.4 M reads、后者是 0.7 M reads；cPCR 用更少的 reads 拿到更多 DEG，这才是它的主张。真正严格的对照应该是"1/200× 的 10X 下采样"，原文这里取的是 1/100×（对 10X 稍有利，因此不构成夸大）。另外，ARI=0.78 不算高，原文也承认要靠"合并 T 与 NK"才到 0.97——<strong>这说明 panel 在浅测时最难分辨的是 T/NK 这类转录组相近的细胞</strong>。</p>
+</aside>
+</figure>
+</section>
+
+<section id="sec-fig5">
+<h2 id="sec-fig5">第五张图：AML 临床样本，把"$10/样本"摆上桌</h2>
+
+<p>这是全文的"落地"章节，也是样本最薄、主张最大的一章。设计：3 例 AML 患者（S1、S2 为 M4，S3 为 M2）+ 1 例健康对照（S0），用 Fluent（Illumina）的 PIP-seq 做无微流控 barcoding <span class="ev" data-ev="p.7 ref17">原文 p.7</span>；先按标准深度测参考（<b>38,000 reads/cell</b>），再对同一文库做压缩 + 浅测（<b>600–800 reads/cell，1/50–60×</b>），并进一步下采样到 <b>80 reads/cell（1/500×）</b> <span class="ev" data-ev="p.7–8">原文 p.7–8</span>。分析面板是 1,000 个免疫标记基因（952 基因 / 1,084 靶标）。</p>
+
+<figure class="paper-fig" data-fig="fig5">
+<div class="pf-panels">
+<h4>逐面板解读</h4>
+<ul>
+<li><b>a</b><span><strong>四个样本共聚类的 UMAP</strong>：标注了髓系（成髓细胞、成熟中的粒细胞）、单核细胞系、B / T / NK、红系（RBC）与血小板（Platelets）。三个 AML 样本的病理性母细胞（blasts）明显<strong>溢出到健康细胞群之外</strong>——这是复现"疾病状态"的第一层证据。<span class="ev" data-ev="p.8 Fig.5a">原文 p.8</span></span></li>
+<li><b>b</b><span><strong>逐样本 UMAP 与 FAB 判据</strong>：S0（健康）无异常亚群；S1、S2 标出 <strong>&gt;30% blasts、30–80% 单核细胞</strong>（AML-M4 判据）；S3 标出 <strong>&gt;30% blasts、&lt;20% 单核、&gt;10% 成熟粒细胞</strong>（AML-M2 判据）。这些百分比判据来自 FAB 分类 <span class="ev" data-ev="p.7 refs 55–56">原文 p.7</span>，作者用转录组 marker 把细胞分类后计算比例，再与判据比对。<span class="ev" data-ev="p.8 Fig.5b">原文 p.8</span></span></li>
+<li><b>c</b><span><strong>细胞比例 vs 深度 vs 标准测序</strong>：三组柱（总 blasts、单核母细胞、成熟粒细胞），压缩侧是 <b>N=6</b>（1/50×…1/500× 六个深度），标准侧是 Fluent 参考。读数：S1 的 blasts 约 59% vs 68%、单核约 48% vs 62%；S2 约 66% vs 76%、51% vs 53%；S3 的 blasts 约 85% vs 81%、成熟粒细胞约 53% vs 46%。<strong>趋势与量级都对得上，误差棒是跨深度的标准差</strong>（不是生物学重复）。<span class="ev" data-ev="p.8 Fig.5c">原文 p.8</span></span></li>
+<li><b>d</b><span><strong>母细胞的 top-50 DEG 热图</strong>：三个 AML 样本的母细胞差异表达谱，行是基因（HLA-DRB5、MGST1、SH2D1A、IL12RB2、UBE2C、HLA-DQB1、CD40LG、TNF、CHI3L1、CST7、VNN2…），列是 S1/S2/S3。S3 与 S1/S2 的谱明显不同（S3 在 HLA-DRB5、MGST1、UBE2C 一列高），与"不同亚型/不同克隆"一致。<span class="ev" data-ev="p.8 Fig.5d">原文 p.8</span></span></li>
+<li><b>e</b><span><strong>治疗前后与深度的三角验证</strong>：SOCS1 与 WT1 两个基因，在 S1（治疗前）vs S2（治疗后）的母细胞上，分别用 <b>1/50× / 1/200× / 标准 1×</b> 三种深度展示。<strong>SOCS1 在治疗后明显上调</strong>（提示治疗诱导的转录调节，且未见母细胞清除），<strong>WT1 轻度下调</strong>（MRD 标志物，提示治疗有效）——两个方向相反的变化在三种深度下都成立，这是本文最有临床意义的一处观察。<span class="ev" data-ev="p.8 Fig.5e">原文 p.8</span></span></li>
+<li><b>f</b><span><strong>M2 样本（S3）母细胞的火山图</strong>：上调端标注 HLA-DRB5（提示免疫调节）、MGST1、UBE2C、CHI3L1（与干性/不良预后相关），左端是下调基因（VNN2、SH2D1A、IL12RB2 等）。<span class="ev" data-ev="p.8 Fig.5f">原文 p.8</span></span></li>
+<li><b>g</b><span><strong>找到"活跃周期"亚群</strong>：用 MKI67 等细胞周期基因在 UMAP 上标出一个增殖亚群，三张图分别是压缩 1/50×、压缩 1/200×、标准 1×——<strong>三者在浅测下仍能定位到同一个亚群</strong>。作者据此提出"增殖压力 / 残留病风险"的解释。<span class="ev" data-ev="p.8 Fig.5g">原文 p.8</span></span></li>
+</ul>
+</div>
+<aside class="callout caveat">
+<p class="callout-label">读图注意：临床结论的四个"不足以"</p>
+<p><b>① n=3 不足以谈"复现诊断准确率"。</b>3/3 与随机猜对（1/2 或 1/3）在统计上无法区分；原文没有报告任何敏感性/特异性区间。</p>
+<p><b>② 判据是"转录组代理形态学"。</b>FAB 的 M4/M2 判据原本基于形态学与细胞化学（原始细胞比例、单核细胞比例、成熟粒细胞比例），本文用 marker 基因注释出的细胞类型去算这些比例，<strong>没有报告与病理科盲法判读的一致性</strong>。这既可能是优势（可自动化），也可能是循环论证（用同一套表达数据证明表达数据分类正确）。</p>
+<p><b>③ 图 c 的误差棒是 N=6 个测序深度，不是 6 个患者或 6 次独立实验</b>，所以它衡量的是"深度稳健性"，不是"生物学可重复性"。</p>
+<p><b>④ 没有随访 / MRD 终点。</b>SOCS1 上调被解释为"治疗诱导的转录调节"，WT1 下调被解释为"治疗有效"，但没有任何临床结局（缓解、复发、生存）来验证这两句话——它们目前只是<strong>与已知生物学一致的观察</strong>，不是疗效预测的证据。</p>
+</aside>
+<aside class="callout insight">
+<p class="callout-label">这一章真正的价值：把"单细胞诊断"的成本门槛具象化</p>
+<p>无论 n 多小，"600–800 reads/cell 就能复现 M2/M4 的分型"这句话如果成立，它改变的是<b>单细胞进入临床的经济学</b>：作者估测测序成本 &lt;$5/样本（2–3 万细胞），连同 barcoding 的"每患者 &lt;$10" <span class="ev" data-ev="p.8">原文 p.8</span>。这个数字是全文最容易被引用、也最需要打折扣的结论——它只算测序与 barcoding，<b>不算 1,000 对引物的合成验证、不算建库人力、不算临床样本处理与合规成本</b>。不过即使打上几倍折扣，它仍然把"单细胞诊断"从"科研项目"推向"可负担检测"的量级。</p>
+</aside>
+</figure>
+</section>
+
+<section id="sec-appraisal">
+<h2 id="sec-appraisal">批判性评估：它成立到什么程度</h2>
+
+<p>这篇论文的论证结构其实很清晰：<b>化学（cPCR 是 log 编码器）→ 文库（压缩能接在 10X 上）→ 生物学（压缩数据能做常规分析）→ 临床（浅测也能分型）</b>。四段里，第一段最硬，第四段最弱。下面按"强项 / 不确定 / 不能外推"三类拆。</p>
+
+<div class="appraisal">
+<div class="card pro">
+<h4>站得住的部分</h4>
+<ul>
+<li><b>核心化学被独立、定量地验证。</b>公式有推导、两相有实时曲线、5 个数量级的端点线性 R²=0.99、96 重与 192 重（双物种）交叉验证。这是"分子对数编码器"这一提法能立住的地方 <span class="ev" data-ev="p.3–4 Fig.1">原文 p.3–4</span>。</li>
+<li><b>两段模型把机制和数据接上了。</b>低丰度线性、高丰度对数，过渡点可估计——这解释了"为什么压缩只作用于高丰度基因"，而且预测与数据方向一致 <span class="ev" data-ev="p.5 Fig.2h–i">原文 p.5</span>。</li>
+<li><b>不回避代价。</b>Fig. 2j 主动展示 CD52 这类高丰度基因压缩后 UMI 减少；Fig. 2f 显示压缩只在 panel 内部带来 2–5× 的读段再分配。这种"把不利数据放进主图"的做法在方法论文里不常见。</li>
+<li><b>DEG 真实性的内部对照设计得很好。</b>用两个独立供体的"仅压缩检出 DEG"重现率（45% vs 21%）来反驳"多出来的都是假阳性"，这比单看 DEG 数更有说服力 <span class="ev" data-ev="p.6 Fig.3f">原文 p.6</span>。</li>
+<li><b>add-on 设计降低采纳门槛。</b>barcode 在压缩前已打好，因此可与标准测序<b>配对比较</b>——本文所有"逐细胞、逐基因"的论证都建立在这一点上 <span class="ev" data-ev="p.4 Fig.2a">原文 p.4</span>。</li>
+<li><b>可调性是真的可调。</b>同一套化学从 Deep（11 M）到 Shallow（0.7 M）到 AML（600 reads/cell）到 80 reads/cell，覆盖两个数量级的深度并逐级报告退化 <span class="ev" data-ev="p.4–8">原文 p.4–8</span>。</li>
+</ul>
+</div>
+<div class="card unc">
+<h4>不确定处 / 需要补充的证据</h4>
+<ul>
+<li><b>没有 "panel-only、不压缩" 的消融。</b>headline 的 100–140× 效率是"只测 457 个基因"与"压缩"两件事的乘积；panel 本身的读段集中效应有多大，原文没有单独测。而 Fig. 2f 里可归因于压缩的读段再分配只有 2–5×。这是全文最大的归因缺口 <span class="ev" data-ev="p.5 Fig.2f">原文 p.5</span>。</li>
+<li><b>报告口径有一处小矛盾。</b>同一段话里正文给 Log2FC 的 R²=0.98，而 Fig. 3e 图内标注 R²=0.94；两处都没有说明是哪一组比较。这类细节不影响主结论，但提示读者：正文数字与图内数字应逐一对表后再引用 <span class="ev" data-ev="p.6 Fig.3e">原文 p.6</span>。</li>
+<li><b>Log2FC 斜率 0.70 没有解释清楚。</b>作者归因于 10X 在近零 UMI 时的比值膨胀；但同一方法的浅测版本斜率是 0.95，说明"深度/压缩段位"会影响斜率。没有校正方案，也没有讨论这对沿用固定 |log2FC| 阈值的下游流程意味着什么 <span class="ev" data-ev="p.6 Fig.3e">原文 p.6</span>。</li>
+<li><b>跨基因定量是否被破坏，主文没说清。</b>压缩是逐基因的单调变换，但每个基因的 a、b 不同；因此"同一细胞内基因 A 与基因 B 的读段比"被改写。作者用标准流程做归一化与分型，并显示分型没问题，但没有给出"何时可以、何时不可以把压缩矩阵当普通表达矩阵用"的判据。</li>
+<li><b>过渡点与参数的可迁移性。</b>370 reads / 150 UMIs 是在特定 panel、特定细胞数、特定 PL 浓度下拟合的；换 panel 或换组织是否需要重新标定？原文把方法细节放进 Supplementary Note 3，而本 PDF 不含该文件。</li>
+<li><b>引物失败的偏差方向。</b>96 重成功率 72%、500 基因引物成功率 93%。失败的靶标是否集中在高 GC、长转录本、低表达或特定 isoform？如果是，panel 的"无偏"就会打折扣 <span class="ev" data-ev="p.4">原文 p.4</span>。</li>
+<li><b>成本模型缺失。</b>"&lt;$5 测序 / &lt;$10 每患者"只含测序与 barcoding；500–2,000 对引物的合成、验证、平衡与人力成本没有列支，也没有与"直接加深测序"做成本-效果比较 <span class="ev" data-ev="p.8">原文 p.8</span>。</li>
+</ul>
+</div>
+<div class="card con">
+<h4>薄弱点 / 不能外推的地方</h4>
+<ul>
+<li><b>样本面窄。</b>PBMC 两个供体（Fig. 2–4 主要是 1 个供体，第 2 个供体只用于 DEG 重复性）；AML 3 例；全部是血液样本。作者称"适用于骨髓等"，但本 PDF 没有数据 <span class="ev" data-ev="p.4–8">原文 p.4–8</span>。</li>
+<li><b>不是全转录组。</b>所有实验都在 457–2,086 个基因的 panel 上；作者把"whole-transcriptome coverage"列为 future work <span class="ev" data-ev="p.9">原文 p.9</span>。这意味着它目前是"targeted panel 的增强版"，而不是"scRNA-seq 的通用替代"。</li>
+<li><b>临床结论没有独立金标准。</b>AML 亚型判读用 FAB 形态学标准，但本文的"细胞类型"来自转录组 marker；没有病理科盲法复核、没有流式/形态学对照、没有随访终点 <span class="ev" data-ev="p.8 Fig.5b–c">原文 p.8</span>。</li>
+<li><b>没有与竞争方法头对头。</b> hybridization normalization、DSN、targeted Perturb-seq / HyPR-seq 都只在引言里被一句话带过，没有在同一文库上做对比。因此"比现有方法好多少"无法从本文判断 <span class="ev" data-ev="p.2">原文 p.2</span>。</li>
+<li><b>新检出的 DEG 没有正交验证。</b>没有 qPCR、流式或蛋白层面的确认；"额外 DEG 是真的"完全依赖跨供体重现率这一间接论证（虽然这个论证相当有力）<span class="ev" data-ev="p.6">原文 p.6</span>。</li>
+<li><b>预印本。</b>本 PDF 是 bioRxiv 预印本（2026-09-03 上传，CC-BY-NC-ND 4.0），未经同行评审；Methods 与补充材料不在本文件内，关键实验参数无法核对。</li>
+</ul>
+</div>
+</div>
+
+<p style="font-weight:700;font-size:1.08em;color:var(--ink);margin:2em 0 .5em">三个必须自己回答的问题</p>
+<ol>
+<li><b>100× 里有多少来自 panel、多少来自压缩？</b>要回答这个问题只需要一个对照：同一 panel 做普通 PCR 富集（不压缩）测到同样深度，看每基因读段与 UMI。本文没有做。按 Fig. 2f 的数字，压缩本身在 panel 内只贡献 2–5× 的再分配，其余来自"只测 1/40 的基因" [推断]。</li>
+<li><b>压缩后的表达矩阵还能不能直接喂给现有流程？</b>Log2FC 斜率 0.70 说明"能，但效应量被压缩"；如果下游用固定 fold-change 阈值，需要重新标定，或者用两段模型反解回线性尺度。本文没有给出这个"反解层"——这是方法从"论文"走向"工具"必须补的一块。</li>
+<li><b>换组织、换平台、换物种还成立吗？</b>cPCR 的化学是通用的，但过渡点、引物成功率、on-target 比例都与样本复杂度、RNA 完整性、barcoding 平台有关。本文只给了血液 + 10X/Fluent 的组合，跨体系的验证是空白。</li>
+</ol>
+
+<aside class="callout method">
+<p class="callout-label">[推断] 一个替代解释：收益可能被"panel 选择"高估</p>
+<p>如果把 2,000 基因 panel 拿去做普通靶向富集（不加压缩、不做两段扩增），在 51 M reads 下也很可能拿到远高于全转录组 10X 的 UMI 覆盖——因为 81.3% 的文库丰度被排除在外。这意味着本文报告的"效率提升"里，有一块属于<b>靶向测序本身的收益</b>，而 cPCR 的独特贡献是"panel 内部把读段从高丰度挪到低丰度"这一块（2–5×）。这不妨碍方法的实用性（组合起来确实省），但会改变"这项技术有多革命性"的判断，也会改变读者该把资源投向"设计更好的 panel"还是"引入压缩"。</p>
+</aside>
+</section>
+
+<section id="sec-relevance">
+<h2 id="sec-relevance">与我相关：可以借走的三样东西</h2>
+
+<p>如果只把这篇论文记成"一种新的单细胞建库方法"，会漏掉它真正可迁移的部分。至少有三样东西与具体化学无关：</p>
+
+<p style="font-weight:700;font-size:1.08em;color:var(--ink);margin:1.9em 0 .5em;letter-spacing:.01em">一、"用饱和机制实现非线性"的工程范式</p>
+<p>cPCR 的聪明之处不是"发明了对数"，而是<b>用一管限量引物把"什么时候饱和"变成了输入的函数</b>。这个范式可以搬到任何"试剂有限、读出是终点值"的体系：定量 PCR、等温扩增、ELISA 的显色终点、甚至液滴里的荧光报告。判据是：只要体系里存在一个<b>可被耗尽、且耗尽时刻取决于输入浓度</b>的组分，终点读出就能被设计成对数或任意压缩函数。对做检测/传感/筛选的人来说，这比"又一个 scRNA-seq 方法"更通用。</p>
+
+<p style="font-weight:700;font-size:1.08em;color:var(--ink);margin:1.9em 0 .5em;letter-spacing:.01em">二、"两段模型 + UMI 层面解剖"的验证套路</p>
+<p>本文没有停留在"压缩后信号 vs 原来信号 R²=0.9"，而是把关系拆成两段、给出过渡点、再用 UMI 交集逐基因检查（Fig. 2j）。这套"先拟合、再在分子层面抽 8 个基因逐个看"的验证方式，可以直接用在任何"改变了测量映射"的方法上（例如新的 UMI 去重策略、新的扩增方案、新的建库化学）——因为<b>聚合指标（中位数、R²）会掩盖分段行为</b>，而分段行为恰恰决定了方法在哪个丰度段可用。</p>
+
+<p style="font-weight:700;font-size:1.08em;color:var(--ink);margin:1.9em 0 .5em;letter-spacing:.01em">三、"跨样本重现率"作为真阳性判别器</p>
+<p>Fig. 3f 的 45% vs 21% 是整篇论文里最便宜、最有说服力的对照：不需要 ground truth，只需要两个独立生物学重复，就能判断"新增检出"是真信号还是阈值放宽的产物。任何声称"更灵敏"的方法（更深的测序、更好的归一化、新的细胞分型算法）都可以照搬这个判别器，成本只是再做一次样本。</p>
+
+<aside class="callout insight">
+<p class="callout-label">如果要把这篇论文变成一条可执行的实验路线</p>
+<p>[推断] 最低风险的路径是：在<b>已有的 10X 或 PIP-seq 文库</b>上做一个 200–500 基因的 panel（选你最关心的低丰度通路，而不是全免疫 panel），用本文的 add-on 流程做一次压缩 + 一次标准测序配对；先只验证三件事——(1) 两段模型在你的体系里是否出现；(2) 你最关心的 10–20 个稀有基因的 UMI 是否真的提高；(3) 你熟悉的 marker 分型是否保持。三件都过，再考虑把它推到大规模筛查或临床样本。风险最高的一步是"全转录组压缩"，因为那需要几千对引物同时在复杂背景里工作，而本文自己也把它留给了未来。</p>
+</aside>
+
+<p>另外值得留意的是它与其他方向的接口：本文的 AML 部分已经用了 Fluent 的无微流控 barcoding（PIP-seq）<span class="ev" data-ev="p.7 ref17">原文 p.7</span>，这意味着"压缩化学"与"低成本 barcoding"可以叠加；而它与液滴微流控、AI 虚拟细胞训练数据这两条线的关系，作者在讨论里都点了名 <span class="ev" data-ev="p.9">原文 p.9</span>——前者是"更多细胞"，后者是"更高质量的表达谱"，压缩对两者都只是<b>降成本</b>，不改变数据的基本形态，因此接入成本低。</p>
+</section>
+
+<section id="sec-glossary">
+<h2 id="sec-glossary">术语表</h2>
+
+<dl class="glossary">
+<div><dt>cPCR（Compression PCR）</dt><dd>本文的核心反应：用不等量正反向引物（过量 PE / 限量 PL）制造"指数相 + 线性相"两段扩增，使终点产物与模板浓度的对数成正比。</dd></div>
+<div><dt>PE / PL</dt><dd>excess primer（过量引物）/ limiting primer（限量引物）。PL 被耗尽的时刻决定压缩程度，PE/PL 比是主旋钮。</dd></div>
+<div><dt>非对称 PCR / LATE-PCR</dt><dd>asymmetric PCR；LATE-PCR 是其中一种用于实时定量的变体。本文的差别在于刻意拉长第二相并把它当作定量区间。</dd></div>
+<div><dt>动态范围（dynamic range）</dt><dd>同一个测量里最大值与最小值的比值。scRNA-seq 里 mRNA 丰度跨 5–6 个 log，是"读段被高丰度基因吃掉"的根源。</dd></div>
+<div><dt>对数变换 / 压缩</dt><dd>把输入按 log 映射到输出。本文用分子反应实现：输入 10<sup>5</sup> 倍 → 输出 &lt;10 倍。</dd></div>
+<div><dt>两段模型（two-segment model）</dt><dd>低丰度段线性放大（PL 未耗尽）、高丰度段对数压缩（PL 提前耗尽），中间有过渡点。本文用它在 reads 与 UMI 两个层面拟合（Fig. 2h–i、Fig. 3b）。</dd></div>
+<div><dt>UMI / barcode</dt><dd>unique molecular identifier（分子条码，用于去重计数）/ cell barcode（细胞条码，用于归属细胞）。压缩必须保留这两者才能回到单细胞。</dd></div>
+<div><dt>dropout</dt><dd>某个基因在某个细胞里实际有表达、但因抽样没被测到（计数为 0）的现象。低丰度基因 dropout 率可达 50–100%。</dd></div>
+<div><dt>饱和度（saturation）</dt><dd>测序深度增加到一定程度后，再测也主要是重复读到同样的分子；本文用它来比较"达到同等饱和度需要多少 reads"。</dd></div>
+<div><dt>preseq</dt><dd>用已有测序数据外推"文库复杂度"与"还需要多少 reads"的软件（Daley &amp; Smith, 2013）。本文用它估计压缩后文库复杂度降低约 100×。</dd></div>
+<div><dt>on-target rate</dt><dd>落在目标区域（panel 基因）上的读段比例。嵌套 PCR 把它从 40% 提到 70%。</dd></div>
+<div><dt>panel / 靶向测序</dt><dd>只扩增/捕获预先选定的一组基因。本文所有单细胞实验都是 panel 形式（457–2,086 个基因），不是全转录组。</dd></div>
+<div><dt>ARI（adjusted Rand index）</dt><dd>两种聚类划分的一致性指标，1 = 完全一致，0 ≈ 随机。本文浅测分型 ARI=0.78（四类），合并 T/NK 后 0.97。</dd></div>
+<div><dt>DEG / Log2FC</dt><dd>differentially expressed gene（差异表达基因）/ log₂ 倍数变化。本文报告压缩后 DEG 多 21%，但 Log2FC 斜率只有 0.70。</dd></div>
+<div><dt>FAB 分类</dt><dd>French–American–British 的 AML 形态学分型（M0–M7）。M4 = 急性粒单核细胞白血病（30–80% 单核细胞），M2 = 伴成熟粒细胞的急性髓系白血病。</dd></div>
+<div><dt>MRD</dt><dd>measurable residual disease，可测量残留病。本文用 WT1 表达变化提示 MRD，但没有随访数据。</dd></div>
+<div><dt>PIP-seq</dt><dd>Fluent（现 Illumina）的无微流控单细胞 barcoding 方法（templated emulsification），成本低于液滴微流控。本文 AML 部分用它建库。</dd></div>
+<div><dt>Harmony</dt><dd>常用的单细胞批次整合算法。本文用它把 Fluent 与 10X 的样本共聚类。</dd></div>
+</dl>
+</section>
+
+<section id="sec-refs">
+<h2 id="sec-refs">引用与延伸阅读</h2>
+
+<p>本报告页码均指所提供 PDF 的页面（共 11 页：主文 p.1–9，参考文献 p.10–11）。原文为 bioRxiv 预印本，DOI <code>10.64898/2026.09.01.748706</code>，2026-09-03 上传，CC-BY-NC-ND 4.0，未经同行评审；Methods 与 Supplementary 不在本文件内。</p>
+
+<ol class="refs">
+<li>Yan, Y. &amp; Dai, M. <i>Compression Sequencing enables ultra-sensitive and scalable scRNA-seq</i>. bioRxiv (2026). doi:10.64898/2026.09.01.748706 —— 本文。Rice University 生物工程系 / 化学系，通讯作者 mingjie.dai@rice.edu。</li>
+<li>Sanchez, J. A., Pierce, K. E., Rice, J. E. &amp; Wangh, L. J. Linear-after-the-exponential (LATE)-PCR: an advanced method of asymmetric PCR and its uses in quantitative real-time analysis. <i>PNAS</i> 101, 1933–1938 (2004). —— cPCR 的直接前身：非对称 PCR 用于定量。</li>
+<li>Gyllensten, U. B. &amp; Erlich, H. A. Generation of single-stranded DNA by the polymerase chain reaction. <i>PNAS</i> 85, 7652–7656 (1988). —— 单链扩增的原始方法。</li>
+<li>Shannon, C. E. &amp; Weaver, W. <i>The Mathematical Theory of Communication</i>. University of Illinois Press (1949)；Huffman, D. A. <i>Proc. IRE</i> 40, 1098–1101 (1952)；Golomb, S. W. Run-length encodings. <i>IEEE Trans. Inf. Theory</i> (1966). —— 作者用来支撑"压缩"这一信息科学类比的经典文献。</li>
+<li>Larson, G. W. LogLuv Encoding for Full-Gamut, High-Dynamic Range Images. <i>J. Graphics Tools</i> 3, 15–31 (1998). —— 对数编码在高动态范围图像里的先例。</li>
+<li>Xie, N. G. et al. Designing highly multiplex PCR primer sets with Simulated Annealing Design using Dimer Likelihood Estimation (SADDLE). <i>Nat Commun</i> 13, 1881 (2022). —— 本文引物设计算法的来源；作者称二聚体形成比该报道降低 &gt;10×。</li>
+<li>Daley, T. &amp; Smith, A. D. Predicting the molecular complexity of sequencing libraries. <i>Nat Methods</i> 10, 325–327 (2013). —— preseq 软件，本文用它估计文库复杂度下降约 100×。</li>
+<li>Love, M. I., Huber, W. &amp; Anders, S. Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. <i>Genome Biol</i> 15, 550 (2014). —— 作者用来解释 Log2FC 斜率偏低时引用。</li>
+<li>Svensson, V. et al. Power analysis of single-cell RNA-sequencing experiments. <i>Nat Methods</i> 14, 381–387 (2017). —— 单细胞 dropout 与测序深度的定量分析，本文问题陈述的主要依据之一。</li>
+<li>Zheng, G. X. et al. Massively parallel digital transcriptional profiling of single cells. <i>Nat Commun</i> 8, 14049 (2017). —— 10X 平台原始文献。</li>
+<li>Clark, I. C. et al. Microfluidics-free single-cell genomics with templated emulsification. <i>Nat Biotechnol</i> 41, 1557–1566 (2023). —— Fluent PIP-seq，本文 AML 部分的建库方法。</li>
+<li>Schraivogel, D. et al. Targeted Perturb-seq enables genome-scale genetic screens in single cells. <i>Nat Methods</i> 17, 629–635 (2020)；Marshall, J. L. et al. HyPR-seq. <i>PNAS</i> 117, 33404–33413 (2020). —— 本文引言里作为"靶向 panel 路线"的代表。</li>
+<li>Replogle, J. M. et al. Mapping information-rich genotype-phenotype landscapes with genome-scale Perturb-seq. <i>Cell</i> 185, 2559–2575 (2022). —— 大规模 Perturb-seq 的成本与规模背景。</li>
+<li>Hagemann-Jensen, M., Ziegenhain, C. &amp; Sandberg, R. Scalable single-cell RNA sequencing from full transcripts with Smart-seq3xpress. <i>Nat Biotechnol</i> 40, 1452–1457 (2022). —— 作者在讨论里提出的"深测 + 微孔板"替代路线。</li>
+<li>van Galen, P. et al. Single-Cell RNA-Seq Reveals AML Hierarchies Relevant to Disease Progression and Immunity. <i>Cell</i> 176, 1265–1281 (2019)；Döhner, H. et al. Acute Myeloid Leukemia. <i>N Engl J Med</i> 373, 1136–1152 (2015). —— AML 单细胞与临床背景。</li>
+<li>Bennett, J. M. et al. Proposed revised criteria for the classification of acute myeloid leukemia (FAB). <i>Ann Intern Med</i> 103, 620–625 (1985). —— 本文亚型判读所依据的 FAB 标准。</li>
+</ol>
+
+<aside class="callout quote">
+<p class="callout-label">原文最值得记住的三句</p>
+<p>"Fundamentally, this is caused by the high dynamic range of mRNA expression in human cells."（p.2）—— 问题的根因一句话。</p>
+<p>"…the second phase ('prolonged linear phase') reflects true linear growth due to single-primer amplification, which is different from the transient 'linear phase' observed in conventional qPCR assays."（p.2）—— 它与常规 qPCR 的分界线。</p>
+<p>"…logarithmic compression suppresses read fraction from high-abundance genes by 40x while boosting that from low-abundance ones, achieving up to 500x overall improvement in sequencing efficiency and sensitivity in rare genes."（p.2，模拟结果）—— 注意这是 <b>in silico</b> 数字，实验值是 100–140×。</p>
+</aside>
+</section>

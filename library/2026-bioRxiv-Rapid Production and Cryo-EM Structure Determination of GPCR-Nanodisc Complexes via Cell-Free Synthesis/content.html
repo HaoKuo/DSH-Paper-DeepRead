@@ -1,0 +1,594 @@
+<section id="sec-tldr">
+<h2 id="sec-tldr">结论先行：把整条 GPCR 结构产线搬进无细胞体系</h2>
+
+<p>GPCR 的冷冻电镜结构之所以难，不只是"蛋白难表达"，而是三件事叠在一起：受体只有 40–50 kDa、大部分体积埋在膜里，颗粒对齐缺少参考质量；细胞表达 + 去垢剂增溶会破坏构象与配体结合；而从构建到上样往往要几周到几个月。过去几年的解法是"加质量"——接 G 蛋白、接纳米抗体、或者在胞内环 3（ICL3）里插一个刚性融合模块当基准（fiducial）。这篇预印本换的是<b>上游</b>：把表达、增溶、筛选、纯化全部改到无细胞（cell-free）体系里，用 PURE 体系 + 共翻译插入脂质纳米盘 + 数字微流控纳升级筛选，把"基因到电镜"压到四天 <span class="ev" data-ev="p.16 讨论">原文 p.16</span>。</p>
+
+<p>技术上它是一个<b>组合创新的产线论文</b>，而不是新生物学：结构本身（拮抗剂结合的 A<sub>2A</sub>R–β-内酰胺酶–BLIP-II 复合物，MSP1E3D1 DOPG 纳米盘，<b>3.38 Å</b>）与 2026 年 Shah 等人用昆虫细胞 + 去垢剂得到的参考结构（PDB 9T9P，3.22 Å）几乎重合——跨膜螺旋 Cα RMSD 仅 <b>0.85 Å</b>，配体重原子 RMSD <b>1.7 Å</b>。真正的新意有三条：<b>(1)</b> 作者称这是首次用 PURE 体系（而非大肠杆菌裂解液）产出可用于高分辨冷冻电镜的 GPCR；<b>(2)</b> 复合物里每一个组分都是无细胞合成的，因此能拿到 G 蛋白路线拿不到的拮抗剂结合态；<b>(3)</b> 用数字微流控在纳升级把"构建 × 脂质配方"筛完再放大，把试错成本压到最低。</p>
+
+<div class="cover-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:22px 0">
+<div class="metric"><span class="metric-v">3.38 Å</span><span class="metric-l">整体分辨率</span><span class="metric-n">A<sub>2A</sub>R 拮抗剂结合态</span></div>
+<div class="metric"><span class="metric-v">47,986</span><span class="metric-l">最终颗粒数</span><span class="metric-n">参考结构用了 597,000（≈12×）</span></div>
+<div class="metric"><span class="metric-v">4 天</span><span class="metric-l">基因 → 上样</span><span class="metric-n">原文未给出逐日计时</span></div>
+<div class="metric"><span class="metric-v">12</span><span class="metric-l">受体面板</span><span class="metric-n">4×Class A · 1×B · 1×C · 6 孤儿</span></div>
+</div>
+
+<figure class="tbl">
+<figcaption><b>表 A</b>　五条核心主张与证据强度（本报告判读，非原文表述）</figcaption>
+<div class="table-wrap">
+<table class="cmp-table">
+<thead><tr><th>主张</th><th>原文数字</th><th>证据位置</th><th>本报告判读</th></tr></thead>
+<tbody>
+<tr><td>PURE 无细胞体系能产出"电镜级"GPCR</td><td>3.38 Å；47,986 颗粒；TM 螺旋 Cα RMSD 0.85 Å（对 9T9P）</td><td>p.9–10、图 3 <span class="ev" data-ev="p.10 Fig.3">原文 p.10</span></td><td><strong>结论成立，但只有一个结构、一个靶点。</strong>3.38 Å 属"中等分辨"，作者自认配体尾巴与水分子不可分辨</td></tr>
+<tr><td>共翻译插入纳米盘是增溶/纯化的必要条件</td><td>无纳米盘时两种受体"纯化不到有意义的量"；有纳米盘时 52.5 / 60.0 µg/mL（效率 18% / 23%）</td><td>p.6–7、图 1 <span class="ev" data-ev="p.6 Fig.1b">原文 p.6</span></td><td><strong>证据直接、对照干净。</strong>"共翻译"是从"翻译时必须有纳米盘"推断的，没有核糖体层析等直接证据</td></tr>
+<tr><td>全流程四天，可做 DBTL 循环</td><td>"从构建生成与芯片筛选、放大、FSEC 到上样共四天"</td><td>p.16 讨论</td><td><strong>说法合理但不可复核。</strong>原文没有逐日计时，且起点是已到手的线性 DNA（gBlocks 的合成/运输时间未计）</td></tr>
+<tr><td>可泛化到 12 个 Class A/B/C 与孤儿受体</td><td>12 个受体全部表达、插入、纯化；GPR61/146/151 近单分散</td><td>p.11–14、图 4 <span class="ev" data-ev="p.13 Fig.4">原文 p.13</span></td><td><strong>最有价值的一条，但只有 FSEC。</strong>没有配体结合、活性或结构；"结构级质量"是相对 A<sub>2A</sub>R 基准的推断</td></tr>
+<tr><td>纳米盘环境比去垢剂更接近天然</td><td>基准模块相对受体刚性倾斜 ~3°，BLIP-II 位移 ~3.7 Å</td><td>p.9–10、图 3c–d</td><td><strong>提示性。</strong>作者自己说不同数据收集/处理"不允许直接比较"；3.7 Å 的差别也可能来自拟合与分辨率差异</td></tr>
+</tbody>
+</table>
+</div>
+<p class="table-note">数字均转录自原文；"本报告判读"为解读而非原文结论，正文中以 <code>[推断]</code> / <code>[背景]</code> 标出推断与文献背景。</p>
+</figure>
+
+<aside class="callout insight">
+<p class="callout-label">一句话定位</p>
+<p>把它读成<strong>"Nuclera 平台的技术验证 + 流程宣言"</strong>最准确：科学上它确认了"无细胞合成的 GPCR 在纳米盘里与细胞来源的受体结构等价"，工程上给出了一个可复制的四天流程。它<strong>不是</strong>一篇新的 GPCR 生物学论文——没有一个新构象、新配位点或新机制被揭示。</p>
+</aside>
+</section>
+
+<section id="sec-problem">
+<h2 id="sec-problem">问题：小、软、慢——GPCR 冷冻电镜的三重瓶颈</h2>
+
+<p>[背景] 单颗粒冷冻电镜在 2015 年后把"结晶"这道门槛拆掉了，但对 GPCR 这类膜蛋白仍然吃力：受体本身只有约 40–50 kDa，而它最具特征的结构（七次跨膜束）埋在膜或去垢剂胶束里，胞外只有很小的结构域可供对齐。业界的标准解法是"把复合物做大"——接异源三聚体 G 蛋白、再接一段纳米抗体或 Fab 提供刚性参考 <span class="ev" data-ev="p.3 引言">原文 p.3</span>。代价是：这类复合物只能捕获激动剂结合的活性态；无配体（apo）或拮抗剂结合的受体因为缺少稳定化伴侣，在去垢剂里往往构象不均一。</p>
+
+<p>第二条路线是<b>刚性基准模块（rigid fiducial）</b>：GPCR 的 ICL3 位于 TM5 与 TM6 之间，长度与序列容忍度高，历史上在 X 射线晶体学里就被用来插入 T4 溶菌酶等融合伴侣以产生晶格接触。近年把同样的插入用在冷冻电镜上——融合蛋白本身就是一块"额外的刚性质量"，再结合一个高亲和力伴侣（如 β-内酰胺酶 + BLIP-II）进一步加质量。Shah 等 2026 年用这条路线在昆虫细胞表达、去垢剂增溶的 A<sub>2A</sub>R 上拿到 3.2 Å；Collu 等 2026 年在 β<sub>1</sub>-肾上腺素受体上拿到 4.2 Å <span class="ev" data-ev="p.3 引言">原文 p.3</span>。</p>
+
+<p>第三条路线是<b>无细胞表达 + 共翻译插入纳米盘</b>：纳米盘是"磷脂双分子层 + 工程化膜支架蛋白（MSP）"围成的盘状颗粒，能在完全没有去垢剂的情况下把膜蛋白包进类天然脂环境。Köck 等与 Merino 等用大肠杆菌裂解液体系做过 GPCR 的冷冻电镜结构，但那些工作里 G 蛋白仍然来自昆虫细胞，而且捕获的是激动剂结合态 <span class="ev" data-ev="p.4 引言">原文 p.4</span>。</p>
+
+<aside class="callout method">
+<p class="callout-label">本文的赌注：把三条路线的优点拼起来</p>
+<p>作者组合了三件事：<strong>PURE 体系</strong>（重组纯化的转录/翻译组分，背景干净、重复性好，但此前没有被证明能产出电镜级 GPCR）+ <strong>β-内酰胺酶/BLIP-II 刚性基准</strong>（解决对齐）+ <strong>共翻译纳米盘插入</strong>（解决增溶与构象）。再往上加一层：用数字微流控（DMF）在纳升级做条件筛选，先证明"能纯化出来"，再决定放大。</p>
+</aside>
+
+<p>[推断] 这条组合路线真正的卖点不是分辨率，而是<b>消除了三个"外部依赖"</b>：不依赖细胞（表达）、不依赖去垢剂（增溶）、不依赖 G 蛋白或抗体（对齐）。三者同时去掉之后，"设计→构建→测试→学习"的循环才有可能在几天内闭合——这正是作者反复强调 DBTL 的原因，也是这篇论文更接近"平台论文"而非"结构论文"的地方。</p>
+</section>
+<section id="sec-screening">
+<h2 id="sec-screening">第一步：在纳升级把"构建 × 脂质配方"筛完</h2>
+
+<p>无细胞反应最贵的不是时间而是试剂，所以正确的顺序是<b>先用最小的体积证明"这个受体能在这个配方里被纯化出来"，再决定放大</b>。作者的筛选平台是 Nuclera 的 eProtein Discovery——一台数字微流控（DMF）设备，在芯片上以纳升级分配液滴，自动完成表达与链霉亲和素/Strep 纯化，并用 split-GFP 荧光互补定量 <span class="ev" data-ev="p.5 结果">原文 p.5</span>。</p>
+
+<p>筛选空间被压成两个维度：<b>脂质配方</b>上选了三种——不带电的 POPC/POPS、加胆固醇的 POPC/POPS/cholesterol、以及带负电的 DOPG（负电脂质被认为能通过吸引蛋白 N 端的正电荷促进转位子非依赖的膜插入）；<b>纳米盘尺寸</b>上选了两种 MSP——MSP1D1（约 9.5 nm）与 MSP1E3D1（约 13 nm）。再加上两个对照（只有缓冲液、只加 CaCl<sub>2</sub>），一张图上就是 8 种条件 × 2 种受体构型（野生型 A<sub>2A</sub>R 与 ICL3 融合了 β-内酰胺酶的版本）。</p>
+
+<p>另外两个细节决定了这类实验能不能成：<b>(1) 二硫键</b>——GPCR 胞外有保守的二硫键，而无细胞体系没有内质网的氧化折叠机器，所以所有含纳米盘的反应都补了 PDI + 氧化型谷胱甘肽（GSSG）以建立氧化还原缓冲；<b>(2) 检测标签</b>——构建体带 C 端 split-GFP（DET）标签用于定量，带 Strep-tag II 用于单步亲和纯化，两者都不需要抗体。</p>
+
+<figure class="paper-fig" data-fig="fig1">
+<template data-hotspots>
+<svg class="pf-hotspots" aria-hidden="true">
+<g class="hs" tabindex="0" role="button" data-tip-kicker="面板 a · 对照" data-tip="Buffer 与 CaCl2 两个对照：不加深纳米盘时两种受体照样能表达（155–220 µg/mL），说明 β-内酰胺酶插入 ICL3 没有破坏翻译。表达量不是瓶颈。">
+<circle class="hs-halo" cx="11%" cy="42%" r="19"></circle><circle class="hs-dot" cx="11%" cy="42%" r="13"></circle><text class="hs-num" x="11%" y="42%">1</text>
+</g>
+<g class="hs" tabindex="0" role="button" data-tip-kicker="面板 b · 关键对照" data-tip="纯化产量：两个对照组几乎为零。没有纳米盘时 A2AR 与融合体“纯化不到有意义的量”，这是全文“共翻译插入纳米盘是必要条件”的直接证据。">
+<circle class="hs-halo" cx="41%" cy="45%" r="19"></circle><circle class="hs-dot" cx="41%" cy="45%" r="13"></circle><text class="hs-num" x="41%" y="45%">2</text>
+</g>
+<g class="hs" tabindex="0" role="button" data-tip-kicker="面板 c · 效率" data-tip="纯化效率 = 纯化产量 / 表达量：野生型与融合体平均 18% 与 23%。融合体略高，说明 β-内酰胺酶模块没有降低可纯化比例。">
+<circle class="hs-halo" cx="90%" cy="42%" r="19"></circle><circle class="hs-dot" cx="90%" cy="42%" r="13"></circle><text class="hs-num" x="90%" y="42%">3</text>
+</g>
+</svg>
+</template>
+<div class="pf-panels">
+<h4>逐面板解读</h4>
+<ul>
+<li><b>a</b><span><strong>表达量（µg/mL）</strong>：灰＝野生型 A<sub>2A</sub>R，橙＝A<sub>2A</sub>R-β-内酰胺酶融合体。两个对照（Buffer、CaCl<sub>2</sub>）都在 150–220 µg/mL，六种纳米盘条件升到 250–320 µg/mL。<b>读法：加了纳米盘只是"中等幅度"提高表达，说明纳米盘的价值不在翻译效率，而在后面的可溶性</b>。<span class="ev" data-ev="p.6 Fig.1a">原文 p.6</span></span></li>
+<li><b>b</b><span><strong>纯化产量（µg/mL）</strong>：分水岭在这里——两个对照组几乎贴地，六种纳米盘条件跳到 44–70 µg/mL。野生型平均 <strong>52.5</strong>、融合体平均 <strong>60.0 µg/mL</strong>。<b>这是"共翻译插入是必要条件"的核心证据</b>：同样的构建、同样的表达量，只是在翻译时缺了纳米盘，就纯化不出来。<span class="ev" data-ev="p.7 结果">原文 p.7</span></span></li>
+<li><b>c</b><span><strong>纯化效率（%）</strong>＝纯化产量/表达量：野生型 <strong>18%</strong>、融合体 <strong>23%</strong>。这个数字要记住——它意味着<b>每五份合成出来的受体里只有约一份是可纯化的</b>，这也是为什么后面做电镜必须把反应从 100 µL 放大到 2 mL。<span class="ev" data-ev="p.7 结果">原文 p.7</span></span></li>
+<li><b>横轴</b><span>前两组是 Controls；后六组按 MSP 尺寸分成 MSP1D1（~9.5 nm）与 MSP1E3D1（~13 nm）两簇，每簇内依次是 POPC/PS、POPC/PS/CHOL、DOPG。<strong>读图注意：所有纳米盘条件都含 PDI + GSSG</strong>，所以这里比较的不是"有无氧化还原缓冲"，而是脂质与尺寸。</span></li>
+</ul>
+</div>
+<aside class="callout caveat">
+<p class="callout-label">读图注意</p>
+<p>这张图的数据全部来自<b>芯片上的纳升级反应</b>（nanoliter-scale），它回答的是"哪个配方值得放大"，<b>不是</b>定量结论：绝对产量会随放大而变（下一节的图 2a 就是对照）。另外图中没有误差棒——原文没有报告芯片筛的重复次数与离散度，这一栏的"显著差异"要打折扣地读。</p>
+</aside>
+</figure>
+
+<figure class="schematic">
+<div class="sch-head">
+<span class="sch-badge">AI 重绘示意图（非原文图）</span>
+<span class="sch-source">流程重绘自第 5 节、方法部分与讨论 · 悬停各阶段查看释义</span>
+</div>
+<div class="sch-canvas">
+<svg viewBox="0 0 960 330" role="img" aria-labelledby="wf2-title wf2-desc">
+<title id="wf2-title">从线性 DNA 到冷冻电镜上样的四天无细胞流程</title>
+<desc id="wf2-desc">五个阶段：构建线性 eGene DNA（带 DET 与 Strep-tag II）；在数字微流控芯片上以纳升级筛选对照与六种纳米盘配方；放大到 100 微升至 2 毫升反应并在 29 摄氏度过夜表达、单步 Strep 纯化；用 FSEC 检查单体与聚集体比例；最后与 BLIP-II 按 1:1.2 混合、加 15 微摩尔 ZM241385 后上样，得到 3.38 埃、47,986 颗粒的重建。底部标注原文给出的总时长为四天，但没有逐步计时。</desc>
+<defs>
+<marker id="wf2-ar" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--svg-rule)"/></marker>
+</defs>
+<g font-family="inherit">
+<rect x="26" y="52" width="158" height="106" rx="12" fill="var(--svg-node)" stroke="var(--svg-rule)"/>
+<rect x="206" y="52" width="158" height="106" rx="12" fill="var(--svg-node)" stroke="var(--svg-rule)"/>
+<rect x="386" y="52" width="158" height="106" rx="12" fill="var(--svg-node)" stroke="var(--svg-rule)"/>
+<rect x="566" y="52" width="158" height="106" rx="12" fill="var(--svg-node)" stroke="var(--svg-rule)"/>
+<rect x="746" y="52" width="158" height="106" rx="12" fill="var(--svg-node)" stroke="var(--svg-rule)"/>
+
+<g data-tip-kicker="阶段 01 · 构建" data-tip="线性 eGene DNA 由 gBlocks/HiFi 片段经 PCR 装配而成，带 5′ 启动子/核糖体结合位点/翻译增强子与 3′ DET tag、Strep-tag II、终止子。A2AR-β-内酰胺酶序列取自 Shah et al. 2026，但保留全长 C 端。" tabindex="0">
+<circle cx="52" cy="78" r="13" fill="var(--svg-1)" opacity=".18"/><text x="52" y="82" text-anchor="middle" fill="var(--svg-1)" font-size="11" font-weight="700">01</text>
+<text x="74" y="82" fill="var(--svg-ink)" font-size="12.5" font-weight="600">构建</text>
+<text x="40" y="104" fill="var(--svg-ink-2)" font-size="10">线性 eGene DNA</text>
+<text x="40" y="121" fill="var(--svg-ink-2)" font-size="10">DET + Strep-tag II</text>
+<text x="40" y="138" fill="var(--svg-ink-2)" font-size="10">3 种 N 端变体</text>
+</g>
+<g data-tip-kicker="阶段 02 · 筛选" data-tip="eProtein Discovery 数字微流控：纳升级液滴，自动表达与 Strep 纯化，split-GFP 定量。每张图 2 个对照 + 6 种纳米盘配方（3 种脂质 × 2 种 MSP）。" tabindex="0">
+<circle cx="232" cy="78" r="13" fill="var(--svg-1)" opacity=".18"/><text x="232" y="82" text-anchor="middle" fill="var(--svg-1)" font-size="11" font-weight="700">02</text>
+<text x="254" y="82" fill="var(--svg-ink)" font-size="12.5" font-weight="600">芯片筛选</text>
+<text x="220" y="104" fill="var(--svg-ink-2)" font-size="10">纳升级 · 数字微流控</text>
+<text x="220" y="121" fill="var(--svg-ink-2)" font-size="10">2 对照 + 6 配方</text>
+<text x="220" y="138" fill="var(--svg-ink-2)" font-size="10">表达 + 纯化一次读出</text>
+</g>
+<g data-tip-kicker="阶段 03 · 放大" data-tip="先用 100 µL 放大做 FSEC，再按产量估算电镜所需体积：A2AR-β-内酰胺酶 2 mL、BLIP-II 1 mL。反应 29 °C 过夜，RNase A 处理 30 分钟，Strep 磁珠单步纯化。" tabindex="0">
+<circle cx="412" cy="78" r="13" fill="var(--svg-1)" opacity=".18"/><text x="412" y="82" text-anchor="middle" fill="var(--svg-1)" font-size="11" font-weight="700">03</text>
+<text x="434" y="82" fill="var(--svg-ink)" font-size="12.5" font-weight="600">放大表达</text>
+<text x="400" y="104" fill="var(--svg-ink-2)" font-size="10">100 µL → 2 mL</text>
+<text x="400" y="121" fill="var(--svg-ink-2)" font-size="10">29 °C 过夜</text>
+<text x="400" y="138" fill="var(--svg-ink-2)" font-size="10">单步 Strep 纯化</text>
+</g>
+<g data-tip-kicker="阶段 04 · 质检" data-tip="FSEC：ACQUITY UPLC + 250 Å SEC 柱，20 mM 磷酸钠/250 mM NaCl/100 mM 精氨酸 pH 7.5，Ex280/Em350。看主峰是否落在单体受体-纳米盘区间、聚集体占比多少。" tabindex="0">
+<circle cx="592" cy="78" r="13" fill="var(--svg-1)" opacity=".18"/><text x="592" y="82" text-anchor="middle" fill="var(--svg-1)" font-size="11" font-weight="700">04</text>
+<text x="614" y="82" fill="var(--svg-ink)" font-size="12.5" font-weight="600">FSEC 质检</text>
+<text x="580" y="104" fill="var(--svg-ink-2)" font-size="10">单体 vs 聚集体</text>
+<text x="580" y="121" fill="var(--svg-ink-2)" font-size="10">对标准品读数</text>
+<text x="580" y="138" fill="var(--svg-ink-2)" font-size="10">决定是否上样</text>
+</g>
+<g data-tip-kicker="阶段 05 · 上样" data-tip="A2AR-β-内酰胺酶 8 µM 与 BLIP-II 9.6 µM（1:1.2）混合，加 15 µM ZM241385，冰上过夜后上 Quantifoil R1.2/1.3 300 目铜网，Vitrobot 4 °C/95% 湿度、3 s blot。" tabindex="0">
+<circle cx="772" cy="78" r="13" fill="var(--svg-1)" opacity=".18"/><text x="772" y="82" text-anchor="middle" fill="var(--svg-1)" font-size="11" font-weight="700">05</text>
+<text x="794" y="82" fill="var(--svg-ink)" font-size="12.5" font-weight="600">上样</text>
+<text x="760" y="104" fill="var(--svg-ink-2)" font-size="10">1:1.2 + 15 µM 配体</text>
+<text x="760" y="121" fill="var(--svg-ink-2)" font-size="10">Quantifoil 300 目</text>
+<text x="760" y="138" fill="var(--svg-ink-2)" font-size="10">31,799 电影</text>
+</g>
+
+<line x1="186" y1="105" x2="202" y2="105" stroke="var(--svg-rule)" stroke-width="1.6" marker-end="url(#wf2-ar)"/>
+<line x1="366" y1="105" x2="382" y2="105" stroke="var(--svg-rule)" stroke-width="1.6" marker-end="url(#wf2-ar)"/>
+<line x1="546" y1="105" x2="562" y2="105" stroke="var(--svg-rule)" stroke-width="1.6" marker-end="url(#wf2-ar)"/>
+<line x1="726" y1="105" x2="742" y2="105" stroke="var(--svg-rule)" stroke-width="1.6" marker-end="url(#wf2-ar)"/>
+
+<path d="M 825 52 L 825 30 L 105 30 L 105 48" fill="none" stroke="var(--svg-ink-2)" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#wf2-ar)"/>
+<text x="465" y="22" text-anchor="middle" fill="var(--svg-ink-2)" font-size="10.5">DBTL：换个构建或配方再来一轮</text>
+
+<path d="M 26 200 L 26 190 L 904 190 L 904 200" fill="none" stroke="var(--svg-2)" stroke-width="1.6"/>
+<text x="465" y="214" text-anchor="middle" fill="var(--svg-2)" font-size="11.5" font-weight="600">原文给出的总时长：约 4 天（构建生成 → 上样）</text>
+<text x="465" y="236" text-anchor="middle" fill="var(--svg-mute)" font-size="10">注意：起点是"基因构建生成"，原文没有给出逐步计时；DNA 片段本身由 IDT 合成，其交付时间不计在内</text>
+<text x="465" y="262" text-anchor="middle" fill="var(--svg-mute)" font-size="10">四个阶段的方框数字均取自方法部分与结果（p.5–9、p.16、p.19–22）</text>
+<rect x="300" y="286" width="360" height="30" rx="15" fill="var(--svg-1-soft)"/>
+<text x="480" y="306" text-anchor="middle" fill="var(--svg-ink)" font-size="11">最终产出：3.38 Å 重建 · 47,986 颗粒</text>
+</g>
+</svg>
+</div>
+<figcaption><p class="sch-caption">这条流水线的关键设计不是任何单步，而是<b>顺序</b>：先用纳升级证明"能纯化"，再用 100 µL 放大做 FSEC，最后才投入 2 mL 的反应做电镜。<b>每一步都在花更贵的钱之前回答一个更便宜的问题</b>——这是它能压到四天的真正原因。</p></figcaption>
+</figure>
+
+<figure class="tbl">
+<figcaption><b>表 B</b>　可复现参数（转录自方法部分 p.19–22）</figcaption>
+<div class="table-wrap">
+<table class="cmp-table">
+<thead><tr><th>环节</th><th>设定</th></tr></thead>
+<tbody>
+<tr><td>构建</td><td>eGene 线性 DNA：5′ 启动子/RBS/翻译增强子 + 5′ 3C、3′ TEV 位点 + DET tag（split-GFP）+ Strep-tag II；gBlocks/HiFi 片段经 PCR 装配（Linear eGene Prep Kit Flexivariant NC3008）</td></tr>
+<tr><td>芯片筛选</td><td>eProtein Discovery + Membrane Protein 试剂盒（NC3013）；添加剂：Additive Buffer、CaCl<sub>2</sub>、PDI + GSSG Mix、GPCR Nanodisc Panel（NC3023）</td></tr>
+<tr><td>FSEC 放大反应</td><td>100 µL：60 µL Scale-Up Core + 7.5 µL PDI/GSSG + 7.5 µL MSP1E3D1 DOPG + 25 µL DNA（纳米盘终浓 75 µM，DNA 5 nM）；29 °C 过夜；RNase A 0.2 mg/mL 30 min</td></tr>
+<tr><td>纯化</td><td>Strep Beads 磁珠单步捕获，100 µL 洗脱；split-GFP 定量（eProtein Quantification Kit NC3014）</td></tr>
+<tr><td>FSEC</td><td>25 °C，ACQUITY Premier UPLC + Protein SEC 柱（250 Å, 1.7 µm, 4.6×150 mm）；缓冲液 20 mM 磷酸氢二钠 + 250 mM NaCl + 100 mM 精氨酸，pH 7.5；10 µL 进样、0.25 mL/min；Ex280/Em350，15 min</td></tr>
+<tr><td>电镜样品</td><td>A<sub>2A</sub>R-β-内酰胺酶 2 mL 反应、BLIP-II 1 mL 反应；分别浓缩到 ~100 µL（1.25 / 0.77 mg/mL）；8 µM : 9.6 µM（1:1.2）+ 15 µM ZM241385，冰上过夜</td></tr>
+<tr><td>上样</td><td>Quantifoil R1.2/1.3 Cu 300 目；辉光放电 25 mA × 60 s/面；Vitrobot 4 °C、95% RH、blot 3 s、force −5</td></tr>
+<tr><td>数据收集</td><td>Titan Krios 300 kV + Selectris X 能量过滤（10 eV 狭缝）+ Falcon 4i 计数模式；165,000×；像素 0.729 Å；31,799 部电影；AFIS；离焦 −1.8 至 −0.6 µm</td></tr>
+<tr><td>处理与建模</td><td>WARP 实时预处理（增益/运动/CTF）→ BoxNet2 自动拾取 → 384 px 框提取 → cryoSPARC 5.0.6 二维/三维分类；模型：ChimeraX 手动就位 9T9P → Coot 0.9.8.95 → Phenix 1.21 精修</td></tr>
+</tbody>
+</table>
+</div>
+</figure>
+
+<aside class="callout caveat">
+<p class="callout-label">这张快照里缺什么</p>
+<p>方法部分给了大量可复现细节（试剂货号、缓冲液配方、上样参数），但<b>缺三样关键的东西</b>：① 没有 Table S3 里的模型/地图质量统计（FSC 曲线、B-factor、map-model CC、局部分辨率）——正文只给了一个"整体 3.38 Å"；② 没有说明是否做了金标准 FSC 与方向分辨率；③ 坐标与密度图"准备中"，未被沉积。对一篇结构论文来说，这三项在评审时会被直接追问。</p>
+</aside>
+</section>
+
+<section id="sec-scaleup">
+<h2 id="sec-scaleup">第二步：放大、纯化、证明复合物真的组成了</h2>
+
+<p>芯片筛只回答"哪个配方值得放大"。接下来的关键问题是<b>放大会不会失真</b>，以及<b>融合了 β-内酰胺酶的受体是否真的能和 BLIP-II 结合</b>。作者的顺序是：先用 100 µL 管式放大做 FSEC，再把产量与芯片值对照，最后才把反应推到 2 mL 做电镜。</p>
+
+<p>结果是三者一致：BLIP-II 芯片 0.16 vs 放大 0.11 mg/mL，野生型 A<sub>2A</sub>R 0.05 vs 0.07，融合体 0.06 vs 0.06。野生型与融合体在 FSEC 上都早于空纳米盘出峰，落在"MSP1E3D1 DOPG 纳米盘里单体受体"的预期分子量区间；<b>但同时检出相当比例的聚集体——分别占总荧光的 35% 与 36%</b>。这个数字值得记住：后面能做成功结构，靠的不是"没有聚集体"，而是"单体峰足够干净、聚集体被 SEC 分开了"。</p>
+
+<p>复合物形成的证据做得干净：把 A<sub>2A</sub>R-β-内酰胺酶与 BLIP-II 预混后再跑 FSEC，主峰向高分子量方向位移、峰高增加、游离 BLIP-II 峰同时减少；而<b>把没有 β-内酰胺酶插入的野生型 A<sub>2A</sub>R 与 BLIP-II 预混，则完全不位移、强度也不变</b>。这一对正反实验同时排除了"BLIP-II 与纳米盘或受体非特异黏附"的可能。</p>
+
+<figure class="paper-fig" data-fig="fig2">
+<div class="pf-panels">
+<h4>逐面板解读</h4>
+<ul>
+<li><b>a</b><span><strong>三个组分的纯化产量</strong>：BLIP-II 最高（约 110 µg/mL），A<sub>2A</sub>R 约 70，融合体约 60。<b>BLIP-II 单独表达是为了后续按化学计量加进去</b>，所以它必须单独放大；三根柱子的高度也解释了为什么 2 mL 反应要按不同比例配置。<span class="ev" data-ev="p.8 Fig.2a">原文 p.8</span></span></li>
+<li><b>b</b><span><strong>野生型 A<sub>2A</sub>R 的 FSEC（阴性对照）</strong>：青＝BLIP-II，红虚线＝A<sub>2A</sub>R，深蓝＝两者预混。<b>红与深蓝几乎重合</b>——没有 β-内酰胺酶就没有结合位点，峰位与峰高都不变。这一步是整篇论文里最关键的对照。<span class="ev" data-ev="p.8 Fig.2b">原文 p.8</span></span></li>
+<li><b>c</b><span><strong>融合体的 FSEC（阳性）</strong>：橙虚线＝融合体，青＝BLIP-II，深蓝＝预混。<b>预混后主峰左移（更高分子量）、峰高上升，同时游离 BLIP-II 峰被消耗</b>，直接证明 1:1 复合物形成。左侧 0.8–1.0 mL 的小峰是聚集体/空盘区，右侧 1.6–1.8 mL 的尖峰是 BLIP-II。<span class="ev" data-ev="p.8 Fig.2c">原文 p.8</span></span></li>
+<li><b>标准品</b><span>灰色点线是 Waters BEH200 标准品：660、150、66.4、17 kDa。<strong>读法：受体-纳米盘复合物（约 200 kDa 量级）应落在 660 与 150 之间</strong>；图上主峰的位置对得上，而 BLIP-II（约 36 kDa 二聚体量级）落在 17–66 之间。</span></li>
+</ul>
+</div>
+<aside class="callout insight">
+<p class="callout-label">这一节最容易被低估的信息</p>
+<p>聚合体占总荧光 <b>35–36%</b> 并不低，但作者没有回避。对做结构的人来说这里有两层含义：<strong>(1)</strong> 无细胞 + 纳米盘的产物并不是"纯净的单体"，单步亲和纯化后仍有三分之一是聚集体；<strong>(2)</strong> 结构能成功，说明对冷冻电镜而言"单体的绝对量 + SEC 可分性"比"总纯度"更关键。<strong>如果照这个流程迁移到别的靶点，FSEC 的单体峰高度应该成为放大的硬性 gate，而不是产量。</strong></p>
+</aside>
+</figure>
+
+<aside class="callout caveat">
+<p class="callout-label">两处需要留意的方法细节</p>
+<ul>
+<li><b>FSEC 的分辨率有限。</b>它与 SEC 同原理但用荧光检测，分子量是"对标准品推断"而不是绝对测量；文中所有"单体/聚集体"的判定都基于峰位区间，没有 SEC-MALS 或质量光度法做正交确认。</li>
+<li><b>"纯化效率"是把芯片读数和放大读数混在一起算的。</b>Fig. 1c 的 18%/23% 来自纳升级芯片，Fig. 2a 的产量来自 100 µL 放大；两者数量级一致，但不是同一个测量的重复。</li>
+</ul>
+</aside>
+</section>
+<section id="sec-structure">
+<h2 id="sec-structure">第三步：3.38 Å 的结构读出了什么</h2>
+
+<p>电镜样品是 2 mL 的融合体反应 + 1 mL 的 BLIP-II 反应，各自单步亲和纯化、浓缩到约 100 µL（1.25 与 0.77 mg/mL），按 1:1.2 摩尔比混合并加 15 µM 拮抗剂 ZM241385，冰上过夜后上样。数据收集到 31,799 部电影，自动拾取 5,477,692 个颗粒，经过二维与三维分类后保留 <b>47,986</b> 个，得到整体 <b>3.38 Å</b> 的重建 <span class="ev" data-ev="p.9 结果">原文 p.9</span>。</p>
+
+<p>结构本身最值得注意的是<b>它"没有新东西"</b>——这恰恰是作者要证明的。把高分辨参考模型 PDB 9T9P（Shah 等，昆虫细胞 + 去垢剂）直接放进密度图后几乎不需要改：跨 803 个残基的 Cα RMSD 为 <b>0.99 Å</b>，跨 227 个跨膜螺旋残基仅 <b>0.85 Å</b>；配体 ZM241385 的重原子 RMSD <b>1.7 Å</b>，并且 9T9P 的配体构象放回本图的密度里同样贴合。差异只出现在三处：ECL1 附近 TM2/TM3 的胞外端、ECL2/ECL3（Cα 偏差最大约 2.3 Å）、以及 β-内酰胺酶–BLIP-II 模块相对受体约 <b>3°</b> 的刚性倾斜（使 BLIP-II 位移约 3.7 Å）。作者推测最后一项可能源于膜模拟环境的差异——去垢剂胶束 vs 脂质纳米盘 <span class="ev" data-ev="p.9 结果">原文 p.9</span>。</p>
+
+<p>密度质量呈明显的<b>梯度</b>：β-内酰胺酶与 BLIP-II 最好；受体内部与融合螺旋直接连续的 TM5、TM6 次之，侧链清晰；TM2、TM3、TM7 沿全长也不错；最差的是朝脂质的外周螺旋 TM1、TM4 与胞外环，很多侧链无法解析。这个梯度不是缺陷，而是这套设计的<b>必然结果</b>：颗粒对齐主要由基准模块驱动，离它越远的部件分辨率越低。</p>
+
+<figure class="paper-fig" data-fig="fig3">
+<div class="pf-panels">
+<h4>逐面板解读</h4>
+<ul>
+<li><b>a</b><span><strong>3.38 Å 的密度图</strong>：可以看到"倒置的 T 形"——上方是 β-内酰胺酶–BLIP-II 基准模块（一块大的、刚性的质量），下方插在纳米盘里的才是受体。<b>这张图本身就说明了策略：颗粒对齐靠上面那一块，不是靠受体。</b><span class="ev" data-ev="p.10 Fig.3a">原文 p.10</span></span></li>
+<li><b>b</b><span><strong>把参考模型塞进密度</strong>：作者把 9T9P 手动就位（为了清晰移除了纳米盘密度）。<b>读法：如果模型与密度大面积不符，这里会立刻看出来</b>；实际上几乎处处吻合，说明折叠一致。<span class="ev" data-ev="p.10 Fig.3b">原文 p.10</span></span></li>
+<li><b>c</b><span><strong>两个模型叠合</strong>：粉/钢蓝＝9T9P，番茄红/蓝灰＝本研究。整体高度一致，差异集中在 TM2–TM4（即 ECL1/ECL2 一侧）与基准模块的倾角。<b>注意：跨膜束的 0.85 Å 与整体的 0.99 Å 是两个不同分母，引用时别混。</b><span class="ev" data-ev="p.10 Fig.3c">原文 p.10</span></span></li>
+<li><b>d</b><span><strong>TM2–TM4 特写</strong>：能看到螺旋的轻微弯折与侧链差异。作者提示这部分可能反映膜模拟环境不同，也可能是分辨率与拟合带来的表观差异——<b>3.38 Å 下二者的区分度有限</b>。<span class="ev" data-ev="p.10 Fig.3d">原文 p.10</span></span></li>
+<li><b>e</b><span><strong>配体密度</strong>：ZM241385 的三唑并三嗪核心与呋喃环密度与周围侧链相当，但<b>伸向溶剂暴露胞外前庭的 4-羟基苯乙氨基尾巴密度更弱</b>。作者据此只说"结合模式与既有结构一致"，没有声称新的相互作用。<span class="ev" data-ev="p.10 Fig.3e">原文 p.10</span></span></li>
+</ul>
+</div>
+<aside class="callout caveat">
+<p class="callout-label">3.38 Å 能说什么、不能说什么</p>
+<p><strong>能说</strong>：整体折叠、跨膜束的排布、配体在正构口袋中的位置与朝向、基准模块相对受体的取向。<strong>不能说</strong>：氢键网络、有序水、侧链的精细构象、以及任何依赖 2 Å 以内精度的"结构导向设计"结论。作者自己在讨论里承认"在这个分辨率下，配体构象与先前结构一致，但氢键网络与有序水无法解析"——<b>这句话应该被引用者原样保留</b>，因为很多二次引用会把"3.38 Å 结构与 3.22 Å 一致"读成"精度相当"。</p>
+</aside>
+</figure>
+
+<figure class="schematic">
+<div class="sch-head">
+<span class="sch-badge">AI 重绘示意图（非原文图）</span>
+<span class="sch-source">机制重绘自第 3–4 节、结果 p.9–10 与图 3 · 结构形状为示意</span>
+</div>
+<div class="sch-canvas">
+<svg viewBox="0 0 960 340" role="img" aria-labelledby="fid-title fid-desc">
+<title id="fid-title">刚性基准模块为什么能让 40–50 kDa 的 GPCR 对齐</title>
+<desc id="fid-desc">左：受体只有 40 到 50 千道尔顿、大部分埋在膜或去垢剂里，可用于对齐的刚性参考很少。中：在胞内环 3 切除并插入 β-内酰胺酶，TM5 直接延续成 β-内酰胺酶的 N 端螺旋、其 C 端螺旋直接延续成 TM6，形成刚性连接；再结合 BLIP-II 增加质量。右：密度质量从基准模块向受体递减，TM5/TM6 最好，外周 TM1/TM4 与胞外环最差。</desc>
+<defs>
+<marker id="fid-ar" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--svg-rule)"/></marker>
+</defs>
+<g font-family="inherit">
+<text x="150" y="28" text-anchor="middle" fill="var(--svg-ink)" font-size="12.5" font-weight="600">① 问题：太小、太软</text>
+<text x="480" y="28" text-anchor="middle" fill="var(--svg-ink)" font-size="12.5" font-weight="600">② 解法：ICL3 插刚性模块 + 加质量</text>
+<text x="810" y="28" text-anchor="middle" fill="var(--svg-ink)" font-size="12.5" font-weight="600">③ 结果：密度质量呈梯度</text>
+
+<ellipse cx="150" cy="170" rx="86" ry="58" fill="var(--svg-bg)" stroke="var(--svg-rule)" stroke-dasharray="4 4"/>
+<text x="150" y="242" text-anchor="middle" fill="var(--svg-mute)" font-size="9.5">去垢剂胶束 / 膜</text>
+<g fill="var(--svg-3-soft)" stroke="var(--svg-3)" stroke-width="1">
+<rect x="112" y="130" width="10" height="66" rx="5"/><rect x="128" y="130" width="10" height="66" rx="5"/>
+<rect x="144" y="130" width="10" height="66" rx="5"/><rect x="160" y="130" width="10" height="66" rx="5"/>
+<rect x="176" y="130" width="10" height="66" rx="5"/>
+</g>
+<text x="150" y="118" text-anchor="middle" fill="var(--svg-ink-2)" font-size="10">~40–50 kDa</text>
+<text x="150" y="278" text-anchor="middle" fill="var(--svg-ink-2)" font-size="9.5">胞外质量少 → 对齐只靠膜内片段</text>
+<text x="150" y="296" text-anchor="middle" fill="var(--svg-mute)" font-size="9.5">通常要靠 G 蛋白 / 抗体补质量</text>
+
+<rect x="352" y="132" width="256" height="72" rx="10" fill="var(--svg-2-soft)" stroke="var(--svg-2)" stroke-width="1.2"/>
+<g fill="var(--svg-3-soft)" stroke="var(--svg-3)" stroke-width="1">
+<rect x="366" y="140" width="9" height="58" rx="4"/><rect x="380" y="140" width="9" height="58" rx="4"/>
+<rect x="394" y="140" width="9" height="58" rx="4"/>
+<rect x="470" y="140" width="9" height="58" rx="4"/><rect x="484" y="140" width="9" height="58" rx="4"/>
+<rect x="498" y="140" width="9" height="58" rx="4"/>
+</g>
+<rect x="414" y="128" width="48" height="50" rx="7" fill="var(--svg-2)" opacity=".85"/>
+<text x="438" y="158" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">β-lac</text>
+<ellipse cx="438" cy="102" rx="42" ry="20" fill="var(--svg-1)" opacity=".9"/>
+<text x="438" y="106" text-anchor="middle" fill="#fff" font-size="10.5" font-weight="700">BLIP-II</text>
+<line x1="414" y1="120" x2="438" y2="126" stroke="var(--svg-2)" stroke-width="1.6"/>
+<text x="352" y="98" fill="var(--svg-ink-2)" font-size="9.5">加质量</text>
+<text x="612" y="120" text-anchor="end" fill="var(--svg-ink-2)" font-size="9.5">TM5 → N 端螺旋</text>
+<text x="612" y="136" text-anchor="end" fill="var(--svg-ink-2)" font-size="9.5">C 端螺旋 → TM6</text>
+<text x="480" y="222" text-anchor="middle" fill="var(--svg-ink-2)" font-size="9.5">ICL3 被切除，融合模块成为跨膜束的一部分</text>
+<text x="480" y="242" text-anchor="middle" fill="var(--svg-mute)" font-size="9.5">纳米盘脂双层（文中约 4 nm 厚）</text>
+
+<text x="676" y="52" fill="var(--svg-ink)" font-size="10.5" font-weight="600">密度质量（示意条长）</text>
+<g font-size="9.5" fill="var(--svg-ink-2)">
+<text x="676" y="76">β-内酰胺酶 / BLIP-II</text>
+<rect x="676" y="82" width="188" height="12" rx="4" fill="var(--svg-1)" opacity=".9"/>
+<text x="676" y="114">TM5 / TM6</text>
+<rect x="676" y="120" width="140" height="12" rx="4" fill="var(--svg-1)" opacity=".65"/>
+<text x="676" y="152">TM2 / TM3 / TM7</text>
+<rect x="676" y="158" width="102" height="12" rx="4" fill="var(--svg-3)" opacity=".55"/>
+<text x="676" y="190">TM1 / TM4 / ECL</text>
+<rect x="676" y="196" width="66" height="12" rx="4" fill="var(--svg-3)" opacity=".3"/>
+</g>
+<text x="676" y="232" fill="var(--svg-ink-2)" font-size="9.5">对齐由基准模块驱动 →</text>
+<text x="676" y="248" fill="var(--svg-ink-2)" font-size="9.5">离它越远越模糊</text>
+<text x="676" y="270" fill="var(--svg-mute)" font-size="9">这是"加质量"策略的固有代价，</text>
+<text x="676" y="284" fill="var(--svg-mute)" font-size="9">不是制备质量的缺陷</text>
+<text x="480" y="322" text-anchor="middle" fill="var(--svg-mute)" font-size="9.5">结构形状为示意；质量梯度与残基分辨率范围取自原文 p.9–10</text>
+</g>
+</svg>
+</div>
+<figcaption><p class="sch-caption">这套设计的逻辑链条很短：<b>受体自己不够大 → 造一块刚性的、额外的质量并让它与受体硬连接 → 颗粒对齐由它主导</b>。代价同样直接：分辨率会沿着"基准模块 → 受体"的距离衰减，所以 TM5/TM6（与融合螺旋连续）最清楚、外周 TM1/TM4 最模糊。理解这一点，就理解了后面所有局限（配体尾巴弱、ECL 模糊、水分子不可见）的物理来源。</p></figcaption>
+</figure>
+
+<figure class="tbl">
+<figcaption><b>表 C</b>　冷冻电镜数据与建模：原文报告了什么、没报告什么</figcaption>
+<div class="table-wrap">
+<table class="cmp-table">
+<thead><tr><th>项目</th><th>原文给出</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>显微镜 / 检测器</td><td>Titan Krios 300 kV、Selectris X（10 eV）、Falcon 4i 计数模式</td><td>方法 p.21</td></tr>
+<tr><td>像素 / 放大</td><td>0.729 Å·px⁻¹（标定），标称 165,000×</td><td>方法 p.21</td></tr>
+<tr><td>电影数</td><td>31,799</td><td>方法 p.21</td></tr>
+<tr><td>拾取颗粒</td><td>5,477,692（BoxNet2，384 px 框）</td><td>方法 p.21</td></tr>
+<tr><td>最终颗粒</td><td><b>47,986</b></td><td>结果 p.9；约为拾取量的 0.88%</td></tr>
+<tr><td>整体分辨率</td><td><b>3.38 Å</b></td><td>未说明是 gold-standard FSC<sub>0.143</sub> 还是 <sub>0.5</sub></td></tr>
+<tr><td>对称性</td><td><b>未报告</b></td><td>按惯例应为 C1，但原文未写明</td></tr>
+<tr><td>FSC 曲线 / 方向分辨率 / 局部分辨率图</td><td><b>未报告（指向 Table S3，本 PDF 未含补充）</b></td><td>结构论文的关键质量证据缺失</td></tr>
+<tr><td>B-factor / 锐化 / map-model CC</td><td><b>未报告</b></td><td>同上</td></tr>
+<tr><td>模型覆盖</td><td>A<sub>2A</sub>R 8–146、163–214、220–303；β-内酰胺酶全长；BLIP-II 41–311；ZM241385</td><td>ECL2 147–162 与 C 端 303 之后未解析，与柔性一致</td></tr>
+<tr><td>坐标 / 密度图</td><td><b>未沉积</b>（"准备中，待同行评审后公开"）</td><td>数据可用性声明 p.23</td></tr>
+</tbody>
+</table>
+</div>
+<p class="table-note">"未报告"一栏是核对该 PDF 正文后的判断；补充材料（Table S3）不在本文件内，因此无法确认是否在补充中给出。</p>
+</figure>
+
+<figure class="schematic datafig">
+<div class="sch-head">
+<span class="sch-badge data">数据重绘自 p.9–10、p.21</span>
+<span class="sch-source">数据转录自原文，未重新分析 · 颗粒数取对数轴</span>
+</div>
+<div class="sch-canvas">
+<svg viewBox="0 0 920 300" role="img" aria-labelledby="pl-title pl-desc">
+<title id="pl-title">颗粒数与重建分辨率：本研究与参考结构 9T9P 的对比</title>
+<desc id="pl-desc">对数坐标下三根横条：本研究拾取的颗粒 5,477,692 个；参考结构 9T9P 最终使用的颗粒 597,000 个；本研究最终使用的颗粒 47,986 个。本研究保留率 0.88%，最终颗粒数比参考结构少约 12 倍，分辨率分别为 3.38 埃与 3.22 埃。</desc>
+<g stroke="var(--svg-grid)" stroke-width="1">
+<line x1="220" y1="60" x2="220" y2="230"/><line x1="433" y1="60" x2="433" y2="230"/>
+<line x1="647" y1="60" x2="647" y2="230"/><line x1="860" y1="60" x2="860" y2="230"/>
+</g>
+<line x1="220" y1="230" x2="880" y2="230" stroke="var(--svg-rule)" stroke-width="1.4"/>
+<g font-size="9.5" fill="var(--svg-mute)" text-anchor="middle">
+<text x="220" y="248">10⁴</text><text x="433" y="248">10⁵</text><text x="647" y="248">10⁶</text><text x="860" y="248">10⁷</text>
+</g>
+<text x="550" y="270" text-anchor="middle" fill="var(--svg-ink-2)" font-size="10">颗粒数（对数刻度）</text>
+
+<g font-size="10.5" fill="var(--svg-ink)">
+<text x="210" y="88" text-anchor="end">本研究：拾取</text>
+<text x="210" y="150" text-anchor="end">9T9P：最终使用</text>
+<text x="210" y="212" text-anchor="end">本研究：最终使用</text>
+</g>
+<rect x="220" y="72" width="584" height="22" rx="4" fill="var(--svg-3)" opacity=".55"/>
+<text x="812" y="88" fill="var(--svg-ink)" font-size="10.5" font-weight="600">5,477,692</text>
+<rect x="220" y="134" width="379" height="22" rx="4" fill="var(--svg-2)" opacity=".8"/>
+<text x="607" y="150" fill="var(--svg-ink)" font-size="10.5" font-weight="600">597,000 · 3.22 Å</text>
+<rect x="220" y="196" width="145" height="22" rx="4" fill="var(--svg-1)" opacity=".9"/>
+<text x="373" y="212" fill="var(--svg-ink)" font-size="10.5" font-weight="600">47,986 · 3.38 Å</text>
+
+<text x="220" y="40" fill="var(--svg-ink)" font-size="11.5" font-weight="600">保留率 0.88%；最终颗粒数比参考结构少 ≈12 倍，分辨率仅差 0.16 Å</text>
+</svg>
+</div>
+<figcaption>
+<p class="sch-caption"><b>这张图要读的是"同一分辨率的代价变了"</b>：两组数据里，本研究的最终颗粒数少了一个数量级，分辨率只差 0.16 Å。但作者自己指出，数据收集与处理流程不同"不允许直接比较"——所以这张图是<b>提示</b>而不是<b>证明</b>。</p>
+<p class="source-note">数据转录自原文 p.9（47,986 颗粒、3.38 Å）、p.10（9T9P 为 597,000 颗粒、3.22 Å）、p.21（31,799 电影、5,477,692 拾取）；未重新分析。</p>
+</figcaption>
+</figure>
+
+<aside class="callout insight">
+<p class="callout-label">"少 12 倍颗粒"这件事该怎么读</p>
+<p>作者的解释是"纳米盘包埋的无细胞材料足够均一，因而电镜分析效率更高"。<b>[推断] 这个解释至少有三个替代来源</b>：① 基准模块（β-内酰胺酶 + BLIP-II）比 9T9P 使用的对应模块质量更大或更长程刚性，对齐本身更强；② 数据收集条件（Krios + Selectris X + Falcon 4i、AFIS、0.729 Å 像素）可能优于参考工作；③ 处理流程（WARP 实时预处理 + cryoSPARC）与分类策略不同。<b>在 3.38 vs 3.22 Å 这样接近的分辨率下，"颗粒效率"同时受样品、仪器与流程影响，单靠论文给出的信息无法把功劳分配给"无细胞合成"。</b></p>
+</aside>
+</section>
+<section id="sec-panel">
+<h2 id="sec-panel">第四步：把流程推到 12 个受体，包括 6 个孤儿 GPCR</h2>
+
+<p>单个 A<sub>2A</sub>R 结构只能证明"这条路能走通"，不能证明"这条路能复制"。作者因此做了一个 12 个受体的面板：4 个已有配体/结构的 Class A（CCR10、CXCR1、ADRB2、CB2）、1 个 Class B（GCGR）、1 个 Class C（RAI3/GPRC5A），以及 6 个孤儿受体（GPR61、GPR85、GPR88、GPR146、GPR151、GPR174）。这些全部是<b>无配体（apo）状态</b>——孤儿受体没有已知天然配体，本来就不可能靠小分子热稳定化或用 G 蛋白复合物来稳定，所以它们恰好是这套"无去垢剂、共翻译插入"路线最有说服力的用例。</p>
+
+<p>针对每个靶点，作者做了三种 N 端构建变体：<b>(1)</b> 天然无标签；<b>(2)</b> N 端融合 BRIL（一种来自细胞色素 b<sub>562</sub> 的"可溶性折叠伴侣"，常用于稳定 GPCR 的 N 端）；<b>(3)</b> N 端融合二氢乳清酸脱氢酶（DHODH）的双亲性膜锚定螺旋，用来促进初始的纳米盘结合。三种变体 × 不同纳米盘配方在芯片上快速筛一遍，取每个靶点产量最高的条件放大，再做 FSEC <span class="ev" data-ev="p.12 结果">原文 p.12</span>。</p>
+
+<p>结果：12 个受体全部表达了、都插进了纳米盘、都能在 apo 状态下纯化，产量"与 A<sub>2A</sub>R 相当或更高"；非孤儿面板（Class A/B/C）都给出对应单体受体–纳米盘复合物的清晰主峰，聚集体水平虽各有差异但整体很低；6 个孤儿受体都给出尖锐对称的洗脱峰，其中 <b>GPR61、GPR146、GPR151</b> 接近单分散、几乎没有高分子量物种。</p>
+
+<figure class="paper-fig" data-fig="fig4">
+<template data-hotspots>
+<svg class="pf-hotspots" aria-hidden="true">
+<g class="hs" tabindex="0" role="button" data-tip-kicker="灰色点线 · 标准品" data-tip="Waters BEH200 标准品：660、150、66.4、17 kDa（以及 112 Da）。所有主峰都要跟这组位置比，才能判断是不是“单个受体 + 一个纳米盘”。">
+<circle class="hs-halo" cx="30%" cy="24%" r="19"></circle><circle class="hs-dot" cx="30%" cy="24%" r="13"></circle><text class="hs-num" x="30%" y="24%">1</text>
+</g>
+<g class="hs" tabindex="0" role="button" data-tip-kicker="主峰左侧 · 聚集体" data-tip="0.8–1.1 mL 区间的小峰是空盘/聚集体。不同受体这里的高度差别很大（例如 CXCR1、GCGR、GPR85 更明显），这是判断“结构级质量”的真实指标，而不是总产量。">
+<circle class="hs-halo" cx="14%" cy="50%" r="19"></circle><circle class="hs-dot" cx="14%" cy="50%" r="13"></circle><text class="hs-num" x="14%" y="50%">2</text>
+</g>
+<g class="hs" tabindex="0" role="button" data-tip-kicker="孤儿受体 g/k" data-tip="GPR61（g）与 GPR151（k）接近单分散：主峰尖锐对称、几乎没有高分子量肩峰。对没有配体可用的孤儿受体来说，这是目前能拿到的最好质量证据——但只是尺寸排阻行为，不是功能证据。">
+<circle class="hs-halo" cx="18%" cy="66%" r="19"></circle><circle class="hs-dot" cx="18%" cy="66%" r="13"></circle><text class="hs-num" x="18%" y="66%">3</text>
+</g>
+</svg>
+</template>
+<div class="pf-panels">
+<h4>逐面板解读</h4>
+<ul>
+<li><b>a–d</b><span><strong>Class A 的四个非孤儿靶点</strong>：CCR10、CXCR1、ADRB2、CB2，全部在 apo 状态下纯化。注意纵轴量程不同（ADRB2 只有 150 a.u.，CCR10 到 400）——<b>荧光强度不能直接跨面板比较</b>，能比较的是"主峰位置"与"肩峰相对高度"。<span class="ev" data-ev="p.13 Fig.4">原文 p.13</span></span></li>
+<li><b>e–f</b><span><strong>Class B（GCGR）与 Class C（RAI3/GPRC5A）</strong>：这两类受体的胞外域更大、折叠更复杂，是最能考验"共翻译插入"是否通用的样本。<b>两者都给出单峰</b>，说明这套流程不是只对 Class A 的"小受体"有效。</span></li>
+<li><b>g–l</b><span><strong>六个孤儿受体</strong>：全部 apo、没有配体稳定化。<b>GPR61（g）、GPR146（j）、GPR151（k）接近单分散</b>，峰形尖锐对称；GPR85（h）、GPR88（i）、GPR174（l）在主峰左侧有可见肩峰，说明有部分聚集体或空盘。<b>这是本文"可泛化"主张的核心证据，但证据类型只有 FSEC。</b></span></li>
+<li><b>共同点</b><span>每个面板都叠了同一套灰色标准品，所以读者可以逐格判断主峰落在哪个分子量区间。<b>原文没有给每个受体的纯化产量数字</b>，只说"与 A<sub>2A</sub>R 相当或更高"，也没有重复次数与误差——这是这张图最大的信息缺口。<span class="ev" data-ev="p.14 结果">原文 p.14</span></span></li>
+</ul>
+</div>
+<aside class="callout caveat">
+<p class="callout-label">"FSEC 合格"能证明什么</p>
+<p>FSEC 只能说明：<strong>该受体在去垢剂-free 的纳米盘里以一个尺寸接近"单受体 + 单纳米盘"的可溶物种存在，且没有大量聚集</strong>。它<strong>不能</strong>说明：受体是正确折叠的（错折叠也可能单分散）、能结合配体（这些靶点大多没有做结合实验）、有功能活性、或者其构象均一。<b>因此"12 个受体都达到结构级质量"是一个以 A<sub>2A</sub>R 为单点标定的外推</b>——A<sub>2A</sub>R 的 FSEC 质量确实足以解出 3.38 Å，但这不保证其他 11 个受体同样可以。</p>
+</aside>
+</figure>
+
+<figure class="tbl">
+<figcaption><b>表 D</b>　12 个受体的面板（转录自图 4 与正文 p.11–14）</figcaption>
+<div class="table-wrap">
+<table class="cmp-table">
+<thead><tr><th>面板</th><th>受体</th><th>类别</th><th>原文给出的质量描述</th><th>有无功能/结构验证</th></tr></thead>
+<tbody>
+<tr><td>a</td><td>CCR10</td><td>Class A（趋化因子）</td><td>主峰对应单体受体–纳米盘；有少量聚集体</td><td>无</td></tr>
+<tr><td>b</td><td>CXCR1</td><td>Class A（趋化因子）</td><td>同上；0.9 mL 附近肩峰较明显</td><td>无</td></tr>
+<tr><td>c</td><td>ADRB2</td><td>Class A（β<sub>2</sub>-肾上腺素）</td><td>主峰清晰；荧光强度最高（150 a.u. 量程内）</td><td>无</td></tr>
+<tr><td>d</td><td>CB2</td><td>Class A（大麻素）</td><td>主峰对应单体；峰形对称</td><td>无</td></tr>
+<tr><td>e</td><td>GCGR</td><td>Class B（胰高血糖素）</td><td>单峰，主峰前有聚集体肩</td><td>无</td></tr>
+<tr><td>f</td><td>RAI3 / GPRC5A</td><td>Class C</td><td>单峰，肩峰很低</td><td>无</td></tr>
+<tr><td>g</td><td>GPR61</td><td>孤儿（Class A）</td><td><b>近单分散</b>，峰尖锐对称</td><td>无</td></tr>
+<tr><td>h</td><td>GPR85</td><td>孤儿（Class A）</td><td>主峰 + 明显左肩（聚集体/空盘）</td><td>无</td></tr>
+<tr><td>i</td><td>GPR88</td><td>孤儿（Class A）</td><td>主峰 + 左肩</td><td>无</td></tr>
+<tr><td>j</td><td>GPR146</td><td>孤儿（Class A）</td><td><b>近单分散</b>，荧光强度高（400 a.u.）</td><td>无</td></tr>
+<tr><td>k</td><td>GPR151</td><td>孤儿（Class A）</td><td><b>近单分散</b>，峰形最干净之一</td><td>无</td></tr>
+<tr><td>l</td><td>GPR174</td><td>孤儿（Class A）</td><td>主峰 + 左肩</td><td>无</td></tr>
+</tbody>
+</table>
+</div>
+<p class="table-note">"原文给出的质量描述"来自正文 p.12–14 与图 4 的目视判读；原文未逐靶点报告纯化产量、重复次数或误差。3 种 N 端变体（native / BRIL / DHODH 螺旋）的筛选结果见补充 Table S1（本 PDF 未含）。</p>
+</figure>
+
+<figure class="tbl">
+<figcaption><b>表 E</b>　与三条既有路线的定位（据原文引言 p.3–4 与讨论 p.15–17 整理）</figcaption>
+<div class="table-wrap">
+<table class="cmp-table">
+<thead><tr><th>维度</th><th>Shah et al. 2026（9T9P）</th><th>Collu et al. 2026</th><th>Köck 2024 / Merino 2025</th><th>本研究</th></tr></thead>
+<tbody>
+<tr><td>表达体系</td><td>昆虫细胞</td><td>（单链 β<sub>1</sub>AR 融合，细胞体系）</td><td>大肠杆菌裂解液无细胞</td><td><b>PURE 无细胞</b></td></tr>
+<tr><td>增溶方式</td><td>去垢剂</td><td>去垢剂</td><td>共翻译插入纳米盘</td><td><b>共翻译插入纳米盘</b></td></tr>
+<tr><td>对准策略</td><td>ICL3 β-内酰胺酶 + BLIP-II</td><td>AmpC β-内酰胺酶融合</td><td>G 蛋白复合物（G 蛋白来自昆虫细胞）</td><td><b>ICL3 β-内酰胺酶 + BLIP-II</b></td></tr>
+<tr><td>可及的配体态</td><td>拮抗剂结合</td><td>未强调</td><td>激动剂结合（活性态）</td><td><b>拮抗剂结合（全无细胞）</b></td></tr>
+<tr><td>分辨率</td><td>3.22 Å（共识）</td><td>4.2 Å</td><td>高分辨（具体值见各自文献）</td><td><b>3.38 Å</b></td></tr>
+<tr><td>最终颗粒数</td><td>597,000</td><td>未在本文引用</td><td>未在本文引用</td><td><b>47,986</b></td></tr>
+<tr><td>流程时长</td><td>数周（细胞表达 + 去垢剂纯化）</td><td>未给出</td><td>数天（但仍需昆虫细胞产 G 蛋白）</td><td><b>约 4 天</b></td></tr>
+</tbody>
+</table>
+</div>
+<p class="table-note">表中"未在本文引用"指原文没有转述这些数值；跨研究的数字不可直接比较（数据收集、处理、样品状态均不同）。</p>
+</figure>
+
+<aside class="callout insight">
+<p class="callout-label">这张面板图真正的价值在哪</p>
+<p>不在"12 个都成功"，而在<b>它把"孤儿受体"变成了这套流程的天然领地</b>。孤儿受体没有已知配体，因此：不能靠小分子热稳定化、不能靠 G 蛋白复合物捕获活性态、也很难用细胞体系稳定表达。<b>如果无细胞 + 纳米盘能让它们在 apo 状态下稳定且单分散，那么它们就是冷冻电镜最纯粹的"先有蛋白、再找结构"的靶点类别。</b>这条论证比"12 个靶点都纯化出来了"更有分量，也是本文最值得被后续工作接住的地方。</p>
+</aside>
+</section>
+<section id="sec-appraisal">
+<h2 id="sec-appraisal">批判性评估：一条可信的产线，一个还不完整的故事</h2>
+
+<div class="appraisal">
+<div class="card pro">
+<h4>强项</h4>
+<ul>
+<li><b>对照设计干净。</b>三项关键比较都有正反两面：有/无纳米盘的纯化对比（图 1b）、野生型/融合体对 BLIP-II 的结合对比（图 2b vs 2c）、以及与本领域独立结构 9T9P 的叠合（图 3c）。这不是"做了就成"的叙述，而是每一步都能被反驳的设计。</li>
+<li><b>用别人的结构验证自己的蛋白。</b>作者没有声称发现新构象，而是把参考模型直接放进自己的密度图，报告 Cα RMSD（0.99 / 0.85 Å）与配体重原子 RMSD（1.7 Å），甚至做了"把 9T9P 的配体构象放回本图密度"的互换检验。<b>对一篇"只证明等价"的论文，这是最有说服力的写法。</b></li>
+<li><b>不利数据照登。</b>纯化后聚集体占荧光 35–36%、TM1/TM4 侧链大多不可解析、配体尾巴密度弱、ECL2 与 C 端未解析、两种升温/收集条件不可直接比较——这些都写在正文里，没有被藏进补充材料。</li>
+<li><b>打开了一个此前难及的态。</b>复合物全部由无细胞体系合成，因此不需要 G 蛋白，能拿到拮抗剂结合（乃至 apo）状态。这是方法层面的真实能力扩展，而不是数字上的改进。</li>
+<li><b>可复现性高。</b>试剂货号、缓冲液配方、上样参数、数据收集设置、处理软件版本都给了。按方法部分可以把流程重搭起来。</li>
+</ul>
+</div>
+<div class="card unc">
+<h4>不确定处</h4>
+<ul>
+<li><b>一个结构、一张网格、一个比例。</b>没有重复的重建，没有第二个脂质配方或第二个摩尔比的结构对照。因此"3.38 Å"是单点观测，而不是可重复的规格。</li>
+<li><b>关键质量统计不在正文。</b>没有 FSC 曲线、没有说明 3.38 Å 是哪个阈值、没有 B-factor / map-model CC / 局部分辨率图。正文说统计在 Table S3，但补充材料不在本 PDF 里。<b>这使"3.38 Å"无法被独立评估。</b></li>
+<li><b>"少 12 倍颗粒"的归因不唯一。</b>样品均一性、基准模块质量、数据收集配置（Krios + Selectris X + Falcon 4i + AFIS）、处理流程都可能贡献。作者自己也写了"数据收集与处理的不同不允许直接比较"，但摘要与讨论仍然强调了 12 倍。</li>
+<li><b>12 个受体的面板只有 FSEC。</b>没有配体结合、没有热稳定性、没有活性、也没有任何一个新结构。"结构级质量"是从 A<sub>2A</sub>R 这一个点外推的。</li>
+<li><b>摘录与正文的面板数字对不上。</b>摘要写"an expanded panel of <b>12 wild-type GPCRs</b> spanning Classes A, B, and C, <b>as well as six orphan receptors</b>"，读起来是 12 + 6 = 18 个；正文与图 4 实际是 <b>12 个总数</b>（4 个 Class A + 1 个 B + 1 个 C + 6 个孤儿）。引言也写"a wider set of 12 Class A-C GPCRs"。<b>这是审稿一定会抓的不一致。</b></li>
+<li><b>"四天"不可复核。</b>原文只给总时长，没有逐步计时；起点是"基因构建生成"，而 DNA 片段由 IDT 合成交付，这段时间是否计入没说明。PURE 试剂的成本与 2 mL 放大的线性度也没有报告。</li>
+</ul>
+</div>
+<div class="card con">
+<h4>薄弱点 / 不能外推的地方</h4>
+<ul>
+<li><b>这是一篇公司平台论文。</b>9 位作者里 5 位是 Nuclera 雇员并持有股票期权，平台（eProtein Discovery、PURE Core、纳米盘面板）全部是自家产品。结论"这套流程可行"与作者利益同向；没有独立实验室复现。</li>
+<li><b>数据尚未公开。</b>坐标与密度图"准备中，待同行评审后公开"。在沉积之前，结构层面的任何核对都无法进行。</li>
+<li><b>"共翻译插入"是推断，不是直接观测。</b>证据是"翻译时没有纳米盘就纯化不出来"。这可以有别的解释（例如无纳米盘时受体在翻译后立即聚集、且被磁珠非特异吸附损失），要直接证明共翻译需要核糖体-新生链保护、蛋白酶可及性等实验。</li>
+<li><b>纯化效率只有 18–23%。</b>也就是每五份合成蛋白只有一份可纯化。对 A<sub>2A</sub>R 而言这已经够用（2 mL 反应），但对表达更差的靶点，放大会线性放大试剂成本——原文没有讨论这个上限在哪里。</li>
+<li><b>没有与"大肠杆菌裂解液 CF"做头对头。</b>作者论证 PURE 优于裂解液（背景更干净、重复性更好），但这是文献层面的说法，本研究没有在同一样品、同一靶点上比较两种体系。因此"PURE 对电镜更友好"仍是未检验的假设。</li>
+<li><b>孤儿受体"折叠正确"未验证。</b>单分散只能说明尺寸行为，不能说明构象正确。对没有配体可用的孤儿受体，这一步验证尤其重要，却被留给了未来工作。</li>
+</ul>
+</div>
+</div>
+
+<p style="font-weight:700;font-size:1.08em;color:var(--ink);margin:2em 0 .5em">三个必须自己回答的问题</p>
+<ol>
+<li><b>"3.38 Å"和参考结构的 3.22 Å 差 0.16 Å，但为什么值得单独发表？</b>如果结构本身没有新信息，那么价值必须全部落在"更快、更便宜、更可及"上。这三项里只有"更快"（四天）被部分记录，"更便宜"完全没有数据，"更可及"（不需要 G 蛋白/细胞）是定性论证。<b>读者应该把这篇当成"流程可行性研究"，而不是"结构生物学发现"。</b></li>
+<li><b>12 个受体里，有几个能真的解出结构？</b>论文证明了它们能纯化、能单分散，但没有一个被推到电镜。历史上"FSEC 漂亮"与"能出 3.5 Å"之间的落差很大（尤其是 Class B/C 与孤儿受体）。<b>本文最需要后续补的，就是至少 2–3 个非 A<sub>2A</sub>R 靶点的结构。</b></li>
+<li><b>如果换成更小的刚性模块，质量梯度会改善吗？</b>当前设计里 β-内酰胺酶 + BLIP-II 提供了质量，也让"离它越远越模糊"成为固有问题。用更靠近胞外的模块、或者双向对称的双模块，可能改善受体本身的密度——这是这套策略真正的方法学改进方向，本文没有探索。</li>
+</ol>
+
+<p>[推断] 最稳妥的读法：<b>这是一篇"产线可行性"论文，价值在流程而不在结构</b>。它成功的地方是把三个独立的技术（PURE 表达、共翻译纳米盘、ICL3 刚性基准）串成一条能在四天内闭合的流水线，并用一个 3.38 Å 的结构证明终点可达；它没做的事情，恰恰是把"可达"升级为"可重复、可泛化、可比较"——那需要多个靶点的结构、公开的坐标、以及与现有体系的头对头数据。</p>
+</section>
+
+<section id="sec-relevance">
+<h2 id="sec-relevance">与我相关：四件可以立刻借走的事</h2>
+
+<p style="font-weight:700;font-size:1.08em;color:var(--ink);margin:1.9em 0 .5em">一、"先便宜问题、后贵问题"的筛选阶梯</p>
+<p>这是全文最可迁移的工程思想：<b>纳升级芯片筛（几十纳升/条件）→ 100 µL 管式放大 + FSEC → 2 mL 电镜级制备</b>。每一级只回答一个问题，且成本比下一级低一到两个数量级。任何"高价值、低通量、试剂昂贵"的实验闭环都可以照搬这个结构：<b>先在最便宜的尺度上把"能不能"变成"值不值得"</b>。</p>
+
+<p style="font-weight:700;font-size:1.08em;color:var(--ink);margin:1.9em 0 .5em">二、用独立参考结构做交叉验证</p>
+<p>当你的工作"没有新发现、只是换了一条路"时，最有力的证据不是分辨率，而是<b>与既有高分辨结构的逐原子一致性</b>：Cα RMSD、跨膜段 RMSD、配体重原子 RMSD、以及"把对方的配体放回我的密度图"这种互换检验。这套写法可以直接搬到任何"方法替代"型论文（新表达体系、新纯化路线、新固定方法）。</p>
+
+<p style="font-weight:700;font-size:1.08em;color:var(--ink);margin:1.9em 0 .5em">三、警惕"单点标定 → 面板外推"</p>
+<p>本文用 A<sub>2A</sub>R 一个点证明"FSEC 质量足以解结构"，再把同样的 FSEC 标准套到 11 个受体上，得出"都达到结构级质量"。<b>这是一个单点标定的外推</b>，在方法学上很常见也很危险。读到"整个面板都合格"时，第一个要问的问题是：<b>合格这个判定，是用什么读出定义的？那个读出被验证过的靶点有几个？</b></p>
+
+<p style="font-weight:700;font-size:1.08em;color:var(--ink);margin:1.9em 0 .5em">四、刚性基准模块是一个通用解法</p>
+<p>"给小的、软的、缺参考的蛋白硬接一块质量"这个思路，不限于 GPCR：单域抗体、小膜蛋白、病毒衣壳亚基、乃至冷冻电镜里的核酸-蛋白小复合物都适用。可迁移的三条经验：<b>(1)</b> 插入位点选在天然柔性环（容忍度高）；<b>(2)</b> 连接处要与相邻二级结构"连续"（本文 TM5→N 端螺旋、C 端螺旋→TM6）以获得刚性；<b>(3)</b> 再结合一个高亲和力伴侣加质量。<b>代价是密度质量的梯度</b>——离模块越远越模糊，这一点在选题时就要预判。</p>
+
+<aside class="callout method">
+<p class="callout-label">一个可检验的假设（如果你要做后续工作）</p>
+<p>[推断] 如果"无细胞 + 共翻译纳米盘"真的是一种通用的膜蛋白稳定化手段，那么它对<b>热稳定性差、且没有配体可用的孤儿受体</b>的相对优势应该最大——因为其他所有路线（去垢剂、G 蛋白、小分子热稳定化）在这类靶点上都失效。可检验的写法：选 3 个 FSEC 近单分散的孤儿受体（如 GPR61、GPR146、GPR151），在相同流程下尝试 3.5 Å 以内重建；若其中至少 2 个成功，则"通用"成立；若全部失败，则本文的"结构级质量"只是 A<sub>2A</sub>R 的特例。</p>
+</aside>
+</section>
+
+<section id="sec-glossary">
+<h2 id="sec-glossary">术语表</h2>
+
+<dl class="glossary">
+<div><dt>GPCR</dt><dd>G 蛋白偶联受体，七次跨膜的最大膜蛋白家族，约三分之一 FDA 批准药物的靶点。</dd></div>
+<div><dt>cryo-EM / 单颗粒分析</dt><dd>把蛋白快速冷冻成玻璃态冰、拍大量电子显微照片、再通过二维/三维分类与平均重建出三维密度图的方法。</dd></div>
+<div><dt>CFPS</dt><dd>cell-free protein synthesis，无细胞蛋白合成：在试管里用裂解液或纯化组分完成转录翻译。</dd></div>
+<div><dt>PURE 体系</dt><dd>Protein synthesis Using Reconstituted Elements：只用重组纯化的转录/翻译组分，背景干净、重复性好、无宿主蛋白污染。</dd></div>
+<div><dt>纳米盘（nanodisc）</dt><dd>由磷脂双分子层 + 两圈膜支架蛋白（MSP）围成的盘状颗粒，直径由 MSP 长度决定，可在无去垢剂条件下包埋膜蛋白。</dd></div>
+<div><dt>MSP1D1 / MSP1E3D1</dt><dd>两种膜支架蛋白，直径分别约 9.5 nm 与 13 nm；后者更常用于较大或需要更多脂质的受体。</dd></div>
+<div><dt>DOPG / POPC / POPS</dt><dd>常用磷脂：DOPG 带负电，POPC 中性，POPS 带负电；脂质电荷影响膜插入效率与受体构象。</dd></div>
+<div><dt>ICL3</dt><dd>第三个胞内环，位于 TM5 与 TM6 之间。长度与序列容忍度高，是插入融合伴侣的经典位点。</dd></div>
+<div><dt>刚性基准（rigid fiducial）</dt><dd>与目标蛋白刚性连接、用于提供颗粒对齐参考的模块；本文用的是 β-内酰胺酶 + BLIP-II。</dd></div>
+<div><dt>BLIP-II</dt><dd>β-内酰胺酶抑制蛋白 II，与 β-内酰胺酶高亲和结合，用来给基准模块再加质量。</dd></div>
+<div><dt>共翻译插入</dt><dd>在蛋白还在核糖体上合成时就插入脂双层/纳米盘，而不是先表达再 reconstitute；本文声称这是增溶的关键。</dd></div>
+<div><dt>FSEC</dt><dd>fluorescence-detection size-exclusion chromatography：用荧光检测的尺寸排阻色谱，判断膜蛋白是否单分散、有无聚集。</dd></div>
+<div><dt>DMF / 数字微流控</dt><dd>digital microfluidics：用介电润湿在电极阵列上移动纳升级液滴，做分液、混合、反应与纯化。</dd></div>
+<div><dt>split-GFP（DET tag）</dt><dd>把 GFP 拆成两半、分别挂在目标蛋白与检测试剂上，只有两者靠近才发光——用于定量表达与纯化。</dd></div>
+<div><dt>BRIL</dt><dd>来自细胞色素 b<sub>562</sub> 的稳定化融合伴侣，常加在 GPCR 的 N 端以改善折叠与表达。</dd></div>
+<div><dt>DHODH 螺旋</dt><dd>二氢乳清酸脱氢酶的 N 端双亲性膜锚定螺旋，本文用它促进受体与纳米盘的初始结合。</dd></div>
+<div><dt>FSC / gold standard</dt><dd>傅里叶壳层相关；冷冻电镜分辨率的标准判据，常用 0.143 阈值（gold standard）。</dd></div>
+<div><dt>Cα RMSD</dt><dd>叠合后主链碳原子的均方根偏差，衡量两个结构的几何一致性。</dd></div>
+<div><dt>apo 状态</dt><dd>无配体（未结合激动剂/拮抗剂）的受体状态，构象通常更柔性、更难稳定。</dd></div>
+<div><dt>DBTL</dt><dd>Design–Build–Test–Learn，合成生物学常用的迭代闭环。</dd></div>
+<div><dt>ZM241385</dt><dd>A<sub>2A</sub> 受体的高亲和力拮抗剂，本文用于锁定拮抗剂结合态。</dd></div>
+</dl>
+</section>
+
+<section id="sec-refs">
+<h2 id="sec-refs">引用与延伸阅读</h2>
+
+<p>本报告页码均指该 PDF 的页码（29 页）。原文是 bioRxiv 预印本，未同行评审。</p>
+
+<ol class="refs">
+<li>Guilliam, T. A., Jakimowicz, A. K., Manni, M. M., Gaber, Z. B., Paris, G., Hardwick, S. W., Cooper, L., Chirgadze, D. Y., &amp; Ost, T. W. B. <i>Rapid Production and Cryo-EM Structure Determination of GPCR-Nanodisc Complexes via Cell-Free Synthesis</i>. bioRxiv (2026-10-23). doi:10.64898/2026.10.21.760646 —— 本文。</li>
+<li>Shah, N. R. et al. A novel fusion tool to enable G protein-coupled receptor structure determination. <i>Acta Cryst.</i> D82(6), 655–663 (2026). doi:10.1107/S2059798326003785 —— 9T9P 的来源；本文的构建策略与对照结构。</li>
+<li>Collu, G. et al. Cryo-EM structure of a single-chain β1-adrenoceptor-AmpC β-lactamase fusion protein. <i>J. Struct. Biol.</i> 218(3), 108349 (2026). doi:10.1016/j.jsb.2026.108349 —— 同策略在 β<sub>1</sub>AR 上 4.2 Å。</li>
+<li>Singh, S. K., Agrawal, M., Pattanayak, A., Baidya, M., &amp; Kumari, P. Strategic advances for cryo-EM structural studies of small (&lt;100 kDa) GPCRs. <i>Commun. Biol.</i> 9, 237 (2026). doi:10.1038/s42003-026-09516-y —— 小 GPCR 电镜策略综述。</li>
+<li>Köck, Z. et al. Biochemical characterization of cell-free synthesized human β1 adrenergic receptor cotranslationally inserted into nanodiscs. <i>J. Mol. Biol.</i> 434(16), 167687 (2022). doi:10.1016/j.jmb.2022.167687 —— 共翻译纳米盘插入的方法学根基。</li>
+<li>Köck, Z. et al. Cryo-EM structure of ... (2024); 与 Merino, F. et al. Cryo-EM structure of a cell-free synthesized full-length human β1-adrenergic receptor in complex with Gs. <i>Structure</i> 33(11), 1867–1877.e5 (2025). doi:10.1016/j.str.2025.07.020 —— 大肠杆菌裂解液 CF + 纳米盘的两个里程碑结构。</li>
+<li>Shimizu, Y. et al. Cell-free translation reconstituted with purified components. <i>Nat. Biotechnol.</i> 19(8), 751–755 (2001). doi:10.1038/90802 —— PURE 体系原始论文。</li>
+<li>Bayburt, T. H., Grinkova, Y. V., &amp; Sligar, S. G. Self-assembly of discoidal phospholipid bilayer nanoparticles with membrane scaffold proteins. <i>Nano Lett.</i> 2(8), 853–856 (2002); Denisov, I. G. et al. <i>JACS</i> 126(11), 3477–3487 (2004) —— 纳米盘与 MSP 的原始文献。</li>
+<li>Kawate, T., &amp; Gouaux, E. Fluorescence-detection size-exclusion chromatography for precrystallization screening of integral membrane proteins. <i>Structure</i> 14(4), 673–681 (2006). doi:10.1016/j.str.2006.01.013 —— FSEC 方法原始论文。</li>
+<li>Mendoza-Hoffmann, F., Guo, C., Song, Y., Feng, D., Yang, L., &amp; Wüthrich, K. <sup>19</sup>F-NMR studies of the impact of different detergents and nanodiscs on the A2A adenosine receptor. <i>J. Biomol. NMR</i> 78(1), 31–37 (2024). doi:10.1007/s10858-023-00430-7 —— 去垢剂 vs 纳米盘对 A<sub>2A</sub>R 构象平衡的影响，作者用来解释 3° 倾角。</li>
+</ol>
+
+<aside class="callout quote">
+<p class="callout-label">原文最值得记住的两句</p>
+<p>"Crucially, microfluidic screening confirmed that co-translational insertion into nanodiscs was strictly required for A2AR solubilization and affinity purification, de-risking reaction scale-up before committing higher reagent volumes."（p.16）</p>
+<p>"At the current resolution, the ligand pose is consistent with previous structures, but detailed interactions such as hydrogen-bonding networks and ordered water molecules, which are important for structure-based drug design, cannot be resolved."（p.17）</p>
+</aside>
+</section>
