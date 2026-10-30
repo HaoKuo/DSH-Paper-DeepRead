@@ -10,7 +10,7 @@ the library, the skill, and both JavaScript halves.
   │  Host fiber (src/index.js)                                   │
   │   ├─ webServer.register({kind:'prefix', path:'/paper-deepread'}) │
   │   ├─ tools.register(defineTool('paper_deepread'))             │
-  │   └─ installBundledSkill() → $DSH_HOME/skills/... (once)      │
+  │   └─ syncBundledSkill() → $DSH_HOME/skills/... (+ state)     │
   └───────────────┬──────────────────────────────────────────────┘
                   │ same-origin HTTP
   ┌───────────────▼──────────────────────────────────────────────┐
@@ -61,15 +61,20 @@ Exports `name`, `inject = ['webServer', 'tools']`, and `apply(ctx, config)`.
    catalogue; the Web URL is built from `ctx.webServer.getOrigin()` when the listener is
    already bound and falls back to a relative URL otherwise.
 
-3. **Skill self-registration.** `installBundledSkill()` resolves
-   `$DSH_HOME/skills` (or `config.skillsDir`) and copies `skills/paper-deepread-html`
-   only when the target directory does not exist. The user's own copy therefore wins.
-   Failures are logged with `ctx.logger.warn` and swallowed.
+3. **Skill install + version sync.** `syncBundledSkill()` resolves
+   `$DSH_HOME/skills` (or `config.skillsDir`), installs `skills/paper-deepread-html` when
+   the target is missing, and otherwise compares the `version:` frontmatter of the bundled
+   and installed SKILL.md. The installed tree's content hash (recorded in
+   `<dataDir>/skill-state.json` when the plugin installed it) decides whether an outdated
+   copy is updated (old copy backed up under `.backup/`) or preserved because the user
+   modified it. Copies newer than the bundle are never downgraded; `skillSync: "keep"`
+   disables updates. Failures are logged with `ctx.logger.warn` and swallowed.
 
-The catalogue parser, the static route, and the skill installer live in
-`src/library.js`, `src/route.js`, and `src/skill.js`. They import only Node built-ins, so
-they can be exercised directly with `node` (the route with a throwaway `node:http`
-server, the skill with a throwaway `$DSH_HOME`) without booting dsh.
+The catalogue parser, the static route, the skill sync, and the optional site proxy live in
+`src/library.js`, `src/route.js`, `src/skill.js`, and `src/site.js`. They import only Node
+built-ins, so they can be exercised directly with `node` (the route with a throwaway
+`node:http` server, the skill with a throwaway `$DSH_HOME`, the site proxy against a mock
+site) without booting dsh.
 
 ## Browser half — `lib/client.js`
 
@@ -157,12 +162,14 @@ and call `build`. The one-click index rebuild is deterministic and model-free.
 
 | Method | Path | Meaning |
 | --- | --- | --- |
-| GET | `/paper-deepread/api/state` | library root/title/version, stats, uploads, reports, Python/skill status, limits |
+| GET | `/paper-deepread/api/state` | library root/title/version, stats, uploads, reports, Python status, `skillVersion` / `installedSkillVersion`, `site {configured,url}`, limits |
 | POST | `/paper-deepread/api/upload` | raw PDF body, `x-filename` (percent-encoded), `content-type: application/pdf` → `201`/`413`/`415`/`400` |
 | POST | `/paper-deepread/api/uploads/delete` | `{id}` — record, raw PDF, and work directory |
 | POST | `/paper-deepread/api/reports/rebuild` | rebuild `index.html`/`index.md`; returns stats + log tail |
 | POST | `/paper-deepread/api/reports/delete` | `{dir}` — exactly one validated child directory |
 | POST | `/paper-deepread/api/reports/visibility` | `{dir, hidden}` — merges `library.json` |
+| GET | `/paper-deepread/api/site/health` | v1.2.0: proxies `<siteUrl>/api/health` (5 s timeout, 5 s cache); `{configured:false}` when `siteUrl` is unset |
+| POST | `/paper-deepread/api/site/upload` | v1.2.0: raw PDF body forwarded to `<siteUrl>/api/upload` with `X-Filename`/`Content-Type`/optional `X-KB-Upload-Token` (120 s timeout); returns the site JSON verbatim |
 
 Errors are `{"ok": false, "error": {"code", "message"}}`; non-GET on state/upload and
 unknown routes return `405`/`404`; management bodies must be `application/json`.
@@ -170,5 +177,63 @@ unknown routes return `405`/`404`; management bodies must be `application/json`.
 ### Browser half
 
 `lib/client.js` keeps the same sidebar/main-slot registration and adds a three-tab page:
-文献库 (the iframe), 上传 (drop zone, XHR progress, queue, copyable agent instruction),
-报告管理 (summary, report table, hide/delete, one-click rebuild + log tail).
+文献库 (the iframe), 上传 (optional 自动精读 card, drop zone, XHR progress, queue, copyable
+agent instruction), 报告管理 (summary, report table, hide/delete, one-click rebuild + log
+tail). The panel header/tab design is unchanged from v1.1.4.
+
+## v1.2.0 — skill version sync + standalone site integration
+
+### Skill sync state machine
+
+```text
+activation
+  │  syncBundledSkill(packageDir, skillsDir, dataDir, skillSync)
+  ├─ installed missing ─────────────────────► copy bundle + write skill-state.json
+  ├─ skillSync == "keep" ───────────────────► skip (log)
+  ├─ installed == bundled ──────────────────► skip
+  ├─ installed  > bundled ──────────────────► skip (never downgrade)
+  ├─ installed  < bundled
+  │    ├─ no state record ──────────────────► keep + warn (untracked)
+  │    ├─ hash(tree) != state.contentHash ──► keep + warn (user modified)
+  │    └─ hash matches ─────────────────────► backup old copy
+  │                                            → copy bundle → update hash
+  └─ errors ────────────────────────────────► log + continue activation
+```
+
+`<dataDir>/skill-state.json` shape:
+
+```json
+{
+  "version": 1,
+  "skill": "paper-deepread-html",
+  "installedVersion": "1.1.5",
+  "contentHash": "sha256:…",
+  "source": "package",
+  "packageVersion": "1.2.0",
+  "installedAt": "ISO8601",
+  "updatedAt": "ISO8601"
+}
+```
+
+Backups go to `<skillsDir>/.backup/paper-deepread-html-<oldVersion>-<UTC>/`
+(`UTC` = `20261030T211500Z`, no colons so it is path-safe).
+
+### Standalone-site proxy
+
+```text
+browser (Harness origin)                plugin host                     site :8080
+  GET  /paper-deepread/api/site/health ─► src/site.js health()  ───────► GET /api/health
+                                          cache 5 s, timeout 5 s
+  POST /paper-deepread/api/site/upload ─► src/site.js upload()  ───────► POST /api/upload
+                                          readRequestBody(cap)
+                                          forward X-Filename, Content-Type,
+                                          X-KB-Upload-Token
+  ◄────────────── status/content-type/body verbatim ────────────────────┘
+```
+
+The proxy exists because the site API is same-origin-only; the browser panel lives on the
+Harness origin. `siteUrl` is normalized once (absolute `http(s)`, path prefix kept,
+trailing slash removed); an invalid value disables the feature with a warning. The site
+upload token is never stored in the plugin config — it is per-request browser state in
+`sessionStorage` and is only forwarded.
+

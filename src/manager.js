@@ -2,10 +2,17 @@
  * Feature manager: managed library store, upload inbox, report management,
  * the HTTP API under `/paper-deepread/api/*`, and the model tools.
  *
+ * v1.2.0 adds two optional surfaces to the same API prefix:
+ *   - skill version metadata (`skillVersion` / `installedSkillVersion`) read by
+ *     `src/skill.js` from the bundled and installed SKILL.md frontmatter;
+ *   - a proxy to a standalone deep-read site (`config.siteUrl`): health state
+ *     for the 自动精读 card and a raw PDF upload pass-through.
+ *
  * The plugin never calls a model. Upload -> deep-read is agent-driven: the UI
  * shows a copyable handoff instruction, and an agent in any session calls
  * `paper_deepread_uploads` (ingest) and `paper_deepread_reports` (build) to run
- * the bundled deterministic skill scripts.
+ * the bundled deterministic skill scripts. With `siteUrl` configured, a PDF can
+ * instead be handed to that site's queue, whose own worker runs the pipeline.
  *
  * @module dsh-paper-deepread/manager
  */
@@ -13,6 +20,8 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { losslessToolResult } from './lossless.js'
+import { describeSkill, resolveSkillsDir } from './skill.js'
+import { createSiteProxy } from './site.js'
 import {
   MAX_SEARCH_HITS,
   findPaper,
@@ -63,6 +72,7 @@ const QUEUE_MAX = 200
 /** API error-code to HTTP status mapping. */
 const STATUS_BY_CODE = {
   BAD_BODY: 400,
+  BAD_CONFIG: 400,
   BAD_DIR: 400,
   BAD_FILENAME: 400,
   BAD_ID: 400,
@@ -70,6 +80,10 @@ const STATUS_BY_CODE = {
   MISSING_SOURCES: 409,
   NOT_FOUND: 404,
   PAYLOAD_TOO_LARGE: 413,
+  SITE_BAD_RESPONSE: 502,
+  SITE_NOT_CONFIGURED: 503,
+  SITE_TIMEOUT: 504,
+  SITE_UNREACHABLE: 502,
   UNSUPPORTED_MEDIA_TYPE: 415,
 }
 
@@ -83,6 +97,18 @@ function json(res, status, payload) {
   res.writeHead(status, {
     'content-type': 'application/json; charset=utf-8',
     'content-length': String(Buffer.byteLength(body)),
+    'cache-control': 'no-store',
+    'x-content-type-options': 'nosniff',
+  })
+  res.end(body)
+}
+
+/** Forward a proxied site response verbatim (status, content type, bytes). */
+function proxiedResponse(res, proxied) {
+  const { status, contentType, body } = proxied
+  res.writeHead(status, {
+    'content-type': contentType,
+    'content-length': String(body?.length ?? 0),
     'cache-control': 'no-store',
     'x-content-type-options': 'nosniff',
   })
@@ -140,7 +166,8 @@ function listLibraryDirs(root) {
  *
  * @param {object} options
  * @param {string} options.packageDir Installed package root.
- * @param {object} [options.config] Plugin row config (`dataDir`, `libraryDir`, `maxUploadBytes`).
+ * @param {object} [options.config] Plugin row config (`dataDir`, `libraryDir`,
+ *   `skillsDir`, `skillSync`, `siteUrl`, `maxUploadBytes`).
  * @param {{info?: Function, warn?: Function}} [options.logger] Plugin logger.
  * @returns {object} Manager with the store, API handler, and model tools.
  */
@@ -156,7 +183,22 @@ export function createManager(options) {
   }).ensure()
   const skillDir = bundledSkillDir(packageDir)
   const python = new PythonRegistry({ skillDir, logger })
+  const skillsDir = resolveSkillsDir({ skillsDir: config.skillsDir })
+  // Optional integration with the standalone deep-read site (§ v1.2.0). An
+  // empty/invalid siteUrl leaves the whole feature disabled, so the plugin
+  // behaves exactly like v1.1.6.
+  const site = createSiteProxy({ siteUrl: config.siteUrl, logger })
   let cached = null
+
+  /** Bundled/installed skill versions plus the tracked-hash record. */
+  function skillInfo() {
+    return describeSkill({
+      packageDir,
+      skillsDir,
+      dataDir: store.dataDir,
+      skillSync: config.skillSync,
+    })
+  }
 
   /** Current managed library catalogue (re-read when `index.html` changes). */
   function currentLibrary() {
@@ -181,6 +223,7 @@ export function createManager(options) {
     const library = currentLibrary()
     const uploads = store.listUploads()
     const reportList = reports()
+    const skill = skillInfo()
     return {
       ok: true,
       dataDir: store.dataDir,
@@ -214,7 +257,14 @@ export function createManager(options) {
       admin: { enabled: false, tokenRequired: false, header: 'X-KB-Token' },
       publish: { dest: '', available: false, lastRelease: '', lastPublishedAt: '' },
       python: await python.describe(),
-      skill: { dir: skillDir, installed: existsSync(join(skillDir, 'SKILL.md')) },
+      // Skill version sync (§ v1.2.0): bundled version, installed version, and
+      // whether the installed tree is tracked by a recorded content hash.
+      skillVersion: skill.version,
+      installedSkillVersion: skill.installedVersion,
+      skill,
+      // Optional standalone-site integration; `configured: false` keeps the
+      // local upload UI and hides the 自动精读 card.
+      site: site.describe(),
       limits: {
         maxUploadBytes: store.maxUploadBytes,
         maxUploadMb: Math.floor(store.maxUploadBytes / (1024 * 1024)),
@@ -331,6 +381,7 @@ export function createManager(options) {
         }
         const uploads = store.listUploads()
         const reportList = reports()
+        const skill = skillInfo()
         const meta = {
           title: library.title,
           version: library.version || undefined,
@@ -342,6 +393,10 @@ export function createManager(options) {
           webUrl: `${webOriginString()}/paper-deepread/index.html`,
           dataDir: store.dataDir,
           managed: store.managed,
+          skillVersion: skill.version,
+          installedSkillVersion: skill.installedVersion,
+          skill: { dir: skill.dir, installed: skill.installedPresent, tracked: skill.tracked, syncMode: skill.syncMode },
+          site: site.describe(),
           uploads: { total: uploads.length, pending: uploads.filter(entry => entry.status === 'uploaded').length, ingested: uploads.filter(entry => entry.status === 'ingested').length },
           reports: { total: reportList.length, visible: reportList.filter(entry => !entry.hidden).length },
         }
@@ -582,6 +637,16 @@ export function createManager(options) {
         const rebuilt = await rebuild()
         return json(res, 200, { ok: true, ...result, rebuild: { ok: rebuilt.ok, stats: rebuilt.stats, error: rebuilt.error } })
       }
+      // ---- optional standalone-site integration -----------------------------
+      if (route === '/api/site/health') {
+        if (method !== 'GET') return json(res, 405, { ok: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'GET required' } })
+        return json(res, 200, await site.health())
+      }
+      if (route === '/api/site/upload') {
+        if (method !== 'POST') return json(res, 405, { ok: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'POST required' } })
+        const proxied = await site.upload({ req })
+        return proxiedResponse(res, proxied)
+      }
       return json(res, 404, { ok: false, error: { code: 'NOT_FOUND', message: `unknown API route: ${route}` } })
     } catch (error) {
       const code = error instanceof StoreError ? error.code : 'INTERNAL'
@@ -594,12 +659,15 @@ export function createManager(options) {
   return {
     store,
     skillDir,
+    skillsDir,
     python,
+    site,
     currentLibrary,
     reports,
     rebuild,
     statePayload,
     handleApi,
+    skillInfo,
     uploadsTool,
     reportsTool,
     catalogueTool,

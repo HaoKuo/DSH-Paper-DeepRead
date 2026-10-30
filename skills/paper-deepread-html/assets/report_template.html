@@ -1595,6 +1595,46 @@ body.lb-open{overflow:hidden}
   .prov-build{border-top-color:#cbc3b2;font-size:7.6pt;padding-left:0;padding-right:0}
   .paper-fig a[href]::after,.schematic a[href]::after,.report p a[href^="http"]::after{content:""}
 }
+
+/* ==========================================================================
+   v1.4.0 · citation block (BibTeX / RIS from #report-meta, copy buttons)
+   ========================================================================== */
+.cite-block{
+  margin:clamp(26px,4vh,44px) 0 4px;padding:18px 20px;
+  border:1px solid var(--rule);border-radius:14px;background:var(--surface);
+  box-shadow:var(--shadow-1);
+}
+.cite-block[hidden]{display:none!important}
+.cite-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;margin:0 0 10px}
+.cite-title{margin:0;font-family:var(--font-serif);font-size:17px;line-height:1.3;font-weight:600;color:var(--ink)}
+.cite-sub{font-family:var(--font-mono);font-size:9.6px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3)}
+.cite-hint{margin:6px 0 0;font-size:11.8px;line-height:1.6;color:var(--ink-3)}
+.cite-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 10px}
+.cite-btn{
+  appearance:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
+  min-height:32px;padding:0 13px;border:1px solid var(--rule);border-radius:8px;
+  background:var(--surface-2);color:var(--ink);font-family:var(--font-sans);font-size:12.5px;line-height:1;
+  transition:background .15s ease,color .15s ease,border-color .15s ease;
+}
+.cite-btn:hover{background:var(--teal-soft);border-color:var(--teal);color:var(--teal-ink)}
+.cite-btn[data-cite="bibtex"]{border-color:color-mix(in srgb,var(--teal) 40%,var(--rule));color:var(--teal-ink)}
+.cite-btn.is-done{background:var(--ok-soft);border-color:color-mix(in srgb,var(--ok) 40%,var(--rule));color:var(--ok)}
+.cite-status{font-family:var(--font-mono);font-size:10.5px;color:var(--ok);min-height:1em}
+.cite-pre{
+  margin:0;padding:12px 14px;max-height:220px;overflow:auto;
+  background:var(--bg-2);border:1px solid var(--rule-soft);border-radius:10px;
+  font-family:var(--font-mono);font-size:11px;line-height:1.6;color:var(--ink-2);
+  white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;
+}
+@media (max-width:560px){
+  .cite-block{padding:14px 15px}
+  .cite-btn{min-height:44px;padding:0 15px;font-size:13px}
+}
+@media print{
+  .cite-block{break-inside:avoid;box-shadow:none;margin:5mm 0 0}
+  .cite-btn,.cite-hint{display:none!important}
+  .cite-pre{max-height:none;background:#f7f5ef;border-color:#cbc3b2;font-size:7.6pt}
+}
 </style>
 </head>
 <body>
@@ -1652,6 +1692,21 @@ body.lb-open{overflow:hidden}
   <div class="toc-backdrop" id="tocBackdrop" hidden></div>
   <main id="report" class="report" tabindex="-1">
 {{CONTENT}}
+    <!-- v1.4.0 citation block: filled from #report-meta JSON by the runtime below.
+         Deliberately a div (not <section>) so it never becomes a TOC entry. -->
+    <div class="cite-block" id="citeBlock" hidden>
+      <div class="cite-head">
+        <p class="cite-title" id="citeTitle">引用这篇论文</p>
+        <span class="cite-sub">Cite this paper</span>
+        <p class="cite-hint">从报告元数据自动生成；BibTeX / RIS 可直接粘贴到 Zotero、EndNote 或其它文献管理器。复制失败时也可手动选中下方文本复制。</p>
+      </div>
+      <div class="cite-actions">
+        <button class="cite-btn" id="citeBibtex" type="button" data-cite="bibtex" aria-label="复制 BibTeX 引用">复制 BibTeX</button>
+        <button class="cite-btn" id="citeRis" type="button" data-cite="ris" aria-label="复制 RIS 引用">复制 RIS</button>
+        <span class="cite-status" id="citeStatus" role="status" aria-live="polite"></span>
+      </div>
+      <pre class="cite-pre" id="citePreview" tabindex="0" aria-label="引用预览"></pre>
+    </div>
   </main>
 </div>
 
@@ -2729,6 +2784,116 @@ body.lb-open{overflow:hidden}
   initQa();
 
   window.__paperDeepread={meta:meta,errors:errors,setTheme:setTheme};
+})();
+</script>
+<script>
+/* ============================================================================
+   v1.4.0 · citation block (BibTeX / RIS) — self-contained, no dependencies.
+   Reads the same <script type="application/json" id="report-meta"> the report
+   runtime uses and composes citations from title/authors/journal/year/doi.
+   ========================================================================== */
+(function(){
+  'use strict';
+  var block = document.getElementById('citeBlock');
+  if(!block) return;
+  var meta = null;
+  try{
+    var node = document.getElementById('report-meta');
+    if(node && node.textContent) meta = JSON.parse(node.textContent);
+  }catch(err){ meta = null; }
+  if(!meta || typeof meta !== 'object') return;
+
+  function str(v){ return (v === undefined || v === null) ? '' : String(v).trim(); }
+  function toList(v){
+    if(Array.isArray(v)) return v.map(str).filter(Boolean);
+    if(typeof v === 'string' && v) return v.split(/[,;，；]/).map(function(s){ return s.trim(); }).filter(Boolean);
+    return [];
+  }
+  var title = str(meta.title), journal = str(meta.journal), year = str(meta.year), doi = str(meta.doi);
+  var authors = toList(meta.authors);
+  if(!title && !authors.length) return;
+
+  function asciiWord(s){ return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+  function citeKey(){
+    var first = authors[0] || 'anon';
+    var parts = first.split(/\s+/).filter(Boolean);
+    var last = parts.length ? parts[parts.length - 1] : 'anon';
+    var firstWord = (title.split(/\s+/).filter(Boolean)[0] || 'paper');
+    return (asciiWord(last) || 'anon') + asciiWord(year) + (asciiWord(firstWord) || 'paper');
+  }
+  function bibField(value){
+    return String(value == null ? '' : value)
+      .replace(/\\/g, '\\textbackslash{}')
+      .replace(/([{}])/g, '\\$1')
+      .replace(/&/g, '\\&').replace(/%/g, '\\%').replace(/\$/g, '\\$')
+      .replace(/#/g, '\\#').replace(/_/g, '\\_').replace(/\^/g, '\\^{}');
+  }
+  function bibtex(){
+    var lines = ['@article{' + citeKey() + ','];
+    if(title) lines.push('  title = {{' + bibField(title) + '}},');
+    if(authors.length) lines.push('  author = {' + authors.map(bibField).join(' and ') + '},');
+    if(journal) lines.push('  journal = {{' + bibField(journal) + '}},');
+    if(year) lines.push('  year = {' + bibField(year) + '},');
+    if(doi) lines.push('  doi = {' + bibField(doi) + '},');
+    lines.push('}');
+    return lines.join('\n');
+  }
+  function ris(){
+    var lines = ['TY  - JOUR'];
+    if(title) lines.push('TI  - ' + title);
+    authors.forEach(function(a){ lines.push('AU  - ' + a); });
+    if(journal) lines.push('JO  - ' + journal);
+    if(year) lines.push('PY  - ' + year);
+    if(doi) lines.push('DO  - ' + doi);
+    lines.push('ER  - ');
+    return lines.join('\n');
+  }
+  var preview = document.getElementById('citePreview');
+  var status = document.getElementById('citeStatus');
+  var buttons = [document.getElementById('citeBibtex'), document.getElementById('citeRis')];
+
+  function paint(fmt, done, ok){
+    if(preview) preview.textContent = fmt === 'ris' ? ris() : bibtex();
+    buttons.forEach(function(b){
+      if(!b) return;
+      b.classList.toggle('is-done', !!done && b.getAttribute('data-cite') === fmt && !!ok);
+    });
+    if(status){
+      if(!done) status.textContent = '';
+      else status.textContent = ok ? ('已复制 ' + (fmt === 'ris' ? 'RIS' : 'BibTeX')) : '复制失败，请手动选中下方文本复制';
+    }
+  }
+  function copy(text, fmt){
+    var finish = function(ok){ paint(fmt, true, ok); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){ finish(true); }, function(){ fallback(); });
+    }else{ fallback(); }
+    function fallback(){
+      var area = document.createElement('textarea');
+      area.value = text;
+      area.setAttribute('readonly', 'readonly');
+      area.style.position = 'fixed';
+      area.style.top = '-1000px';
+      area.style.opacity = '0';
+      document.body.appendChild(area);
+      area.select();
+      var ok = false;
+      try{ ok = document.execCommand('copy'); }catch(e){ ok = false; }
+      document.body.removeChild(area);
+      finish(ok);
+    }
+  }
+  buttons.forEach(function(b){
+    if(!b) return;
+    b.addEventListener('click', function(){
+      var fmt = b.getAttribute('data-cite') === 'ris' ? 'ris' : 'bibtex';
+      copy(fmt === 'ris' ? ris() : bibtex(), fmt);
+    });
+  });
+  paint('bibtex', false, false);
+  block.hidden = false;
+  /* expose for QA / tests without touching the report runtime */
+  window.__paperDeepreadCitation = { bibtex: bibtex, ris: ris, meta: meta };
 })();
 </script>
 </body>

@@ -4,6 +4,85 @@ All notable changes to DSH-Paper-DeepRead are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] — 2026-10-30
+
+### Bundled skill
+
+The bundled skill `paper-deepread-html` is updated to **1.2.0**: library templates now ship citation export (BibTeX/RIS), favorites, build-time related papers, PWA/offline support, a zh/en UI switch and accessibility polish; the report template adds a citation block. Existing installs are updated by the version-sync logic (or kept when modified).
+
+### Added
+
+- **Skill version sync.** `src/skill.js` now reads the skill `version:` from the
+  `paper-deepread-html` SKILL.md frontmatter (bundled and installed), records the installed
+  tree's content hash in `<dataDir>/skill-state.json`, and applies a conservative update
+  policy: install when missing; skip when up to date; never downgrade; update an outdated
+  copy only when the tree is identical to the recorded hash, after backing the old copy up
+  to `<skillsDir>/.backup/paper-deepread-html-<version>-<UTC>/`; keep the user's copy with a
+  warning when it was modified or is untracked. New `skillSync: "update" | "keep"` config
+  (default `update`). `/api/state` and the `paper_deepread` tool output now expose
+  `skillVersion` (bundled) and `installedSkillVersion`, plus sync/tracking details.
+- **Optional standalone-site integration.** New `siteUrl` config wires the plugin panel to a
+  running Paper Deepread site (`deploy/serve.py`): `GET /paper-deepread/api/site/health`
+  proxies `<siteUrl>/api/health` (5 s timeout, 5 s cache) and
+  `POST /paper-deepread/api/site/upload` forwards the raw PDF with `X-Filename`,
+  `Content-Type`, and the optional `X-KB-Upload-Token` to `<siteUrl>/api/upload`
+  (120 s timeout), returning the site JSON verbatim.
+- **「自动精读」 card** in the 上传 tab when `siteUrl` is configured: worker/queue status
+  from site health, drag & drop uploader through the proxy with per-file progress,
+  duplicate / possible-duplicate feedback reused from the site response, optional upload
+  token stored in sessionStorage, and links to `<siteUrl>/manage.html` / the site library.
+  With no `siteUrl` the local upload UI and agent handoff stay exactly as in v1.1.6.
+- New host module `src/site.js` (stdlib-only site proxy) and `tests/skill.test.js` /
+  `tests/site.test.js` covering frontmatter parsing, version compare, hash-tracked
+  install/update/backup/modified/untracked/downgrade/keep paths, site URL normalization,
+  health caching, proxy header/body forwarding, verbatim duplicate payloads, and the
+  unconfigured/unreachable states.
+- README (EN/ZH) documents `siteUrl` + `skillSync`, the sync policy table, and a version
+  matrix (site 1.4.0 / library 1.4.0 / plugin 1.2.0 / skill 1.2.0).
+
+### Changed
+
+- Package version bumped to `1.2.0`; `npm run check` includes the new host module.
+- Skill self-registration became a full install-and-sync step at activation; failures are
+  still logged and swallowed so a read-only `$DSH_HOME` never breaks plugin activation.
+
+<details>
+<summary>中文</summary>
+
+### 新增
+
+- **技能版本同步。** `src/skill.js` 从 `paper-deepread-html` 的 SKILL.md frontmatter 读取
+  内置与已安装副本的 `version:`，把已安装目录的内容 hash 记录到
+  `<dataDir>/skill-state.json`，并执行保守的更新策略：缺失则安装；同版本跳过；绝不降级；
+  仅当目录内容与记录的 hash 完全一致时才更新旧版本，且先把旧副本备份到
+  `<skillsDir>/.backup/paper-deepread-html-<版本>-<UTC>/`；被用户修改或没有记录时保留并
+  告警。新增 `skillSync: "update" | "keep"` 配置（默认 `update`）。`/api/state` 与
+  `paper_deepread` 工具输出新增 `skillVersion`（内置）与 `installedSkillVersion`，并附带
+  同步/追踪信息。
+- **可选的独立站点集成。** 新增 `siteUrl` 配置，把插件面板接到运行中的 Paper Deepread
+  站点（`deploy/serve.py`）：`GET /paper-deepread/api/site/health` 代理
+  `<siteUrl>/api/health`（5 秒超时、5 秒缓存）；
+  `POST /paper-deepread/api/site/upload` 把原始 PDF 连同 `X-Filename`、`Content-Type`、
+  可选 `X-KB-Upload-Token` 转发到 `<siteUrl>/api/upload`（120 秒超时），并把站点 JSON
+  原样返回。
+- **「自动精读」卡片**：配置 `siteUrl` 后出现在上传标签页顶部——站点 health 提供
+  worker/队列状态；拖放 PDF 经代理上传并显示逐文件进度；重复/可能重复反馈直接复用站点
+  返回文案；可选上传令牌只存 sessionStorage；提供 `<siteUrl>/manage.html` 与站点书库
+  链接。未配置 `siteUrl` 时上传标签页保持 v1.1.6 的本地上传与 Agent 交接流程。
+- 新增宿主模块 `src/site.js`（仅标准库的站点代理）与 `tests/skill.test.js`、
+  `tests/site.test.js`：覆盖 frontmatter 解析、版本比较、hash 追踪的安装/更新/备份/
+  被修改/未追踪/不降级/keep 各路径，站点 URL 规范化、health 缓存、代理头/body 转发、
+  重复上传载荷原样透传，以及未配置/不可达状态。
+- 中英文 README 记录 `siteUrl` + `skillSync`、同步策略表与版本矩阵
+  （站点 1.4.0 / 书库 1.4.0 / 插件 1.2.0 / 技能 1.2.0）。
+
+### 变更
+
+- 包版本升到 `1.2.0`；`npm run check` 纳入新的宿主模块。
+- 技能自注册升级为激活时的完整安装+同步步骤；失败仍只记日志、不影响插件激活。
+
+</details>
+
 ## [1.1.6] — 2026-10-30
 
 ### Changed (docs/screenshots only)

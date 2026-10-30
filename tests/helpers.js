@@ -62,7 +62,14 @@ export function makeFixture(options = {}) {
   mkdirSync(join(skillDir, 'assets'), { recursive: true })
   mkdirSync(join(skillDir, 'scripts'), { recursive: true })
   writeFileSync(join(skillDir, 'assets', 'library_template.html'), '<html><body>{{LIBRARY_JSON}}</body></html>')
-  writeFileSync(join(skillDir, 'SKILL.md'), '# test skill\n')
+  writeFileSync(join(skillDir, 'SKILL.md'), [
+    '---',
+    'name: paper-deepread-html',
+    'version: 1.1.5',
+    '---',
+    '# test skill',
+    '',
+  ].join('\n'))
   writeFileSync(join(skillDir, 'scripts', 'build_library.py'), [
     'import argparse, json, pathlib',
     'p = argparse.ArgumentParser()',
@@ -82,13 +89,15 @@ export function makeFixture(options = {}) {
   ].join('\n'))
   writeFileSync(join(skillDir, 'scripts', 'setup_env.sh'), '#!/usr/bin/env bash\necho /usr/bin/python3\n')
   const dataDir = join(base, 'data')
+  const skillsDir = join(base, 'skills')
   return {
     base,
     packageDir,
     dataDir,
     skillDir,
+    skillsDir,
     libraryDir,
-    config: { dataDir, ...(options.maxUploadBytes ? { maxUploadBytes: options.maxUploadBytes } : {}) },
+    config: { dataDir, skillsDir, ...(options.maxUploadBytes ? { maxUploadBytes: options.maxUploadBytes } : {}) },
     cleanup: () => rmSync(base, { recursive: true, force: true }),
   }
 }

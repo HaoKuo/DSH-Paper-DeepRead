@@ -1,5 +1,6 @@
 ---
 name: paper-deepread-html
+version: 1.2.0
 description: 把一篇论文 PDF 深读成单文件、可离线打开的交互式 HTML 精读报告——自动从 PDF 裁切原文关键图表（带页码/图号/图注溯源），并用原生 JS + 内联 SVG 重绘机制图、流程图、对比图与数据图，附批判性评估；区分综述（review）与研究论文（research），分别采用不同的解读重点与章节导读。Deep-read one paper PDF into a self-contained interactive HTML reading companion that mixes high-fidelity original figure crops with JS/SVG redrawn schematics. Use when the user asks to 精读/解读/拆解一篇文献、生成论文精读报告 HTML、给论文配关键截图和示意图、paper deep read, figure highlights, SVG schematic, literature reading notes, or turn a paper into an interactive HTML report.
 ---
 
@@ -276,7 +277,8 @@ paper-read/
 `--name`。`--out-dir` 只写指定目录（目录名不符时会提示），`--out` 显式给带 `.html` 的文件名则以你给的为准。
 
 先补全 `work/paper/meta.json`：摄取只给书目字段，封面还需要 `title_zh`、`tldr`（一句话结论，含关键数字）、
-`metrics`（3–4 个 `{value,label,note}`）、`tags`；可选 `corresponding`、`system`、`data_code` 用于「论文速览」。
+`metrics`（3–4 个 `{value,label,note}`）、`tags`、`article_type`（`review` / `research` / `methods` /
+`perspective` / `mixed`）；可选 `corresponding`、`system`、`data_code` 用于「论文速览」。
 builder 会：展开 `data-fig` 图卡（注入裁切图 + 溯源行 + 图注）、生成封面/目录/溯源页、把本地图片
 base64 内嵌成单文件、注入自检脚本。体积 >25 MB 时用 `--no-inline`（改为 assets 目录交付）或降低
 `--dpi/--max-width` 重新裁切。
@@ -382,6 +384,7 @@ $PY "$SKILL_DIR/scripts/build_library.py" --root paper-read/ --title "文献精�
 - `assets/report_template.html` — 报告外壳（样式 + 交互：缩放灯箱、滚动目录、深浅色、字体切换 Aa、恢复上次阅读位置、章节跳转/折叠、SVG 步骤/提示）
 - `assets/svg-components.md` — 可复制粘贴的 SVG 组件库（流程图/机制/对比/时间线/数据重绘）
 - `assets/library_template.html` — 文献库页外壳（搜索 / 筛选 / 列表与密度 / quick-peek / 页内阅读器 / 阅读状态与相关文献 / 字体与深浅色 / 实时刷新）
-- `references/reading-protocol.md` — 五遍深读法、面板解读清单、批判性评估框架
+- `references/reading-protocol.md` — 五遍深读法、面板解读清单、章节导读卡、批判性评估框架
+- `references/article-types.md` — 综述 / 研究 / 方法 / 观点类文章的差异化解读重点与章节账模板
 - `references/figure-extraction.md` — 裁切原理、手动 bbox 修法、各类版式的坑
 - `references/qa-checklist.md` — 交付前检查清单

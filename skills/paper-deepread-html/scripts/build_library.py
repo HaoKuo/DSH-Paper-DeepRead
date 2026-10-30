@@ -26,11 +26,13 @@ import io
 import json
 import mimetypes
 import re
+import struct
 import sys
+import zlib
 from pathlib import Path
 
 # Shown in the index header/footer. Bump on content or presentation changes.
-LIBRARY_VERSION = "1.3.0"
+LIBRARY_VERSION = "1.4.0"
 
 META_RE = re.compile(r'<script[^>]*\bid="report-meta"[^>]*>(?P<body>.*?)</script>', re.S)
 MAIN_RE = re.compile(r'<main\b[^>]*\bid="report"[^>]*>(?P<body>.*?)</main>', re.S)
@@ -274,6 +276,271 @@ def relative(path, base):
         return str(path.resolve()).replace("\\", "/")
 
 
+def _year_num(value):
+    try:
+        return int(str(value).strip())
+    except (TypeError, ValueError):
+        return -9999
+
+
+def related_ids(paper, papers, limit=3):
+    """Build-time related papers: shared tags (weight 3) + same journal (weight 2).
+
+    The library UI renders these as 「相关」 chips on the card and scrolls to the
+    target card, so the list must be stable and cheap: no full-text scoring here.
+    """
+    tags = {str(t).strip().lower() for t in paper.get("tags") or [] if str(t).strip()}
+    journal = str(paper.get("journal") or "").strip().lower()
+    by_id = {p.get("id"): p for p in papers}
+    scored = []
+    for other in papers:
+        if other is paper or other.get("id") == paper.get("id"):
+            continue
+        other_tags = {str(t).strip().lower() for t in other.get("tags") or [] if str(t).strip()}
+        score = len(tags & other_tags) * 3
+        if journal and journal == str(other.get("journal") or "").strip().lower():
+            score += 2
+        if score > 0:
+            scored.append((score, other.get("id")))
+    # Deterministic order: score desc, newest year, then title.
+    scored.sort(key=lambda row: (
+        -row[0],
+        -_year_num(by_id.get(row[1], {}).get("year")),
+        str(by_id.get(row[1], {}).get("title") or ""),
+    ))
+    return [pid for _, pid in scored[:limit]]
+
+
+def add_related(papers, limit=3):
+    """Attach the related-id list to every paper (in place) and return papers."""
+    for paper in papers:
+        paper["related"] = related_ids(paper, papers, limit)
+    return papers
+
+
+# ---------------------------------------------------------------------------
+# PWA assets: manifest.json + sw.js + PNG icons, generated next to index.html
+# ---------------------------------------------------------------------------
+PWA_ICON_SIZES = (192, 512)
+
+_PNG_ICON_LAYERS = (
+    # (color, x0, y0, x1, y1, radius) as fractions of the canvas size, painted
+    # back to front. The mark mirrors the inline library logo (navy tile + book).
+    ((13, 43, 68), 0.0, 0.0, 1.0, 1.0, 0.22),            # navy rounded tile
+    ((15, 111, 103), 0.195, 0.205, 0.30, 0.795, 0.03),    # teal spine
+    ((255, 253, 248), 0.285, 0.205, 0.755, 0.795, 0.045),  # cream page
+    ((20, 36, 46), 0.36, 0.30, 0.66, 0.325, 0.012),        # text line 1
+    ((20, 36, 46), 0.36, 0.395, 0.66, 0.42, 0.012),        # text line 2
+    ((20, 36, 46), 0.36, 0.49, 0.56, 0.515, 0.012),        # text line 3 (short)
+    ((164, 97, 11), 0.36, 0.62, 0.60, 0.655, 0.014),       # amber highlight
+)
+
+
+def _rounded_rect_hit(x, y, x0, y0, x1, y1, r):
+    """Point-in-rounded-rectangle test for a pixel sample."""
+    if x < x0 or x > x1 or y < y0 or y > y1:
+        return False
+    cx = min(max(x, x0 + r), x1 - r)
+    cy = min(max(y, y0 + r), y1 - r)
+    return (x - cx) ** 2 + (y - cy) ** 2 <= r * r
+
+
+def _blend(dst, src, coverage):
+    if coverage <= 0:
+        return dst
+    if coverage >= 1:
+        return src
+    return tuple(int(round(dst[i] + (src[i] - dst[i]) * coverage)) for i in range(3))
+
+
+def _icon_rgba(size):
+    """Render the PWA icon (RGBA bytes per row) with supersampling."""
+    samples = 4 if size <= 256 else 2
+    layers = [
+        (color, x0 * size, y0 * size, x1 * size, y1 * size, radius * size)
+        for color, x0, y0, x1, y1, radius in _PNG_ICON_LAYERS
+    ]
+    total = samples * samples
+    rows = []
+    for py in range(size):
+        row = bytearray()
+        for px in range(size):
+            acc = [0, 0, 0]
+            covered = 0
+            for sy in range(samples):
+                for sx in range(samples):
+                    x = px + (sx + 0.5) / samples
+                    y = py + (sy + 0.5) / samples
+                    sample = None
+                    for color, x0, y0, x1, y1, radius in layers:
+                        if _rounded_rect_hit(x, y, x0, y0, x1, y1, radius):
+                            sample = color  # topmost layer wins
+                    if sample is not None:
+                        covered += 1
+                        acc[0] += sample[0]
+                        acc[1] += sample[1]
+                        acc[2] += sample[2]
+            if covered:
+                r, g, b = (int(round(acc[i] / covered)) for i in range(3))
+            else:
+                r = g = b = 0
+            row.extend((r, g, b, int(round(covered * 255.0 / total))))
+        rows.append(bytes(row))
+    return rows
+
+
+def png_bytes(width, height, rows):
+    """Minimal PNG encoder (RGBA, no external deps)."""
+    raw = bytearray()
+    for row in rows:
+        raw.append(0)
+        raw.extend(row)
+
+    def chunk(tag, data):
+        return (struct.pack(">I", len(data)) + tag + data
+                + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF))
+
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header)
+            + chunk(b"IDAT", zlib.compress(bytes(raw), 9)) + chunk(b"IEND", b""))
+
+
+def write_if_changed(path, data):
+    """Write bytes only when the content differs (keeps mtimes/hardlinks stable)."""
+    try:
+        if path.read_bytes() == data:
+            return False
+    except OSError:
+        pass
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+    return True
+
+
+def manifest_payload(title, version):
+    name = "%s · Paper Deepread" % (title or "文献精读库")
+    return {
+        "name": name,
+        "short_name": (title or "文献库")[:12],
+        "description": "论文精读报告库：全文检索、收藏、引用导出与离线阅读。",
+        "lang": "zh-CN",
+        "dir": "ltr",
+        "start_url": "./index.html",
+        "scope": "./",
+        "id": "./",
+        "display": "standalone",
+        "orientation": "any",
+        "background_color": "#f5f2ea",
+        "theme_color": "#0d2b44",
+        "categories": ["education", "productivity"],
+        "version": str(version),
+        "icons": [
+            {"src": "assets/pwa-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": "assets/pwa-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+            {"src": "assets/pwa-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+        ],
+    }
+
+
+SW_TEMPLATE = """/* Paper DeepRead library service worker · library v__VERSION__
+ *
+ * Generated by scripts/build_library.py — do not edit the published copy.
+ * Strategy:
+ *   - install: precache the app shell (index/manage/manifest/icons)
+ *   - fetch:   cache-first for same-origin GET; visited report pages are cached
+ *              on first read, so the library keeps working offline.
+ *   - /api/* and the service worker itself are never cached.
+ *   - skipWaiting + clients.claim: a new build takes over on next load.
+ */
+'use strict';
+
+var VERSION = '__VERSION__';
+var CACHE = 'deepread-library-v' + VERSION;
+var SHELL = [
+  './',
+  './index.html',
+  './manage.html',
+  './manifest.json',
+  './assets/pwa-192.png',
+  './assets/pwa-512.png'
+];
+
+self.addEventListener('install', function (event) {
+  event.waitUntil(
+    caches.open(CACHE).then(function (cache) {
+      // addAll() fails as a whole when one entry is missing; add individually.
+      return Promise.all(SHELL.map(function (url) {
+        return cache.add(new Request(url, { cache: 'reload' })).catch(function () {});
+      }));
+    }).then(function () { return self.skipWaiting(); })
+  );
+});
+
+self.addEventListener('activate', function (event) {
+  event.waitUntil(
+    caches.keys().then(function (keys) {
+      return Promise.all(keys.map(function (key) {
+        if (key === CACHE) return null;
+        if (key.indexOf('deepread-library-') !== 0) return null;
+        return caches.delete(key);
+      }));
+    }).then(function () { return self.clients.claim(); })
+  );
+});
+
+self.addEventListener('fetch', function (event) {
+  var request = event.request;
+  if (!request || request.method !== 'GET') return;
+  var url;
+  try { url = new URL(request.url); } catch (err) { return; }
+  if (url.origin !== self.location.origin) return;
+  if (/\\.pdf$/i.test(url.pathname)) return;            // PDFs can be huge: straight to network
+  if (/(^|\\/)api\\//.test(url.pathname)) return;        // never cache the management API
+  if (/\\/sw\\.js$/.test(url.pathname)) return;
+
+  event.respondWith(
+    caches.open(CACHE).then(function (cache) {
+      return cache.match(request, { ignoreSearch: true }).then(function (hit) {
+        if (hit) return hit;
+        return fetch(request).then(function (response) {
+          if (response && response.ok && (response.type === 'basic' || response.type === 'default')) {
+            cache.put(request, response.clone()).catch(function () {});
+          }
+          return response;
+        }).catch(function (error) {
+          if (request.mode === 'navigate') {
+            return cache.match('./index.html').then(function (shell) {
+              if (shell) return shell;
+              throw error;
+            });
+          }
+          throw error;
+        });
+      });
+    })
+  );
+});
+"""
+
+
+def write_pwa_assets(out_dir, title, version):
+    """Write manifest.json, sw.js and the 192/512 PNG icons next to index.html."""
+    out_dir = Path(out_dir)
+    written = []
+    manifest_path = out_dir / "manifest.json"
+    if write_if_changed(manifest_path, (json.dumps(manifest_payload(title, version),
+                                                    ensure_ascii=False, indent=2) + "\n").encode("utf-8")):
+        written.append(manifest_path)
+    sw_path = out_dir / "sw.js"
+    if write_if_changed(sw_path, SW_TEMPLATE.replace("__VERSION__", str(version)).encode("utf-8")):
+        written.append(sw_path)
+    for size in PWA_ICON_SIZES:
+        icon_path = out_dir / "assets" / ("pwa-%d.png" % size)
+        if write_if_changed(icon_path, png_bytes(size, size, _icon_rgba(size))):
+            written.append(icon_path)
+    return written
+
+
 def collect(root, link_base, thumb_width, max_text_per_paper, use_thumbs, taxonomy, thumb_cache_dir=None):
     papers = []
     for directory in sorted(root.iterdir()):
@@ -357,6 +624,7 @@ def build_payload(root, link_base, thumb_width=320, max_text_per_paper=120000,
         taxonomy = {k: list(v) for k, v in DEFAULT_CATEGORIES.items()}
     papers = collect(root, Path(link_base), thumb_width, max_text_per_paper,
                      use_thumbs, taxonomy, Path(thumb_cache_dir) if thumb_cache_dir else None)
+    add_related(papers)
     return {"papers": papers, "stats": build_stats(papers)}
 
 
@@ -421,6 +689,8 @@ def main():
     ap.add_argument("--cache-dir", default=None,
                     help="thumbnail cache dir (default <root>/.library-cache/thumbs)")
     ap.add_argument("--categories", default=None, help="JSON file extending/overriding the keyword taxonomy")
+    ap.add_argument("--no-pwa", action="store_true",
+                    help="do not write manifest.json / sw.js / PWA icons next to the index")
     args = ap.parse_args()
 
     root = Path(args.root).resolve()
@@ -437,6 +707,7 @@ def main():
         thumb_cache_dir = Path(args.cache_dir) if args.cache_dir else (root / ".library-cache" / "thumbs")
     papers = collect(root, link_base, args.thumb_width, args.max_text_per_paper,
                      not args.no_thumbs, taxonomy, thumb_cache_dir)
+    add_related(papers)
     if not papers:
         sys.exit("[library] no reports found under %s" % root)
     stats = build_stats(papers)
@@ -459,6 +730,10 @@ def main():
         print("[library] WARN: unreplaced placeholders: %s" % sorted(set(leftover)))
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(out_html, encoding="utf-8")
+
+    if not args.no_pwa:
+        for path in write_pwa_assets(out.parent, args.title, str(args.version)):
+            print("[library] pwa asset -> %s" % path)
 
     md = Path(args.md) if args.md else root / "index.md"
     if str(args.md) != "":

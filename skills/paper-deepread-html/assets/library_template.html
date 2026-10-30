@@ -6,6 +6,10 @@
 <meta name="color-scheme" content="light dark">
 <meta name="generator" content="paper-deepread-html · library">
 <meta name="library-version" content="{{LIBRARY_VERSION}}">
+<meta name="theme-color" content="#0d2b44">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="assets/pwa-192.png">
+<link rel="icon" type="image/png" href="assets/pwa-192.png">
 <title>Paper Deepread · 文献库</title>
 <!--
 ================================================================================
@@ -68,8 +72,25 @@
 
   READING STATE (client-side only): localStorage "deepread-library-state" holds
   {opened:{id:ISO}, stars:{id:true}, last:{id,at}}; missing/corrupt JSON is
-  tolerated. Related papers are computed in the browser from category overlaps
-  (weight 2) + tag overlaps (weight 1) — the builder injects no extra data.
+  tolerated. Favorites (star toggles) are ALSO mirrored to
+  localStorage "deepread-favorites" (JSON array of paper ids) for the v1.4.0
+  favorites feature; the legacy "stars" map is kept in sync for backwards
+  compatibility. Related papers are computed in the browser for the reader
+  panel from category overlaps (weight 2) + tag overlaps (weight 1); the
+  builder additionally injects a build-time "related" id list (shared tags /
+  journal, max 3) that the cards render as 「相关」 chips (v1.4.0).
+
+  v1.4.0 ADDITIONS (all graceful when the JSON/backend lacks the fields):
+    * citation export — BibTeX / RIS composed from the embedded metadata and
+      copied to the clipboard ("已复制" feedback).
+    * UI language toggle — localStorage "deepread-lang" (zh|en) for the chrome;
+      generated report content always stays as authored.
+    * related chips — per-card build-time related ids; clicking scrolls to and
+      flashes the target card (never navigates away).
+    * PWA — manifest.json + sw.js + PNG icons are written next to this file by
+      build_library.py; the service worker registers only over http(s) and
+      never on file://, so plain snapshots keep working offline.
+    * a11y/mobile — 44 px touch targets, skip link, focus-visible, aria labels.
 ================================================================================
 -->
 <script>
@@ -95,6 +116,23 @@
   document.documentElement.setAttribute('data-font','read');
   document.documentElement.setAttribute('data-density','comfort');
 }})();
+</script>
+<script>
+/* PWA bootstrap: register the service worker ONLY when served over http(s).
+   A file:// snapshot must keep working with no network and no SW (browsers
+   refuse registration there anyway); failures are silent — the page is fully
+   functional without offline caching. */
+(function(){
+  try{
+    if(!('serviceWorker' in navigator)) return;
+    if(location.protocol !== 'http:' && location.protocol !== 'https:') return;
+    window.addEventListener('load', function(){
+      var url;
+      try{ url = new URL('sw.js', document.baseURI).toString(); }catch(e){ return; }
+      navigator.serviceWorker.register(url, { scope: './' }).catch(function(){});
+    });
+  }catch(e){}
+})();
 </script>
 <style>
 /* ==========================================================================
@@ -1474,10 +1512,97 @@ html[data-density="compact"] .list-title{font-size:12.4px}
   .list-meta,.list-counts{display:block;font-size:8pt}
   .list-cat{display:none}
 }
+
+/* ==========================================================================
+   12. v1.4.0 · citation export / related chips / favorites / i18n / a11y
+   ========================================================================== */
+
+/* header language toggle (zh <-> en chrome only; report content stays authored) */
+.lang-toggle{width:auto;min-width:38px;padding:0 8px;font-family:var(--font-mono);font-size:11.5px;font-weight:700;letter-spacing:.03em}
+@media (max-width:900px){ .lang-toggle{order:2} }
+
+/* rail: favorites filter chip (replaces the old star checkbox, same state) */
+.rail-fav-chip{
+  display:flex;align-items:center;gap:8px;width:100%;appearance:none;cursor:pointer;
+  padding:6px 9px;border:1px solid var(--rule);border-radius:8px;
+  background:var(--surface);color:var(--ink-2);
+  font-family:var(--font-sans);font-size:12.2px;line-height:1.5;text-align:left;
+  transition:background .14s ease,color .14s ease,border-color .14s ease;
+}
+.rail-fav-chip .rail-fav-star{color:#c98a1c;font-size:13px;line-height:1}
+.rail-fav-chip .rail-count{margin-left:auto;font-family:var(--font-mono);font-size:9.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.rail-fav-chip:hover{border-color:var(--ink-3);color:var(--ink)}
+.rail-fav-chip[aria-pressed="true"]{background:var(--teal-soft);border-color:color-mix(in srgb,var(--teal) 42%,var(--rule));color:var(--teal-ink);font-weight:600}
+.rail-fav-chip[aria-pressed="true"] .rail-count{color:var(--teal-ink);opacity:.8}
+
+/* card extras: citation export + related papers */
+.card-extras{position:relative;z-index:2;display:flex;flex-direction:column;gap:5px;margin:0 0 7px;min-width:0}
+html[data-density="compact"] .card-extras{gap:4px;margin-bottom:5px}
+.card-cite,.card-rel{display:flex;align-items:center;gap:5px;flex-wrap:wrap;min-width:0}
+.card-extras .k{
+  flex:none;font-family:var(--font-mono);font-size:8.6px;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);
+}
+.cite-btn{
+  appearance:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
+  height:23px;padding:0 7px;border:1px solid var(--rule);border-radius:6px;
+  background:var(--surface);color:var(--ink-2);
+  font-family:var(--font-mono);font-size:9.4px;line-height:1;white-space:nowrap;
+  transition:background .14s ease,color .14s ease,border-color .14s ease;
+}
+.cite-btn:hover{border-color:var(--teal);color:var(--teal-ink);background:var(--teal-soft)}
+.cite-btn.is-done{background:var(--ok-soft);border-color:color-mix(in srgb,var(--ok) 42%,var(--rule));color:var(--ok)}
+.rel-chip{
+  appearance:none;cursor:pointer;display:inline-flex;align-items:center;gap:3px;
+  max-width:100%;min-width:0;padding:2px 7px;
+  border:1px dashed color-mix(in srgb,var(--teal) 38%,var(--rule));border-radius:999px;
+  background:transparent;color:var(--teal-ink);
+  font-family:var(--font-sans);font-size:9.8px;line-height:1.7;
+  transition:background .14s ease,border-color .14s ease;
+}
+.rel-chip:hover{background:var(--teal-soft);border-style:solid}
+.rel-chip .rel-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:17ch}
+.rel-chip .rel-go{opacity:.55;font-size:9px}
+
+/* target card after clicking a related chip */
+.card.is-flash{animation:card-flash 1.5s ease}
+@keyframes card-flash{
+  0%{box-shadow:0 0 0 3px color-mix(in srgb,var(--teal) 55%,transparent),var(--shadow-1)}
+  60%{box-shadow:0 0 0 3px color-mix(in srgb,var(--teal) 26%,transparent),var(--shadow-1)}
+  100%{box-shadow:var(--shadow-1)}
+}
+
+/* citation block on report pages is styled in report_template.html */
+
+/* mobile / touch: 44 px targets (WCAG 2.5.5) without breaking the dense layout */
+@media (max-width:680px), (pointer:coarse){
+  .card-star{width:44px;height:44px;font-size:17px}
+  .cite-btn{height:44px;padding:0 12px;font-size:11px}
+  .rel-chip{min-height:44px;padding:4px 11px;font-size:11px}
+  .btn-read{height:44px;padding:0 14px}
+  .card-link-mini{height:44px;padding:0 10px}
+  .head-link{min-height:44px}
+  .theme-toggle,.lang-toggle{min-width:44px;height:44px}
+  .quick-btn{height:44px}
+  .seg-btn{min-height:44px}
+  .tb-mini,.tb-filter,#sortSel{height:44px}
+  .search-clear{width:44px;height:44px}
+  .mtab{min-height:52px}
+  .rail-opt,.tag-chip,.rail-check,.rail-fav-chip,.rail-sub select{min-height:44px}
+  .viewer .vbtn{min-height:44px}
+  .achip-x{width:28px;height:28px}
+}
+@media (max-width:520px){
+  .card-cite .k,.card-rel .k{display:none}
+  .rel-chip .rel-t{max-width:13ch}
+}
+@media print{
+  .card-extras,.lang-toggle{display:none!important}
+}
 </style>
 </head>
 <body>
-<a class="skip-link" href="#main">跳到报告列表</a>
+<a class="skip-link" href="#main" data-i18n="skip">跳到报告列表</a>
 
 <!-- Build-time plain-text sources (each token appears exactly once in this file).
      Kept as text nodes rather than attributes so quotes / ampersands in the title
@@ -1510,9 +1635,10 @@ html[data-density="compact"] .list-title{font-size:12.4px}
         <path d="M15.8 15.8 20.5 20.5"></path>
       </svg>
       <input id="q" type="search" autocomplete="off" spellcheck="false" enterkeyhint="search"
-             placeholder="搜索标题、作者、标签或全文…" aria-label="搜索文献库" aria-keyshortcuts="/">
+             placeholder="搜索标题、作者、标签或全文…" aria-label="搜索文献库" aria-keyshortcuts="/"
+             data-i18n-ph="searchPh" data-i18n-aria="searchAria">
       <kbd class="search-kbd" aria-hidden="true">/</kbd>
-      <button class="search-clear" id="qClear" type="button" aria-label="清空搜索" hidden>&times;</button>
+      <button class="search-clear" id="qClear" type="button" aria-label="清空搜索" data-i18n-aria="clearSearch" hidden>&times;</button>
     </div>
 
     <button class="theme-toggle font-toggle" id="fontToggle" type="button" aria-pressed="false" aria-label="切换等宽字体" title="阅读字体 / 等宽字体">Aa</button>
@@ -1525,19 +1651,20 @@ html[data-density="compact"] .list-title{font-size:12.4px}
         <path d="M20.2 14.4A8.4 8.4 0 0 1 9.6 3.8a8.6 8.6 0 1 0 10.6 10.6Z"></path>
       </svg>
     </button>
+    <button class="theme-toggle lang-toggle" id="langToggle" type="button" aria-label="切换界面语言（中文 / English）" title="界面语言：中文 / English" data-i18n-aria="langAria" data-i18n-title="langTitle">EN</button>
     <a class="head-link head-link-accent" href="manage.html#upload" target="_blank" rel="noopener"
-       aria-label="上传论文" title="上传论文 / Upload a paper">
+       aria-label="上传论文" title="上传论文 / Upload a paper" data-i18n-aria="uploadAria" data-i18n-title="uploadTitle">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M12 16V4"></path><path d="m7.4 8.6 4.6-4.6 4.6 4.6"></path><path d="M4.6 15.5v2.9A2.6 2.6 0 0 0 7.2 21h9.6a2.6 2.6 0 0 0 2.6-2.6v-2.9"></path>
       </svg>
-      <span class="head-link-text">上传</span>
+      <span class="head-link-text" data-i18n="upload">上传</span>
     </a>
     <a class="head-link" href="manage.html" target="_blank" rel="noopener"
-       aria-label="报告管理" title="上传与报告管理 / Management">
+       aria-label="报告管理" title="上传与报告管理 / Management" data-i18n-aria="manageAria" data-i18n-title="manageTitle">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M4 6.4h10.2M4 12h10.2M4 17.6h6.4"></path><circle cx="17.6" cy="16.4" r="3.2"></circle><path d="m20 19 2 2"></path>
       </svg>
-      <span class="head-link-text">管理</span>
+      <span class="head-link-text" data-i18n="manage">管理</span>
     </a>
   </div>
 </header>
@@ -1545,43 +1672,47 @@ html[data-density="compact"] .list-title{font-size:12.4px}
 <div class="app-layout">
   <div class="rail-scrim" id="railScrim" hidden></div>
 
-  <aside class="rail" id="filterRail" aria-label="筛选">
+  <aside class="rail" id="filterRail" aria-label="筛选" data-i18n-aria="railAria">
     <div class="rail-head">
-      <h2 class="rail-h">筛选</h2>
-      <button class="rail-close" id="railClose" type="button" aria-label="关闭筛选面板">&times;</button>
-      <button class="rail-clear" id="resetBtn" type="button" disabled>重置</button>
+      <h2 class="rail-h" data-i18n="filter">筛选</h2>
+      <button class="rail-close" id="railClose" type="button" aria-label="关闭筛选面板" data-i18n-aria="railClose">&times;</button>
+      <button class="rail-clear" id="resetBtn" type="button" disabled data-i18n="reset">重置</button>
     </div>
 
     <details class="rail-acc" data-group="my" open>
-      <summary class="rail-acc-head"><span class="rail-acc-title">我的</span><span class="rail-acc-n" id="groupMyN"></span><span class="rail-acc-chev" aria-hidden="true">▾</span></summary>
+      <summary class="rail-acc-head"><span class="rail-acc-title" data-i18n="myFilters">我的</span><span class="rail-acc-n" id="groupMyN"></span><span class="rail-acc-chev" aria-hidden="true">▾</span></summary>
       <div class="rail-acc-body">
         <div class="rail-my">
-          <label class="rail-check"><input type="checkbox" id="starOnly"> 仅看星标 <span class="rail-count" id="starCount">0</span></label>
-          <label class="rail-check"><input type="checkbox" id="unreadOnly"> 仅看未读 <span class="rail-count" id="unreadCount">0</span></label>
+          <button class="rail-fav-chip" id="favChip" type="button" aria-pressed="false" aria-label="仅看收藏" data-i18n-aria="favAria">
+            <span class="rail-fav-star" aria-hidden="true">★</span>
+            <span data-i18n="favOnly">仅看收藏</span>
+            <span class="rail-count" id="starCount">0</span>
+          </button>
+          <label class="rail-check"><input type="checkbox" id="unreadOnly"> <span data-i18n="unreadOnly">仅看未读</span> <span class="rail-count" id="unreadCount">0</span></label>
         </div>
       </div>
     </details>
 
     <details class="rail-acc" data-group="cats" open>
-      <summary class="rail-acc-head"><span class="rail-acc-title">主题分类</span><span class="rail-acc-n" id="groupCatsN"></span><span class="rail-acc-chev" aria-hidden="true">▾</span></summary>
+      <summary class="rail-acc-head"><span class="rail-acc-title" data-i18n="topics">主题分类</span><span class="rail-acc-n" id="groupCatsN"></span><span class="rail-acc-chev" aria-hidden="true">▾</span></summary>
       <div class="rail-acc-body"><div class="rail-list" id="catList"></div></div>
     </details>
 
     <details class="rail-acc" data-group="meta" open>
-      <summary class="rail-acc-head"><span class="rail-acc-title">年份 / 期刊</span><span class="rail-acc-n" id="groupMetaN"></span><span class="rail-acc-chev" aria-hidden="true">▾</span></summary>
+      <summary class="rail-acc-head"><span class="rail-acc-title" data-i18n="yearJournal">年份 / 期刊</span><span class="rail-acc-n" id="groupMetaN"></span><span class="rail-acc-chev" aria-hidden="true">▾</span></summary>
       <div class="rail-acc-body rail-meta">
-        <label class="rail-sub">年份<select class="rail-select" id="yearSel" aria-label="按年份筛选"></select></label>
-        <label class="rail-sub">期刊 / 来源<select class="rail-select" id="journalSel" aria-label="按期刊筛选"></select></label>
+        <label class="rail-sub"><span data-i18n="year">年份</span><select class="rail-select" id="yearSel" aria-label="按年份筛选"></select></label>
+        <label class="rail-sub"><span data-i18n="journal">期刊 / 来源</span><select class="rail-select" id="journalSel" aria-label="按期刊筛选"></select></label>
       </div>
     </details>
 
     <details class="rail-acc" data-group="tags" open>
-      <summary class="rail-acc-head"><span class="rail-acc-title">标签</span><span class="rail-acc-n" id="groupTagsN"></span><span class="rail-acc-chev" aria-hidden="true">▾</span></summary>
+      <summary class="rail-acc-head"><span class="rail-acc-title" data-i18n="tags">标签</span><span class="rail-acc-n" id="groupTagsN"></span><span class="rail-acc-chev" aria-hidden="true">▾</span></summary>
       <div class="rail-acc-body"><div class="rail-tags" id="tagChips"></div></div>
     </details>
 
     <label class="rail-check rail-pdf" id="pdfOnlyWrap">
-      <input type="checkbox" id="pdfOnly"> 仅看有原文 PDF
+      <input type="checkbox" id="pdfOnly"> <span data-i18n="pdfOnly">仅看有原文 PDF</span>
     </label>
 
     <p class="rail-foot" id="railFoot"></p>
@@ -1589,17 +1720,17 @@ html[data-density="compact"] .list-title{font-size:12.4px}
 
   <main class="main" id="main">
     <div class="quick-bar" id="quickBar" role="group" aria-label="快速筛选">
-      <button class="quick-btn is-active" type="button" data-quick="all" aria-pressed="true">全部</button>
-      <button class="quick-btn" type="button" data-quick="unread" aria-pressed="false">未读<span class="qn" id="quickUnreadN">0</span></button>
-      <button class="quick-btn" type="button" data-quick="star" aria-pressed="false">星标<span class="qn" id="quickStarN">0</span></button>
-      <button class="quick-btn" type="button" data-quick="recent" aria-pressed="false">最近打开<span class="qn" id="quickRecentN">0</span></button>
+      <button class="quick-btn is-active" type="button" data-quick="all" aria-pressed="true" data-i18n="all">全部</button>
+      <button class="quick-btn" type="button" data-quick="unread" aria-pressed="false"><span data-i18n="unread">未读</span><span class="qn" id="quickUnreadN">0</span></button>
+      <button class="quick-btn" type="button" data-quick="star" aria-pressed="false"><span data-i18n="favorites">收藏</span><span class="qn" id="quickStarN">0</span></button>
+      <button class="quick-btn" type="button" data-quick="recent" aria-pressed="false"><span data-i18n="recent">最近打开</span><span class="qn" id="quickRecentN">0</span></button>
     </div>
     <div class="toolbar">
       <button class="tb-filter" id="filterToggle" type="button" aria-expanded="false" aria-controls="filterRail">
-        筛选<span class="n" id="filterToggleN" hidden>0</span>
+        <span data-i18n="filter">筛选</span><span class="n" id="filterToggleN" hidden>0</span>
       </button>
       <button class="tb-continue" id="continueBtn" type="button" hidden>
-        <span class="k">继续阅读：</span><span class="t" id="continueTitle"></span><span class="arrow">→</span>
+        <span class="k" data-i18n="continue">继续阅读：</span><span class="t" id="continueTitle"></span><span class="arrow">→</span>
       </button>
       <div class="sync-wrap" id="syncWrap" hidden>
         <span class="sync-chip" id="syncChip">同步中…</span>
@@ -1609,16 +1740,16 @@ html[data-density="compact"] .list-title{font-size:12.4px}
       <p class="toolbar-count" id="resultCount" aria-live="polite">共 0 篇</p>
       <div class="toolbar-right">
         <div class="seg" role="group" aria-label="视图切换">
-          <button class="seg-btn is-active" type="button" data-view="cards" aria-pressed="true">卡片</button>
-          <button class="seg-btn" type="button" data-view="table" aria-pressed="false">表格</button>
-          <button class="seg-btn" type="button" data-view="list" aria-pressed="false">列表</button>
+          <button class="seg-btn is-active" type="button" data-view="cards" aria-pressed="true" data-i18n="viewCards">卡片</button>
+          <button class="seg-btn" type="button" data-view="table" aria-pressed="false" data-i18n="viewTable">表格</button>
+          <button class="seg-btn" type="button" data-view="list" aria-pressed="false" data-i18n="viewList">列表</button>
         </div>
         <button class="tb-mini" id="densityBtn" type="button" aria-pressed="false" title="切换卡片密度（舒适 / 紧凑）">舒适</button>
         <select class="select-inline" id="sortSel" aria-label="排序方式">
-          <option value="year">年份（新→旧）</option>
-          <option value="updated">最近更新</option>
-          <option value="title">标题（A–Z）</option>
-          <option value="recent">最近阅读</option>
+          <option value="year" data-i18n="sortYear">年份（新→旧）</option>
+          <option value="updated" data-i18n="sortUpdated">最近更新</option>
+          <option value="title" data-i18n="sortTitle">标题（A–Z）</option>
+          <option value="recent" data-i18n="sortRecent">最近阅读</option>
         </select>
       </div>
     </div>
@@ -1632,8 +1763,8 @@ html[data-density="compact"] .list-title{font-size:12.4px}
 
 <footer class="site-foot">
   <p class="fam"><span id="libTitleFoot">文献库</span> <span class="foot-ver" id="libVerFoot" hidden>v—</span></p>
-  <p>由 <strong>paper-deepread-html</strong> skill 构建 · <span id="buildDateFoot">—</span></p>
-  <p class="foot-hint" id="staticHint" hidden>静态快照 · 重跑 build_library.py 更新</p>
+  <p><span data-i18n="builtBy">由</span> <strong>paper-deepread-html</strong> <span data-i18n="builtBySkill">skill 构建</span> · <span id="buildDateFoot">—</span></p>
+  <p class="foot-hint" id="staticHint" hidden data-i18n="staticHint">静态快照 · 重跑 build_library.py 更新</p>
 </footer>
 
 <!-- ============================================================ READER -->
@@ -1641,9 +1772,9 @@ html[data-density="compact"] .list-title{font-size:12.4px}
   <div class="viewer-shell" id="viewerShell" role="dialog" aria-modal="true" aria-labelledby="viewerTitle">
     <div class="viewer-bar">
       <button class="vbtn vbtn-full" id="viewerFull" type="button" aria-pressed="false" aria-label="全屏阅读" title="全屏阅读" hidden>⛶</button>
-      <button class="vbtn vbtn-close" id="viewerClose" type="button" aria-label="关闭阅读器，返回文库">
+      <button class="vbtn vbtn-close" id="viewerClose" type="button" aria-label="关闭阅读器，返回文库" data-i18n-aria="viewerClose">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 19 8 12l7-7"></path></svg>
-        返回文库
+        <span data-i18n="backToLibrary">返回文库</span>
       </button>
       <div class="vtitle-wrap">
         <p class="vcrumb" id="viewerCrumb"></p>
@@ -1657,16 +1788,16 @@ html[data-density="compact"] .list-title{font-size:12.4px}
           <button class="vbtn" id="viewerNext" type="button" aria-label="下一篇报告">›</button>
         </div>
         <span class="vsep" aria-hidden="true"></span>
-        <button class="vbtn" id="viewerRelatedBtn" type="button" aria-expanded="false" aria-controls="viewerRelated" hidden>相关 <span id="viewerRelatedN">0</span></button>
-        <a class="vbtn" id="viewerOpenTab" target="_blank" rel="noopener noreferrer">在新标签打开 ↗</a>
-        <a class="vbtn vbtn-raw" id="viewerRawView" target="_blank" rel="noopener noreferrer" hidden>查看原文 ↗</a>
+        <button class="vbtn" id="viewerRelatedBtn" type="button" aria-expanded="false" aria-controls="viewerRelated" hidden><span data-i18n="related">相关</span> <span id="viewerRelatedN">0</span></button>
+        <a class="vbtn" id="viewerOpenTab" target="_blank" rel="noopener noreferrer" data-i18n="openInTab">在新标签打开 ↗</a>
+        <a class="vbtn vbtn-raw" id="viewerRawView" target="_blank" rel="noopener noreferrer" hidden data-i18n="openRaw">查看原文 ↗</a>
       </div>
     </div>
     <div class="viewer-related" id="viewerRelated" hidden>
       <div class="vr-head">
-        <span class="vr-title">相关文献</span>
-        <span class="vr-hint">共同主题（2 分）+ 共同标签（1 分）</span>
-        <button class="vr-close" id="viewerRelatedClose" type="button" aria-label="关闭相关文献">&times;</button>
+        <span class="vr-title" data-i18n="relatedPapers">相关文献</span>
+        <span class="vr-hint" data-i18n="relatedHint">共同主题（2 分）+ 共同标签（1 分）</span>
+        <button class="vr-close" id="viewerRelatedClose" type="button" aria-label="关闭相关文献" data-i18n-aria="closeRelated">&times;</button>
       </div>
       <ul class="vr-list" id="viewerRelatedList"></ul>
     </div>
@@ -1674,7 +1805,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
       <iframe id="viewerFrame" title="论文精读报告" loading="eager"></iframe>
       <div class="viewer-loading" id="viewerLoading">
         <span class="spinner" aria-hidden="true"></span>
-        <p>正在载入报告…</p>
+        <p data-i18n="loadingReport">正在载入报告…</p>
         <p class="vload-hint" id="viewerHint">离线单文件报告。若长时间不显示，请使用右上角的「在新标签打开」。</p>
       </div>
     </div>
@@ -1682,16 +1813,16 @@ html[data-density="compact"] .list-title{font-size:12.4px}
 </div>
 
 <nav class="mobile-tabs" id="mobileTabs" aria-label="移动端快捷导航">
-  <button class="mtab" type="button" data-tab="library" aria-pressed="true"><span class="mtab-ico" aria-hidden="true">▤</span><span>库</span></button>
-  <button class="mtab" type="button" data-tab="unread" aria-pressed="false"><span class="mtab-ico" aria-hidden="true">◔</span><span>未读</span><span class="mtab-n" id="tabUnreadN">0</span></button>
-  <button class="mtab" type="button" data-tab="star" aria-pressed="false"><span class="mtab-ico" aria-hidden="true">★</span><span>星标</span><span class="mtab-n" id="tabStarN">0</span></button>
-  <button class="mtab" type="button" data-tab="continue" aria-pressed="false"><span class="mtab-ico" aria-hidden="true">▸</span><span>继续</span></button>
+  <button class="mtab" type="button" data-tab="library" aria-pressed="true"><span class="mtab-ico" aria-hidden="true">▤</span><span data-i18n="tabLibrary">库</span></button>
+  <button class="mtab" type="button" data-tab="unread" aria-pressed="false"><span class="mtab-ico" aria-hidden="true">◔</span><span data-i18n="unread">未读</span><span class="mtab-n" id="tabUnreadN">0</span></button>
+  <button class="mtab" type="button" data-tab="star" aria-pressed="false"><span class="mtab-ico" aria-hidden="true">★</span><span data-i18n="favorites">收藏</span><span class="mtab-n" id="tabStarN">0</span></button>
+  <button class="mtab" type="button" data-tab="continue" aria-pressed="false"><span class="mtab-ico" aria-hidden="true">▸</span><span data-i18n="tabContinue">继续</span></button>
 </nav>
 
 <div class="peek" id="peek" hidden role="dialog" aria-label="报告快速预览"></div>
 
 <noscript>
-  <div class="err-banner" style="display:block">这个文献库页面需要启用 JavaScript 才能浏览、搜索与阅读报告。</div>
+  <div class="err-banner" style="display:block"><span data-i18n="noJs">这个文献库页面需要启用 JavaScript 才能浏览、搜索与阅读报告。</span></div>
 </noscript>
 
 <!-- ================================================================ DATA -->
@@ -1737,6 +1868,298 @@ html[data-density="compact"] .list-title{font-size:12.4px}
       if(!seen[k]){ seen[k] = 1; out.push(x); }
     });
     return out;
+  }
+
+  /* ------------------------------------------------------------- i18n
+     Only the library CHROME is translated; generated report content always
+     stays as authored. Persisted in localStorage "deepread-lang" (zh|en). */
+  var LANG_KEY = 'deepread-lang';
+  var LANG = 'zh';
+  var I18N = {
+    zh: {
+      skip:'跳到报告列表', searchPh:'搜索标题、作者、标签或全文…', searchAria:'搜索文献库',
+      clearSearch:'清空搜索', langAria:'切换界面语言（中文 / English）', langTitle:'界面语言：中文 / English',
+      uploadAria:'上传论文', uploadTitle:'上传论文 / Upload a paper', upload:'上传',
+      manageAria:'报告管理', manageTitle:'上传与报告管理 / Management', manage:'管理',
+      railAria:'筛选', railClose:'关闭筛选面板', reset:'重置', filter:'筛选',
+      myFilters:'我的', favAria:'仅看收藏', favOnly:'仅看收藏', unreadOnly:'仅看未读',
+      topics:'主题分类', yearJournal:'年份 / 期刊', year:'年份', journal:'期刊 / 来源', tags:'标签',
+      pdfOnly:'仅看有原文 PDF', all:'全部', unread:'未读', favorites:'收藏', recent:'最近打开',
+      continue:'继续阅读：', viewCards:'卡片', viewTable:'表格', viewList:'列表',
+      sortYear:'年份（新→旧）', sortUpdated:'最近更新', sortTitle:'标题（A–Z）', sortRecent:'最近阅读',
+      builtBy:'由', builtBySkill:'skill 构建', staticHint:'静态快照 · 重跑 build_library.py 更新',
+      viewerClose:'关闭阅读器，返回文库', backToLibrary:'返回文库', related:'相关',
+      openInTab:'在新标签打开 ↗', openRaw:'查看原文 ↗', relatedPapers:'相关文献',
+      relatedHint:'共同主题（2 分）+ 共同标签（1 分）', closeRelated:'关闭相关文献',
+      loadingReport:'正在载入报告…', tabLibrary:'库', tabContinue:'继续',
+      noJs:'这个文献库页面需要启用 JavaScript 才能浏览、搜索与阅读报告。',
+      /* dynamic chrome */
+      noPapersHead:'还没有报告 · 用 paper-deepread-html skill 生成第一篇',
+      papersUnit:' 篇', topicsUnit:' 个主题', updatedAt:'更新于 {d}', builtAt:'构建于 {d}', builtLocal:'构建于本地',
+      rawFoot:'{n} / {total} 篇有原文 PDF', libTitleFallback:'文献库',
+      allYears:'全部年份', allJournals:'全部期刊', noCats:'这些报告还没有分类', noCatsEmpty:'暂无可筛选的分类',
+      noTags:'这些报告还没有标签', moreTags:'+ {n} 个标签', collapseTags:'收起标签',
+      emptySearchTitle:'没有匹配「{q}」的报告',
+      emptySearchBody:'全文索引里没有找到这个关键词。试试更短的词、去掉空格，或者清空搜索回到全部报告。',
+      emptyFilterTitle:'当前筛选条件下没有报告',
+      emptyFilterBody:'分类、年份、期刊、标签与「仅看有原文 PDF」是多条件叠加的（同类内为“或”）。放宽一两个条件就能看到报告。',
+      resetFilters:'清空筛选', emptyNoneTitle:'还没有报告',
+      emptyNoneBody:'这份文献库是空的。用 paper-deepread-html skill 把一篇论文 PDF 深读成报告，产物放进 paper-read/，再运行库构建脚本即可。',
+      hitsUnit:' 篇命中', hitSites:' 处', ofTotal:'/ {n} 篇', totalPapers:'共 {n} 篇',
+      searchKicker:'搜索结果', searchSummary:'共 {n} 篇 · {h} 处命中 · 点击片段在页内阅读对应章节',
+      filtering:'筛选中', removeFilter:'移除筛选：{label} {value}', resetAll:'重置全部', resultPrefix:'筛选结果 {n} 篇',
+      chipSearch:'搜索', chipCat:'分类', chipTag:'标签', chipYear:'年份', chipJournal:'期刊',
+      chipCondition:'条件', chipMy:'我的', chipQuick:'快捷', onlyPdf:'仅看有原文 PDF', quickUnread:'未读',
+      quickStar:'收藏', quickRecent:'最近打开',
+      read:'阅读', openRawShort:'原文', viewReport:'阅读报告：{t}', openRawAria:'在新标签查看原文 PDF：{t}',
+      citeLabel:'引用', bibtex:'BibTeX', ris:'RIS', copied:'已复制 {fmt}', copyFailed:'复制失败',
+      relatedLabel:'相关', relatedTo:'跳转到相关论文：{t}', markRead:'已读',
+      starOn:'收藏：{t}', starOff:'取消收藏：{t}',
+      prevReport:'上一篇报告', nextReport:'下一篇报告', prevLoop:'上一篇报告（循环）', nextLoop:'下一篇报告（循环）',
+      viewerFallback:'报告', crumbLibrary:'文献库', relatedCount:'相关文献 {n} 篇',
+      loadHint:'离线单文件报告。若长时间不显示，请使用右上角的「在新标签打开」。',
+      loadSlow:'报告载入较慢，或浏览器不允许在页面内嵌 file:// 文档。请使用右上角「在新标签打开」查看完整报告。',
+      syncing:'同步中…', updatedChip:'更新于 {t} · {n} 篇', updatedFlash:'已更新 · {n} 篇', offlineSnapshot:'离线快照',
+      hasUpdates:'有 {n} 篇更新 · 刷新', updatesBadge:'有更新 · 刷新',
+      tableCaption:'文献库表格', colYear:'年份', colReport:'报告', colJournal:'期刊', colCats:'分类',
+      colNums:'图表 / 证据 / 章节', peekClose:'关闭快速预览', readAria:'阅读报告：{t}', tabAria:'移动端快捷导航',
+      figuresShort:'图表', claimsShort:'证据', sectionsShort:'章节', figShort:'图', evShort:'证', secShort:'节',
+      themeToLight:'切换到浅色模式', themeToDark:'切换到深色模式', themeLight:'浅色模式（当前深色）', themeDark:'深色模式（当前浅色）',
+      fontToRead:'切换阅读字体', fontToMono:'切换等宽字体', fontMono:'等宽字体（点击切回阅读字体）', fontRead:'阅读字体（点击切换等宽字体）',
+      densityComfort:'舒适', densityCompact:'紧凑', sortAria:'排序方式', yearFilterAria:'按年份筛选',
+      journalFilterAria:'按期刊筛选', viewAria:'视图切换', quickAria:'快速筛选', continueAria:'继续阅读：{t}',
+      densityToggleHint:'点击切换', sharedTopics:'共同主题', sharedTags:'共同标签', switchRelated:'切换到相关文献：{t}',
+      viewerIframe:'论文精读报告', continueLabel:'继续', syncRefresh:'从本地服务立即刷新文献库',
+      libVersionTitle:'文献库版本 {v}', copyBibtex:'复制 BibTeX 引用', copyRis:'复制 RIS 引用',
+      filterResultLabel:'筛选结果 ', uncategorized:'未分类',
+      authorEtal:' 等 {n} 人', newTab:'新标签打开'
+    },
+    en: {
+      skip:'Skip to paper list', searchPh:'Search titles, authors, tags or full text…', searchAria:'Search the library',
+      clearSearch:'Clear search', langAria:'Switch interface language (Chinese / English)', langTitle:'Interface language: Chinese / English',
+      uploadAria:'Upload a paper', uploadTitle:'Upload a paper', upload:'Upload',
+      manageAria:'Report management', manageTitle:'Uploads and report management', manage:'Manage',
+      railAria:'Filters', railClose:'Close filters', reset:'Reset', filter:'Filters',
+      myFilters:'Mine', favAria:'Favorites only', favOnly:'Favorites only', unreadOnly:'Unread only',
+      topics:'Topics', yearJournal:'Year / Journal', year:'Year', journal:'Journal / Source', tags:'Tags',
+      pdfOnly:'Only papers with the original PDF', all:'All', unread:'Unread', favorites:'Favorites', recent:'Recently opened',
+      continue:'Continue:', viewCards:'Cards', viewTable:'Table', viewList:'List',
+      sortYear:'Year (new → old)', sortUpdated:'Recently updated', sortTitle:'Title (A–Z)', sortRecent:'Recently read',
+      builtBy:'Built by', builtBySkill:'skill', staticHint:'Static snapshot · rerun build_library.py to update',
+      viewerClose:'Close the reader and return to the library', backToLibrary:'Back to library', related:'Related',
+      openInTab:'Open in new tab ↗', openRaw:'View original ↗', relatedPapers:'Related papers',
+      relatedHint:'shared topic (2 pts) + shared tags (1 pt)', closeRelated:'Close related papers',
+      loadingReport:'Loading report…', tabLibrary:'Library', tabContinue:'Continue',
+      noJs:'This library page needs JavaScript to browse, search and read reports.',
+      noPapersHead:'No reports yet · generate the first one with the paper-deepread-html skill',
+      papersUnit:' papers', topicsUnit:' topics', updatedAt:'updated {d}', builtAt:'built {d}', builtLocal:'built locally',
+      rawFoot:'{n} / {total} papers include the original PDF', libTitleFallback:'Library',
+      allYears:'All years', allJournals:'All journals', noCats:'These reports have no categories yet', noCatsEmpty:'No categories to filter',
+      noTags:'These reports have no tags yet', moreTags:'+ {n} tags', collapseTags:'Collapse tags',
+      emptySearchTitle:'No report matches “{q}”',
+      emptySearchBody:'The full-text index did not find this keyword. Try a shorter term, remove spaces, or clear the search.',
+      emptyFilterTitle:'No reports under the current filters',
+      emptyFilterBody:'Categories, year, journal, tags and “original PDF” filters combine (OR within a group). Relax one or two to see reports.',
+      resetFilters:'Clear filters', emptyNoneTitle:'No reports yet',
+      emptyNoneBody:'This library is empty. Deep-read a paper PDF with the paper-deepread-html skill into paper-read/ and rerun the library builder.',
+      hitsUnit:' matches', hitSites:' hits', ofTotal:'/ {n} papers', totalPapers:'{n} papers',
+      searchKicker:'Search results', searchSummary:'{n} papers · {h} hits · click a snippet to read that section in place',
+      filtering:'Filtering', removeFilter:'Remove filter: {label} {value}', resetAll:'Reset all', resultPrefix:'{n} results',
+      chipSearch:'Search', chipCat:'Category', chipTag:'Tag', chipYear:'Year', chipJournal:'Journal',
+      chipCondition:'Condition', chipMy:'Mine', chipQuick:'Quick', onlyPdf:'Only papers with the original PDF', quickUnread:'Unread',
+      quickStar:'Favorites', quickRecent:'Recently opened',
+      read:'Read', openRawShort:'Original', viewReport:'Read report: {t}', openRawAria:'View the original PDF in a new tab: {t}',
+      citeLabel:'Cite', bibtex:'BibTeX', ris:'RIS', copied:'Copied {fmt}', copyFailed:'Copy failed',
+      relatedLabel:'Related', relatedTo:'Jump to related paper: {t}', markRead:'Read',
+      starOn:'Favorite: {t}', starOff:'Remove favorite: {t}',
+      prevReport:'Previous report', nextReport:'Next report', prevLoop:'Previous report (wrap)', nextLoop:'Next report (wrap)',
+      viewerFallback:'Report', crumbLibrary:'Library', relatedCount:'{n} related papers',
+      loadHint:'Offline single-file report. If it does not appear, use “Open in new tab” at the top right.',
+      loadSlow:'The report is slow to load, or the browser blocks framing file:// documents. Use “Open in new tab” at the top right.',
+      syncing:'Syncing…', updatedChip:'updated {t} · {n} papers', updatedFlash:'Updated · {n} papers', offlineSnapshot:'Offline snapshot',
+      hasUpdates:'{n} papers updated · refresh', updatesBadge:'Updates available · refresh',
+      tableCaption:'Library table', colYear:'Year', colReport:'Report', colJournal:'Journal', colCats:'Categories',
+      colNums:'Figures / Evidence / Sections', peekClose:'Close quick preview', readAria:'Read report: {t}', tabAria:'Mobile shortcuts',
+      figuresShort:'figures', claimsShort:'evidence', sectionsShort:'sections', figShort:'fig', evShort:'ev', secShort:'sec',
+      themeToLight:'Switch to light mode', themeToDark:'Switch to dark mode', themeLight:'Light mode (currently dark)', themeDark:'Dark mode (currently light)',
+      fontToRead:'Switch to reading font', fontToMono:'Switch to monospace font', fontMono:'Monospace (click for reading font)', fontRead:'Reading font (click for monospace)',
+      densityComfort:'Comfortable', densityCompact:'Compact', sortAria:'Sort order', yearFilterAria:'Filter by year',
+      journalFilterAria:'Filter by journal', viewAria:'Switch view', quickAria:'Quick filters', continueAria:'Continue reading: {t}',
+      densityToggleHint:'click to toggle', sharedTopics:'shared topics', sharedTags:'shared tags', switchRelated:'Switch to related paper: {t}',
+      viewerIframe:'Paper deep-read report', continueLabel:'Continue', syncRefresh:'Refresh the library from the local server now',
+      libVersionTitle:'Library version {v}', copyBibtex:'Copy BibTeX citation', copyRis:'Copy RIS citation',
+      filterResultLabel:'Results ', uncategorized:'Uncategorized',
+      authorEtal:' et al. ({n})', newTab:'Open in new tab'
+    }
+  };
+  function t(key, vars){
+    var dict = I18N[LANG] || I18N.zh;
+    var s = dict[key];
+    if(s === undefined) s = I18N.zh[key];
+    if(s === undefined) return key;
+    if(vars){
+      Object.keys(vars).forEach(function(k){
+        s = s.replace(new RegExp('\\{' + k + '\\}', 'g'), String(vars[k]));
+      });
+    }
+    return s;
+  }
+  function loadLang(){
+    try{
+      var saved = localStorage.getItem(LANG_KEY);
+      if(saved === 'en' || saved === 'zh') LANG = saved;
+    }catch(e){}
+  }
+  function applyI18n(){
+    $$('[data-i18n]').forEach(function(n){ n.textContent = t(n.getAttribute('data-i18n')); });
+    $$('[data-i18n-ph]').forEach(function(n){ n.setAttribute('placeholder', t(n.getAttribute('data-i18n-ph'))); });
+    $$('[data-i18n-aria]').forEach(function(n){ n.setAttribute('aria-label', t(n.getAttribute('data-i18n-aria'))); });
+    $$('[data-i18n-title]').forEach(function(n){ n.setAttribute('title', t(n.getAttribute('data-i18n-title'))); });
+    document.documentElement.setAttribute('lang', LANG === 'en' ? 'en' : 'zh-CN');
+    document.documentElement.setAttribute('data-lang', LANG);
+  }
+  function paintLangBtn(){
+    var btn = $('#langToggle');
+    if(!btn) return;
+    btn.textContent = LANG === 'en' ? '中文' : 'EN';
+    btn.setAttribute('aria-pressed', LANG === 'en' ? 'true' : 'false');
+    btn.setAttribute('aria-label', t('langAria'));
+    btn.setAttribute('title', t('langTitle'));
+  }
+  function setLang(next){
+    var value = next === 'en' ? 'en' : 'zh';
+    if(value === LANG) return;
+    LANG = value;
+    try{ localStorage.setItem(LANG_KEY, LANG); }catch(e){}
+    applyI18n();
+    paintLangBtn();
+    if(!RAW) return;
+    paintHeader();
+    renderFacetData();
+    apply({ skipHash: true });
+    refreshReadingUI();
+    updateContinue();
+  }
+
+  /* --------------------------------------------------------- citations
+     Compose BibTeX / RIS from the embedded metadata (title, authors, journal,
+     year, doi). Missing fields are omitted instead of printed as "undefined". */
+  function _asciiWord(s){
+    return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+  function citeKey(p){
+    var first = String((p.authors && p.authors[0]) || '').trim();
+    var parts = first.split(/\s+/).filter(Boolean);
+    var last = parts.length ? parts[parts.length - 1] : 'anon';
+    var word = (String(p.title || '').split(/\s+/).filter(Boolean)[0] || 'paper');
+    var key = (_asciiWord(last) || 'anon') + _asciiWord(p.year) + (_asciiWord(word) || 'paper');
+    return key.charAt(0).toLowerCase() === key.charAt(0) ? key : key.charAt(0).toLowerCase() + key.slice(1);
+  }
+  function _bibField(value){
+    return String(value == null ? '' : value)
+      .replace(/\\/g, '\\textbackslash{}')
+      .replace(/([{}])/g, '\\$1')
+      .replace(/&/g, '\\&').replace(/%/g, '\\%').replace(/\$/g, '\\$')
+      .replace(/#/g, '\\#').replace(/_/g, '\\_').replace(/\^/g, '\\^{}');
+  }
+  function bibtexOf(p){
+    var lines = ['@article{' + citeKey(p) + ','];
+    if(p.title) lines.push('  title = {{' + _bibField(p.title) + '}},');
+    if(p.authors && p.authors.length) lines.push('  author = {' + p.authors.map(_bibField).join(' and ') + '},');
+    if(p.journal) lines.push('  journal = {{' + _bibField(p.journal) + '}},');
+    if(p.year) lines.push('  year = {' + _bibField(p.year) + '},');
+    if(p.doi) lines.push('  doi = {' + _bibField(p.doi) + '},');
+    lines.push('}');
+    return lines.join('\n');
+  }
+  function risOf(p){
+    var lines = ['TY  - JOUR'];
+    if(p.title) lines.push('TI  - ' + p.title);
+    (p.authors || []).forEach(function(a){ lines.push('AU  - ' + a); });
+    if(p.journal) lines.push('JO  - ' + p.journal);
+    if(p.year) lines.push('PY  - ' + p.year);
+    if(p.doi) lines.push('DO  - ' + p.doi);
+    lines.push('ER  - ');
+    return lines.join('\n');
+  }
+  function copyText(text, onDone){
+    var done = function(ok){ if(onDone) onDone(!!ok); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){ done(true); }, function(){ fallback(); });
+    }else{ fallback(); }
+    function fallback(){
+      var area = document.createElement('textarea');
+      area.value = text;
+      area.setAttribute('readonly', 'readonly');
+      area.style.position = 'fixed';
+      area.style.top = '-1000px';
+      area.style.opacity = '0';
+      document.body.appendChild(area);
+      area.select();
+      var ok = false;
+      try{ ok = document.execCommand('copy'); }catch(e){ ok = false; }
+      area.parentNode.removeChild(area);
+      done(ok);
+    }
+  }
+  function copyCitation(p, fmt, btn){
+    var text = fmt === 'ris' ? risOf(p) : bibtexOf(p);
+    copyText(text, function(ok){
+      if(!btn) return;
+      var label = fmt === 'ris' ? t('ris') : t('bibtex');
+      btn.classList.toggle('is-done', ok);
+      btn.textContent = ok ? t('copied', { fmt: label }) : t('copyFailed');
+      btn.setAttribute('aria-label', ok ? t('copied', { fmt: label }) : t('copyFailed'));
+      setTimeout(function(){
+        btn.classList.remove('is-done');
+        btn.textContent = label;
+        btn.setAttribute('aria-label', fmt === 'ris' ? t('copyRis') : t('copyBibtex'));
+      }, 1600);
+    });
+  }
+
+  /* ------------------------------------------------- related (build-time) */
+  function relatedPapersOf(p){
+    if(!p || !Array.isArray(p.related)) return [];
+    return p.related.map(function(id){ return paperById(id); }).filter(Boolean);
+  }
+  function findCardEl(id){
+    var nodes = resultRegion ? resultRegion.querySelectorAll('[data-id]') : [];
+    for(var i = 0; i < nodes.length; i++){
+      if(nodes[i].getAttribute('data-id') === id) return nodes[i];
+    }
+    return null;
+  }
+  function focusCard(id){
+    var p = paperById(id);
+    if(!p) return;
+    hidePeek();
+    var card = findCardEl(id);
+    if(!card){
+      /* The target may be filtered out: clear the filters, then retry once. */
+      state.q = '';
+      state.cats = Object.create(null);
+      state.tags = Object.create(null);
+      state.year = '';
+      state.journal = '';
+      state.pdf = false;
+      state.starOnly = false;
+      state.unreadOnly = false;
+      state.quick = 'all';
+      if(state.view !== 'cards') state.view = 'cards';
+      apply({ skipHash: true });
+      card = findCardEl(id);
+    }
+    if(!card) return;
+    try{ card.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+    catch(e){ try{ card.scrollIntoView(); }catch(e2){} }
+    card.classList.remove('is-flash');
+    /* force a reflow so the animation restarts on repeat clicks */
+    void card.offsetWidth;
+    card.classList.add('is-flash');
+    setTimeout(function(){ card.classList.remove('is-flash'); }, 1700);
+    var focusable = card.querySelector('.btn-read') || card.querySelector('.card-star') || card;
+    try{ focusable.focus({ preventScroll: true }); }catch(e){ try{ focusable.focus(); }catch(e2){} }
   }
   function clampLine(text, max){
     text = str(text);
@@ -1803,6 +2226,9 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     p.sectionsN = num(raw.sections);
     p.updated = str(raw.updated);
     p.thumb = str(raw.thumb);
+    /* build-time related ids (shared tags / journal, max 3); absent in older
+       datasets — the card simply renders no related chips. */
+    p.related = dedupe(toArr(raw.related).map(str).filter(Boolean)).slice(0, 6);
     p.text = [];
     if(Array.isArray(raw.text)){
       raw.text.forEach(function(t, j){
@@ -2003,7 +2429,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
 
   var continueBtn = $('#continueBtn');
   var continueTitleEl = $('#continueTitle');
-  var starOnly = $('#starOnly');
+  var favChip = $('#favChip');
   var unreadOnly = $('#unreadOnly');
   var starCountEl = $('#starCount');
   var unreadCountEl = $('#unreadCount');
@@ -2029,7 +2455,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     if(libVerEl){
       libVerEl.textContent = verText || 'v—';
       libVerEl.hidden = !verText;
-      libVerEl.title = verText ? ('文献库版本 ' + verText) : '';
+      libVerEl.title = verText ? t('libVersionTitle', { v: verText }) : '';
     }
     if(libVerFoot){
       libVerFoot.textContent = verText;
@@ -2039,27 +2465,27 @@ html[data-density="compact"] .list-title{font-size:12.4px}
 
     clear(headStats);
     if(!TOTAL_PAPERS){
-      headStats.textContent = '还没有报告 · 用 paper-deepread-html skill 生成第一篇';
+      headStats.textContent = t('noPapersHead');
     }else{
       headStats.appendChild(el('b', null, String(TOTAL_PAPERS)));
-      headStats.appendChild(document.createTextNode(' 篇'));
+      headStats.appendChild(document.createTextNode(t('papersUnit')));
       if(YEAR_RANGE){
         headStats.appendChild(el('span', 'sep', '·'));
-        headStats.appendChild(el('span', 'nw yr', YEAR_RANGE + ' 年'));
+        headStats.appendChild(el('span', 'nw yr', YEAR_RANGE + (LANG === 'en' ? '' : ' 年')));
       }
       headStats.appendChild(el('span', 'sep', '·'));
       headStats.appendChild(el('b', null, String(CAT_COUNT)));
-      headStats.appendChild(document.createTextNode(' 个主题'));
+      headStats.appendChild(document.createTextNode(t('topicsUnit')));
       if(UPDATED){
         headStats.appendChild(el('span', 'sep upd', '·'));
-        headStats.appendChild(el('span', 'nw upd', '更新于 ' + UPDATED));
+        headStats.appendChild(el('span', 'nw upd', t('updatedAt', { d: UPDATED })));
       }
     }
-    buildDateFoot.textContent = BUILD_DATE ? ('构建于 ' + BUILD_DATE) : '构建于本地';
+    buildDateFoot.textContent = BUILD_DATE ? t('builtAt', { d: BUILD_DATE }) : t('builtLocal');
     clear(railFoot);
     if(RAW_COUNT){
       railFoot.appendChild(el('b', null, String(RAW_COUNT)));
-      railFoot.appendChild(document.createTextNode(' / ' + TOTAL_PAPERS + ' 篇有原文 PDF'));
+      railFoot.appendChild(document.createTextNode(t('rawFoot', { total: TOTAL_PAPERS })));
     }
   }
 
@@ -2071,7 +2497,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     yearSel.addEventListener('change', function(){ state.year = yearSel.value; apply(); });
     journalSel.addEventListener('change', function(){ state.journal = journalSel.value; apply(); });
     pdfOnly.addEventListener('change', function(){ state.pdf = !!pdfOnly.checked; apply(); });
-    starOnly.addEventListener('change', function(){ state.starOnly = !!starOnly.checked; apply(); });
+    if(favChip) favChip.addEventListener('click', function(){ state.starOnly = !state.starOnly; apply(); });
     unreadOnly.addEventListener('change', function(){ state.unreadOnly = !!unreadOnly.checked; apply(); });
     renderFacetData();
   }
@@ -2080,7 +2506,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
   function renderFacetData(){
     clear(catList);
     if(!CATEGORIES.length){
-      catList.appendChild(el('p', 'rail-empty', TOTAL_PAPERS ? '这些报告还没有分类' : '暂无可筛选的分类'));
+      catList.appendChild(el('p', 'rail-empty', TOTAL_PAPERS ? t('noCats') : t('noCatsEmpty')));
     }else{
       CATEGORIES.forEach(function(c){
         var b = el('button', 'rail-opt');
@@ -2100,10 +2526,10 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     }
 
     clear(yearSel);
-    yearSel.appendChild(new Option(TOTAL_PAPERS ? '全部年份' : '—', ''));
+    yearSel.appendChild(new Option(TOTAL_PAPERS ? t('allYears') : '—', ''));
     YEARS.forEach(function(y){ yearSel.appendChild(new Option(y + '（' + YEAR_MAP[y] + '）', y)); });
     clear(journalSel);
-    journalSel.appendChild(new Option(TOTAL_PAPERS ? '全部期刊' : '—', ''));
+    journalSel.appendChild(new Option(TOTAL_PAPERS ? t('allJournals') : '—', ''));
     JOURNALS.forEach(function(j){ journalSel.appendChild(new Option(clampLine(j.name, 40) + '（' + j.n + '）', j.name)); });
     renderTagChips();
     syncRailGroupCounts();
@@ -2121,7 +2547,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     clear(tagChips);
     tagButtons = Object.create(null);
     if(!TAGS.length){
-      tagChips.appendChild(el('p', 'rail-empty', '这些报告还没有标签'));
+      tagChips.appendChild(el('p', 'rail-empty', t('noTags')));
       return;
     }
     var limit = 12;
@@ -2145,7 +2571,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     if(TAGS.length > limit){
       var more = el('button', 'rail-tag-more');
       more.type = 'button';
-      more.textContent = state.tagsOpen ? '收起标签' : ('+ ' + Math.max(0, TAGS.length - visible.length) + ' 个标签');
+      more.textContent = state.tagsOpen ? t('collapseTags') : t('moreTags', { n: Math.max(0, TAGS.length - visible.length) });
       more.addEventListener('click', function(){
         state.tagsOpen = !state.tagsOpen;
         renderTagChips();
@@ -2179,13 +2605,13 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     journalSel.value = state.journal || '';
     pdfOnly.checked = !!state.pdf;
     pdfOnlyWrap.classList.toggle('is-checked', !!state.pdf);
-    starOnly.checked = !!state.starOnly;
+    if(favChip) favChip.setAttribute('aria-pressed', state.starOnly ? 'true' : 'false');
     unreadOnly.checked = !!state.unreadOnly;
     syncMyCounts();
     updateContinue();
     syncQuickBar();
     var root = document.documentElement;
-    if(densityBtn) densityBtn.textContent = root.getAttribute('data-density') === 'compact' ? '紧凑' : '舒适';
+    if(densityBtn) densityBtn.textContent = root.getAttribute('data-density') === 'compact' ? t('densityCompact') : t('densityComfort');
     sortSel.value = state.sort;
     $$('.seg-btn').forEach(function(b){
       var on = b.getAttribute('data-view') === state.view;
@@ -2282,6 +2708,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
 
   /* ================================================= reading state + related */
   var LS_KEY = 'deepread-library-state';
+  var FAV_KEY = 'deepread-favorites';
   var reading = { opened: Object.create(null), stars: Object.create(null), last: null };
   var readingDirty = false;
   var RELATED = Object.create(null);
@@ -2290,19 +2717,30 @@ html[data-density="compact"] .list-title{font-size:12.4px}
   function loadReading(){
     try{
       var raw = localStorage.getItem(LS_KEY);
-      if(!raw) return;
-      var d = JSON.parse(raw);
-      if(!d || typeof d !== 'object') return;
-      if(d.opened && typeof d.opened === 'object'){
-        Object.keys(d.opened).forEach(function(k){
-          if(typeof d.opened[k] === 'string') reading.opened[k] = d.opened[k];
-        });
+      if(raw){
+        var d = JSON.parse(raw);
+        if(d && typeof d === 'object'){
+          if(d.opened && typeof d.opened === 'object'){
+            Object.keys(d.opened).forEach(function(k){
+              if(typeof d.opened[k] === 'string') reading.opened[k] = d.opened[k];
+            });
+          }
+          if(d.stars && typeof d.stars === 'object'){
+            Object.keys(d.stars).forEach(function(k){ if(d.stars[k]) reading.stars[k] = true; });
+          }
+          if(d.last && typeof d.last === 'object' && typeof d.last.id === 'string' && d.last.id){
+            reading.last = { id: d.last.id, at: typeof d.last.at === 'string' ? d.last.at : '' };
+          }
+        }
       }
-      if(d.stars && typeof d.stars === 'object'){
-        Object.keys(d.stars).forEach(function(k){ if(d.stars[k]) reading.stars[k] = true; });
-      }
-      if(d.last && typeof d.last === 'object' && typeof d.last.id === 'string' && d.last.id){
-        reading.last = { id: d.last.id, at: typeof d.last.at === 'string' ? d.last.at : '' };
+      /* v1.4.0 favorites: canonical key "deepread-favorites" (array of ids);
+         the legacy stars map above stays readable for older snapshots. */
+      var favs = localStorage.getItem(FAV_KEY);
+      if(favs){
+        var arr = JSON.parse(favs);
+        if(Array.isArray(arr)){
+          arr.forEach(function(id){ if(typeof id === 'string' && id) reading.stars[id] = true; });
+        }
       }
     }catch(e){
       reading = { opened: Object.create(null), stars: Object.create(null), last: null };
@@ -2311,6 +2749,9 @@ html[data-density="compact"] .list-title{font-size:12.4px}
   function saveReading(){
     try{
       localStorage.setItem(LS_KEY, JSON.stringify({ opened: reading.opened, stars: reading.stars, last: reading.last }));
+    }catch(e){}
+    try{
+      localStorage.setItem(FAV_KEY, JSON.stringify(Object.keys(reading.stars).filter(function(id){ return reading.stars[id]; })));
     }catch(e){}
   }
   function paperById(id){
@@ -2360,8 +2801,8 @@ html[data-density="compact"] .list-title{font-size:12.4px}
       continueBtn.hidden = false;
       continueBtn._paper = p;
       continueTitleEl.textContent = clampLine(p.title_zh || p.title, 30);
-      continueBtn.setAttribute('aria-label', '继续阅读：' + p.title);
-      continueBtn.setAttribute('title', '继续阅读：' + p.title);
+      continueBtn.setAttribute('aria-label', t('continueAria', { t: p.title }));
+      continueBtn.setAttribute('title', t('continueAria', { t: p.title }));
     }else{
       continueBtn.hidden = true;
       continueBtn._paper = null;
@@ -2395,7 +2836,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
       if(lstate){
         var lchip = lstate.querySelector('.media-read');
         if(reading.opened[lp.id] && !lchip){
-          var mc = el('span', 'media-read', '已读');
+          var mc = el('span', 'media-read', t('markRead'));
           lstate.insertBefore(mc, lstate.firstChild);
         }else if(!reading.opened[lp.id] && lchip) lchip.parentNode.removeChild(lchip);
         var lstar = lstate.querySelector('.list-star');
@@ -2403,7 +2844,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
           var lon = !!reading.stars[lp.id];
           lstar.setAttribute('aria-pressed', lon ? 'true' : 'false');
           lstar.textContent = lon ? '★' : '☆';
-          lstar.setAttribute('aria-label', (lon ? '取消星标：' : '星标：') + lp.title);
+          lstar.setAttribute('aria-label', t(lon ? 'starOff' : 'starOn', { t: lp.title }));
         }
       }
     });
@@ -2413,7 +2854,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
       var flags = card.querySelector('.media-flags');
       if(flags){
         var chip = flags.querySelector('.media-read');
-        if(reading.opened[p.id] && !chip) flags.appendChild(el('span', 'media-read', '已读'));
+        if(reading.opened[p.id] && !chip) flags.appendChild(el('span', 'media-read', t('markRead')));
         else if(!reading.opened[p.id] && chip) flags.removeChild(chip);
       }
       var star = card.querySelector('.card-star');
@@ -2421,7 +2862,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
         var on = !!reading.stars[p.id];
         star.setAttribute('aria-pressed', on ? 'true' : 'false');
         star.textContent = on ? '★' : '☆';
-        star.setAttribute('aria-label', (on ? '取消星标：' : '星标：') + p.title);
+        star.setAttribute('aria-label', t(on ? 'starOff' : 'starOn', { t: p.title }));
       }
     });
     updateContinue();
@@ -2431,7 +2872,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     if(!p) return;
     if(reading.stars[p.id]) delete reading.stars[p.id];
     else reading.stars[p.id] = true;
-    saveReading();
+    saveReading();  /* mirrors favorites to "deepread-favorites" + legacy state */
     refreshReadingUI();
     if(state.starOnly || state.quick === 'star') apply();
   }
@@ -2444,13 +2885,13 @@ html[data-density="compact"] .list-title{font-size:12.4px}
       var li = el('li');
       var b = el('button', 'vr-item');
       b.type = 'button';
-      b.setAttribute('aria-label', '切换到相关文献：' + q.title);
+      b.setAttribute('aria-label', t('switchRelated', { t: q.title }));
       b.appendChild(el('span', 'vr-item-title', q.title));
       var meta = [q.year, q.journal].filter(Boolean).join(' · ');
       if(meta) b.appendChild(el('span', 'vr-item-meta', meta));
       var why = [];
-      if(item.sharedC.length) why.push('共同主题：' + item.sharedC.join('、'));
-      if(item.sharedT.length) why.push('共同标签：' + item.sharedT.join('、'));
+      if(item.sharedC.length) why.push(t('sharedTopics') + '：' + item.sharedC.join(LANG === 'en' ? ', ' : '、'));
+      if(item.sharedT.length) why.push(t('sharedTags') + '：' + item.sharedT.join(LANG === 'en' ? ', ' : '、'));
       if(why.length) b.appendChild(el('span', 'vr-item-why', why.join(' · ')));
       var chips = el('span', 'vr-chips');
       item.sharedC.slice(0, 4).forEach(function(c){ chips.appendChild(el('span', 'cat-chip ' + catClass(c), c)); });
@@ -2489,7 +2930,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     viewerRelatedBtn.hidden = false;
     viewerRelatedN.textContent = String(rel.length);
     viewerRelatedBtn.setAttribute('aria-expanded', relatedOpen ? 'true' : 'false');
-    viewerRelatedBtn.setAttribute('aria-label', '相关文献 ' + rel.length + ' 篇');
+    viewerRelatedBtn.setAttribute('aria-label', t('relatedCount', { n: rel.length }));
     if(relatedOpen) renderRelatedPanel(p, rel);
     else viewerRelated.hidden = true;
   }
@@ -2609,7 +3050,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
   function authorLine(authors){
     if(!authors.length) return '';
     if(authors.length <= 3) return authors.join(', ');
-    return authors.slice(0, 3).join(', ') + ' 等 ' + authors.length + ' 人';
+    return authors.slice(0, 3).join(', ') + t('authorEtal', { n: authors.length });
   }
   function monogram(p){
     var src = (p.categories[0] || p.title || '?').replace(/\s+/g, ' ').trim();
@@ -2618,7 +3059,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
   }
   function countsRow(p){
     var row = el('div', 'card-counts');
-    [[p.figures, '图表'], [p.claims, '证据'], [p.sectionsN, '章节']].forEach(function(pair){
+    [[p.figures, t('figuresShort')], [p.claims, t('claimsShort')], [p.sectionsN, t('sectionsShort')]].forEach(function(pair){
       if(pair[0] === null) return;
       var s = el('span');
       s.appendChild(el('b', null, String(pair[0])));
@@ -2626,6 +3067,50 @@ html[data-density="compact"] .list-title{font-size:12.4px}
       row.appendChild(s);
     });
     return row;
+  }
+
+  /* Citation export + build-time related chips (v1.4.0). Buttons sit above the
+     full-card link overlay thanks to .card-extras{position:relative;z-index:2}. */
+  function cardExtrasEl(p){
+    var box = el('div', 'card-extras');
+    var cite = el('div', 'card-cite');
+    cite.appendChild(el('span', 'k', t('citeLabel')));
+    [['bibtex', t('bibtex'), t('copyBibtex')], ['ris', t('ris'), t('copyRis')]].forEach(function(fmt){
+      var b = el('button', 'cite-btn js-cite', fmt[1]);
+      b.type = 'button';
+      b.setAttribute('data-fmt', fmt[0]);
+      b.setAttribute('data-id', p.id);
+      b.setAttribute('aria-label', fmt[2] + '：' + p.title);
+      b.addEventListener('click', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        copyCitation(p, fmt[0], b);
+      });
+      cite.appendChild(b);
+    });
+    box.appendChild(cite);
+    var rel = relatedPapersOf(p).slice(0, 3);
+    if(rel.length){
+      var relRow = el('div', 'card-rel');
+      relRow.appendChild(el('span', 'k', t('relatedLabel')));
+      rel.forEach(function(q){
+        var b = el('button', 'rel-chip');
+        b.type = 'button';
+        b.setAttribute('data-rel', q.id);
+        b.setAttribute('title', q.title);
+        b.setAttribute('aria-label', t('relatedTo', { t: q.title }));
+        b.appendChild(el('span', 'rel-t', q.title_zh || q.title));
+        b.appendChild(el('span', 'rel-go', '→'));
+        b.addEventListener('click', function(e){
+          e.preventDefault();
+          e.stopPropagation();
+          focusCard(q.id);
+        });
+        relRow.appendChild(b);
+      });
+      box.appendChild(relRow);
+    }
+    return box;
   }
 
   function cardEl(p){
@@ -2636,7 +3121,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
       var link = el('a', 'card-link');
       link.href = p.html;
       link.rel = 'noopener';
-      link.setAttribute('aria-label', '阅读报告：' + p.title);
+      link.setAttribute('aria-label', t('viewReport', { t: p.title }));
       link.addEventListener('click', function(e){
         if(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return; /* new-tab fallback */
         e.preventDefault();
@@ -2670,7 +3155,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     var star = el('button', 'card-star');
     star.type = 'button';
     star.setAttribute('aria-pressed', reading.stars[p.id] ? 'true' : 'false');
-    star.setAttribute('aria-label', (reading.stars[p.id] ? '取消星标：' : '星标：') + p.title);
+    star.setAttribute('aria-label', t(reading.stars[p.id] ? 'starOff' : 'starOn', { t: p.title }));
     star.textContent = reading.stars[p.id] ? '★' : '☆';
     star.addEventListener('click', function(e){
       e.preventDefault();
@@ -2699,6 +3184,8 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     }
     var counts = countsRow(p);
     if(counts.childNodes.length) body.appendChild(counts);
+    /* v1.4.0: citation export buttons + build-time related-paper chips */
+    body.appendChild(cardExtrasEl(p));
     art.appendChild(body);
 
     /* foot: primary 阅读 + RAW pdf links */
@@ -2706,8 +3193,8 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     if(p.html){
       var read = el('button', 'btn-read');
       read.type = 'button';
-      read.setAttribute('aria-label', '阅读报告：' + p.title);
-      read.appendChild(el('span', null, '阅读'));
+      read.setAttribute('aria-label', t('viewReport', { t: p.title }));
+      read.appendChild(el('span', null, t('read')));
       read.appendChild(el('span', 'arrow', '→'));
       read.addEventListener('click', function(e){
         e.preventDefault();
@@ -2718,7 +3205,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     }
     var links = el('div', 'card-links');
     if(p.raw){
-      links.appendChild(actionLink('查看原文', p.raw, null, { target: true, ext: true, title: '在新标签查看原文 PDF：' + p.title }));
+      links.appendChild(actionLink(t('openRawShort'), p.raw, null, { target: true, ext: true, title: t('openRawAria', { t: p.title }) }));
     }
     if(links.childNodes.length) foot.appendChild(links);
     if(foot.childNodes.length) art.appendChild(foot);
@@ -2793,7 +3280,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     viewerLoading.hidden = !on;
     if(on){
       viewerLoading.classList.remove('is-error');
-      viewerHint.textContent = '离线单文件报告。若长时间不显示，请使用右上角的「在新标签打开」。';
+      viewerHint.textContent = t('loadHint');
     }
   }
 
@@ -2806,9 +3293,9 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     viewerTitle.textContent = p.title;
     if(viewerCrumb){
       clear(viewerCrumb);
-      viewerCrumb.appendChild(el('span', null, '文献库'));
+      viewerCrumb.appendChild(el('span', null, t('crumbLibrary')));
       viewerCrumb.appendChild(el('span', 'sep', '/'));
-      viewerCrumb.appendChild(el('span', null, p.categories[0] || '未分类'));
+      viewerCrumb.appendChild(el('span', null, p.categories[0] || t('uncategorized')));
       viewerCrumb.appendChild(el('span', 'sep', '/'));
       viewerCrumb.appendChild(el('span', null, clampLine(p.title_zh || p.title, 22)));
     }
@@ -2821,17 +3308,17 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     var canLoop = viewerState.list.length > 1;
     viewerPrev.disabled = !canLoop;
     viewerNext.disabled = !canLoop;
-    viewerPrev.setAttribute('aria-label', canLoop ? '上一篇报告（循环）' : '上一篇报告');
-    viewerNext.setAttribute('aria-label', canLoop ? '下一篇报告（循环）' : '下一篇报告');
-    viewerPrev.setAttribute('title', canLoop ? '上一篇（循环）' : '上一篇');
-    viewerNext.setAttribute('title', canLoop ? '下一篇（循环）' : '下一篇');
+    viewerPrev.setAttribute('aria-label', t(canLoop ? 'prevLoop' : 'prevReport'));
+    viewerNext.setAttribute('aria-label', t(canLoop ? 'nextLoop' : 'nextReport'));
+    viewerPrev.setAttribute('title', t(canLoop ? 'prevLoop' : 'prevReport'));
+    viewerNext.setAttribute('title', t(canLoop ? 'nextLoop' : 'nextReport'));
 
     var url = snippetUrl(p, sectionId ? { id: sectionId } : null);
     viewerOpenTab.href = url;
     if(p.raw){
       viewerRawView.hidden = false;
       viewerRawView.href = p.raw;
-      viewerRawView.setAttribute('title', '在新标签查看原文 PDF：' + p.title);
+      viewerRawView.setAttribute('title', t('openRawAria', { t: p.title }));
     }else{
       viewerRawView.hidden = true;
       viewerRawView.removeAttribute('href');
@@ -2851,7 +3338,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
       if(token !== viewerState.loadToken) return;
       if(viewerLoading.hidden) return;
       viewerLoading.classList.add('is-error');
-      viewerHint.textContent = '报告载入较慢，或浏览器不允许在页面内嵌 file:// 文档。请使用右上角「在新标签打开」查看完整报告。';
+      viewerHint.textContent = t('loadSlow');
     }, 9000);
   }
 
@@ -2966,22 +3453,22 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     var actions = el('div', 'empty-actions');
     if(kind === 'search'){
       var q = (extra && extra.q) || '';
-      h2.textContent = '没有匹配「' + clampLine(q, 40) + '」的报告';
-      p.textContent = '全文索引里没有找到这个关键词。试试更短的词、去掉空格，或者清空搜索回到全部报告。';
-      var b1 = el('button', 'btn-primary', '清空搜索');
+      h2.textContent = t('emptySearchTitle', { q: clampLine(q, 40) });
+      p.textContent = t('emptySearchBody');
+      var b1 = el('button', 'btn-primary', t('clearSearch'));
       b1.type = 'button';
       b1.addEventListener('click', function(){ setQuery(''); qInput.focus(); });
       actions.appendChild(b1);
     }else if(kind === 'filter'){
-      h2.textContent = '当前筛选条件下没有报告';
-      p.textContent = '分类、年份、期刊、标签与「仅看有原文 PDF」是多条件叠加的（同类内为“或”）。放宽一两个条件就能看到报告。';
-      var b2 = el('button', 'btn-primary', '清空筛选');
+      h2.textContent = t('emptyFilterTitle');
+      p.textContent = t('emptyFilterBody');
+      var b2 = el('button', 'btn-primary', t('resetFilters'));
       b2.type = 'button';
       b2.addEventListener('click', resetAll);
       actions.appendChild(b2);
     }else{
-      h2.textContent = '还没有报告';
-      p.textContent = '这份文献库是空的。用 paper-deepread-html skill 把一篇论文 PDF 深读成报告，产物放进 paper-read/，再运行库构建脚本即可。';
+      h2.textContent = t('emptyNoneTitle');
+      p.textContent = t('emptyNoneBody');
       var hint = el('code', 'hint', 'paper-read/<年份>-<期刊>-<标题>/');
       box.appendChild(h2);
       box.appendChild(p);
@@ -3012,10 +3499,10 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     if(!list.length){ resultRegion.replaceChildren(renderEmpty('filter')); return; }
     var wrap = el('div', 'table-wrap');
     var table = el('table', 'lib-table');
-    table.appendChild(el('caption', 'sr-only', '文献库表格'));
+    table.appendChild(el('caption', 'sr-only', t('tableCaption')));
     var thead = el('thead');
     var hr = el('tr');
-    [['年份', 'col-year'], ['报告', ''], ['期刊', 'col-journal'], ['分类', 'col-cats'], ['图表 / 证据 / 章节', 'col-nums'], ['', 'col-acts']].forEach(function(h){
+    [[t('colYear'), 'col-year'], [t('colReport'), ''], [t('colJournal'), 'col-journal'], [t('colCats'), 'col-cats'], [t('colNums'), 'col-nums'], ['', 'col-acts']].forEach(function(h){
       var th = el('th', h[1], h[0]);
       th.scope = 'col';
       hr.appendChild(th);
@@ -3048,23 +3535,23 @@ html[data-density="compact"] .list-title{font-size:12.4px}
       tr.appendChild(tdTitle);
 
       tr.appendChild(el('td', 'cell-journal col-journal', p.journal || '—'));
-      tr.appendChild(el('td', 'cell-cats col-cats', p.categories.length ? p.categories.join(' · ') : '未分类'));
+      tr.appendChild(el('td', 'cell-cats col-cats', p.categories.length ? p.categories.join(' · ') : t('uncategorized')));
       var nums = [p.figures, p.claims, p.sectionsN].map(function(n){ return n === null ? '—' : String(n); }).join(' / ');
       tr.appendChild(el('td', 'col-nums', nums));
 
       var tdActs = el('td', 'col-acts');
       var acts = el('span', 'row-acts');
       if(p.html){
-        var read = el('button', 'btn-read', '阅读');
+        var read = el('button', 'btn-read', t('read'));
         read.type = 'button';
-        read.setAttribute('aria-label', '阅读报告：' + p.title);
+        read.setAttribute('aria-label', t('viewReport', { t: p.title }));
         read.addEventListener('click', function(){ openViewer(p); });
         acts.appendChild(read);
       }
       if(p.raw){
-        var v = el('a', 'row-link', '原文 ↗');
+        var v = el('a', 'row-link', t('openRawShort') + ' ↗');
         v.href = p.raw; v.target = '_blank'; v.rel = 'noopener noreferrer';
-        v.setAttribute('aria-label', '在新标签查看原文 PDF：' + p.title);
+        v.setAttribute('aria-label', t('openRawAria', { t: p.title }));
         acts.appendChild(v);
       }
       tdActs.appendChild(acts);
@@ -3084,7 +3571,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
       var open = el('a', 'list-open');
       open.href = p.html;
       open.rel = 'noopener';
-      open.setAttribute('aria-label', '阅读报告：' + p.title);
+      open.setAttribute('aria-label', t('viewReport', { t: p.title }));
       open.addEventListener('click', function(e){
         if(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
         e.preventDefault();
@@ -3115,7 +3602,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     if(p.categories[0]) cat.appendChild(el('span', 'cat-chip ' + catClass(p.categories[0]), p.categories[0]));
     row.appendChild(cat);
     var counts = el('div', 'list-counts');
-    [[p.figures, '图'], [p.claims, '证'], [p.sectionsN, '节']].forEach(function(pair){
+    [[p.figures, t('figShort')], [p.claims, t('evShort')], [p.sectionsN, t('secShort')]].forEach(function(pair){
       if(pair[0] === null) return;
       var sp = el('span');
       sp.appendChild(el('b', null, String(pair[0])));
@@ -3124,25 +3611,25 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     });
     row.appendChild(counts);
     var stateCell = el('div', 'list-state');
-    if(reading.opened[p.id]) stateCell.appendChild(el('span', 'media-read', '已读'));
+    if(reading.opened[p.id]) stateCell.appendChild(el('span', 'media-read', t('markRead')));
     var star = el('button', 'list-star');
     star.type = 'button';
     star.setAttribute('aria-pressed', reading.stars[p.id] ? 'true' : 'false');
-    star.setAttribute('aria-label', (reading.stars[p.id] ? '取消星标：' : '星标：') + p.title);
+    star.setAttribute('aria-label', t(reading.stars[p.id] ? 'starOff' : 'starOn', { t: p.title }));
     star.textContent = reading.stars[p.id] ? '★' : '☆';
     star.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); toggleStar(p); });
     stateCell.appendChild(star);
     row.appendChild(stateCell);
     var acts = el('div', 'list-acts');
     if(p.html){
-      var read = el('button', 'btn-read', '阅读');
+      var read = el('button', 'btn-read', t('read'));
       read.type = 'button';
-      read.setAttribute('aria-label', '阅读报告：' + p.title);
+      read.setAttribute('aria-label', t('viewReport', { t: p.title }));
       read.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); openViewer(p); });
       acts.appendChild(read);
     }
     if(p.raw){
-      acts.appendChild(actionLink('原文', p.raw, null, { target: true, ext: true, title: '在新标签查看原文 PDF：' + p.title }));
+      acts.appendChild(actionLink(t('openRawShort'), p.raw, null, { target: true, ext: true, title: t('openRawAria', { t: p.title }) }));
     }
     row.appendChild(acts);
     return row;
@@ -3164,24 +3651,17 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     clear(resultHead);
     resultHead.hidden = false;
     var grow = el('div', 'grow');
-    grow.appendChild(el('p', 'search-kicker', '搜索结果'));
+    grow.appendChild(el('p', 'search-kicker', t('searchKicker')));
     var title = el('h2', 'search-title');
-    title.appendChild(document.createTextNode('「'));
+    title.appendChild(document.createTextNode(LANG === 'en' ? '“' : '「'));
     title.appendChild(el('span', 'q', clampLine(query, 80)));
-    title.appendChild(document.createTextNode('」'));
+    title.appendChild(document.createTextNode(LANG === 'en' ? '”' : '」'));
     grow.appendChild(title);
     var line = el('p', 'search-summary');
-    line.appendChild(document.createTextNode('共 '));
-    line.appendChild(el('b', null, String(list.length)));
-    line.appendChild(document.createTextNode(' 篇'));
-    line.appendChild(el('span', 'sep', '·'));
-    line.appendChild(el('b', null, String(payload.totalHits)));
-    line.appendChild(document.createTextNode(' 处命中'));
-    line.appendChild(el('span', 'sep', '·'));
-    line.appendChild(document.createTextNode('点击片段在页内阅读对应章节'));
+    line.textContent = t('searchSummary', { n: list.length, h: payload.totalHits });
     grow.appendChild(line);
     resultHead.appendChild(grow);
-    var clearBtn = el('button', 'results-clear', '清空搜索');
+    var clearBtn = el('button', 'results-clear', t('clearSearch'));
     clearBtn.type = 'button';
     clearBtn.addEventListener('click', function(){ setQuery(''); qInput.focus(); });
     resultHead.appendChild(clearBtn);
@@ -3198,7 +3678,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
       var kick = el('div', 'hit-kicker');
       if(p.year) kick.appendChild(el('span', 'yr', p.year));
       if(p.journal) kick.appendChild(el('span', null, p.journal));
-      kick.appendChild(el('span', 'hits-n', r.total + ' 处命中'));
+      kick.appendChild(el('span', 'hits-n', r.total + (LANG === 'en' ? ' hits' : ' 处命中')));
       hit.appendChild(kick);
 
       var h3 = el('h3', 'hit-title');
@@ -3227,7 +3707,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
 
       var foot = el('div', 'hit-foot');
       var counts = el('div', 'hit-counts');
-      [[p.figures, '图表'], [p.claims, '证据'], [p.sectionsN, '章节']].forEach(function(pair){
+      [[p.figures, t('figuresShort')], [p.claims, t('claimsShort')], [p.sectionsN, t('sectionsShort')]].forEach(function(pair){
         if(pair[0] === null) return;
         var sp = el('span');
         sp.appendChild(el('b', null, String(pair[0])));
@@ -3237,15 +3717,15 @@ html[data-density="compact"] .list-title{font-size:12.4px}
       if(counts.childNodes.length) foot.appendChild(counts);
       var acts = el('div', 'hit-acts');
       if(p.html){
-        var read = el('button', 'btn-read', '阅读');
+        var read = el('button', 'btn-read', t('read'));
         read.type = 'button';
-        read.setAttribute('aria-label', '在页内阅读：' + p.title);
+        read.setAttribute('aria-label', t('readAria', { t: p.title }));
         read.addEventListener('click', function(){ openViewer(p); });
         acts.appendChild(read);
-        acts.appendChild(actionLink('新标签打开', p.html, null, { target: true, ext: true, title: '在新标签打开报告：' + p.title }));
+        acts.appendChild(actionLink(t('newTab'), p.html, null, { target: true, ext: true, title: t('newTab') + '：' + p.title }));
       }
       if(p.raw){
-        acts.appendChild(actionLink('查看原文', p.raw, null, { target: true, ext: true, title: '在新标签查看原文 PDF：' + p.title }));
+        acts.appendChild(actionLink(t('openRawShort'), p.raw, null, { target: true, ext: true, title: t('openRawAria', { t: p.title }) }));
       }
       if(acts.childNodes.length) foot.appendChild(acts);
       if(foot.childNodes.length) hit.appendChild(foot);
@@ -3261,42 +3741,42 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     var n = activeCount();
     if(!n){ activeBar.hidden = true; return; }
     activeBar.hidden = false;
-    activeBar.appendChild(el('span', 'active-label', '筛选中'));
+    activeBar.appendChild(el('span', 'active-label', t('filtering')));
     function chip(label, value, onRemove){
       var c = el('span', 'achip');
       c.appendChild(el('span', 'k', label));
       c.appendChild(el('span', 'v', clampLine(value, 24)));
       var x = el('button', 'achip-x', '×');
       x.type = 'button';
-      x.setAttribute('aria-label', '移除筛选：' + label + ' ' + value);
+      x.setAttribute('aria-label', t('removeFilter', { label: label, value: value }));
       x.addEventListener('click', onRemove);
       c.appendChild(x);
       return c;
     }
-    if(state.q.trim()) activeBar.appendChild(chip('搜索', state.q.trim(), function(){ setQuery(''); }));
+    if(state.q.trim()) activeBar.appendChild(chip(t('chipSearch'), state.q.trim(), function(){ setQuery(''); }));
     catKeys().forEach(function(name){
-      activeBar.appendChild(chip('分类', name, function(){ delete state.cats[name]; apply(); }));
+      activeBar.appendChild(chip(t('chipCat'), name, function(){ delete state.cats[name]; apply(); }));
     });
     tagKeys().forEach(function(name){
-      activeBar.appendChild(chip('标签', name, function(){ delete state.tags[name]; apply(); }));
+      activeBar.appendChild(chip(t('chipTag'), name, function(){ delete state.tags[name]; apply(); }));
     });
-    if(state.year) activeBar.appendChild(chip('年份', state.year, function(){ state.year = ''; apply(); }));
-    if(state.journal) activeBar.appendChild(chip('期刊', state.journal, function(){ state.journal = ''; apply(); }));
-    if(state.pdf) activeBar.appendChild(chip('条件', '仅看有原文 PDF', function(){ state.pdf = false; apply(); }));
-    if(state.starOnly) activeBar.appendChild(chip('我的', '仅看星标', function(){ state.starOnly = false; apply(); }));
-    if(state.unreadOnly) activeBar.appendChild(chip('我的', '仅看未读', function(){ state.unreadOnly = false; apply(); }));
+    if(state.year) activeBar.appendChild(chip(t('chipYear'), state.year, function(){ state.year = ''; apply(); }));
+    if(state.journal) activeBar.appendChild(chip(t('chipJournal'), state.journal, function(){ state.journal = ''; apply(); }));
+    if(state.pdf) activeBar.appendChild(chip(t('chipCondition'), t('onlyPdf'), function(){ state.pdf = false; apply(); }));
+    if(state.starOnly) activeBar.appendChild(chip(t('chipMy'), t('favOnly'), function(){ state.starOnly = false; apply(); }));
+    if(state.unreadOnly) activeBar.appendChild(chip(t('chipMy'), t('unreadOnly'), function(){ state.unreadOnly = false; apply(); }));
     if(state.quick !== 'all'){
-      var quickLabel = state.quick === 'unread' ? '未读' : (state.quick === 'star' ? '星标' : '最近打开');
-      activeBar.appendChild(chip('快捷', quickLabel, function(){ state.quick = 'all'; apply(); }));
+      var quickLabel = state.quick === 'unread' ? t('quickUnread') : (state.quick === 'star' ? t('quickStar') : t('quickRecent'));
+      activeBar.appendChild(chip(t('chipQuick'), quickLabel, function(){ state.quick = 'all'; apply(); }));
     }
-    var reset = el('button', 'active-reset', '重置全部');
+    var reset = el('button', 'active-reset', t('resetAll'));
     reset.type = 'button';
     reset.addEventListener('click', resetAll);
     activeBar.appendChild(reset);
     var res = el('span', 'active-result');
-    res.appendChild(document.createTextNode('筛选结果 '));
+    res.appendChild(document.createTextNode(t('filterResultLabel')));
     res.appendChild(el('b', null, String(lastCount)));
-    res.appendChild(document.createTextNode(' 篇'));
+    res.appendChild(document.createTextNode(t('papersUnit')));
     activeBar.appendChild(res);
   }
 
@@ -3305,19 +3785,19 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     clear(resultCountEl);
     if(query){
       resultCountEl.appendChild(el('b', null, String(n)));
-      resultCountEl.appendChild(document.createTextNode(' 篇命中'));
+      resultCountEl.appendChild(document.createTextNode(t('hitsUnit')));
       if(typeof totalHits === 'number'){
         resultCountEl.appendChild(el('span', 'sep', '·'));
         resultCountEl.appendChild(el('b', null, String(totalHits)));
-        resultCountEl.appendChild(document.createTextNode(' 处'));
+        resultCountEl.appendChild(document.createTextNode(t('hitSites')));
       }
     }else if(filterCount()){
       resultCountEl.appendChild(el('b', null, String(n)));
-      resultCountEl.appendChild(document.createTextNode(' / ' + TOTAL_PAPERS + ' 篇'));
+      resultCountEl.appendChild(document.createTextNode(t('ofTotal', { n: TOTAL_PAPERS })));
     }else{
-      resultCountEl.appendChild(document.createTextNode('共 '));
+      resultCountEl.appendChild(document.createTextNode(LANG === 'en' ? '' : '共 '));
       resultCountEl.appendChild(el('b', null, String(n)));
-      resultCountEl.appendChild(document.createTextNode(' 篇'));
+      resultCountEl.appendChild(document.createTextNode(t('papersUnit')));
     }
   }
 
@@ -3459,8 +3939,8 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     function paintBtn(){
       var dark = root.getAttribute('data-theme') === 'dark';
       themeToggle.setAttribute('aria-pressed', dark ? 'true' : 'false');
-      themeToggle.setAttribute('aria-label', dark ? '切换到浅色模式' : '切换到深色模式');
-      themeToggle.setAttribute('title', dark ? '浅色模式（当前深色）' : '深色模式（当前浅色）');
+      themeToggle.setAttribute('aria-label', t(dark ? 'themeToLight' : 'themeToDark'));
+      themeToggle.setAttribute('title', t(dark ? 'themeLight' : 'themeDark'));
     }
     themeToggle.addEventListener('click', function(){
       var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
@@ -3469,6 +3949,14 @@ html[data-density="compact"] .list-title{font-size:12.4px}
       paintBtn();
     });
     paintBtn();
+  }
+
+  /* ====================================================== language toggle */
+  function initLangToggle(){
+    var btn = $('#langToggle');
+    if(!btn) return;
+    btn.addEventListener('click', function(){ setLang(LANG === 'en' ? 'zh' : 'en'); });
+    paintLangBtn();
   }
 
   /* ============================================================== events */
@@ -3598,6 +4086,17 @@ html[data-density="compact"] .list-title{font-size:12.4px}
         viewerSrc: viewerFrame.getAttribute('src') || '',
         railOpen: document.body.classList.contains('drawer-open'),
         stars: starredCount(),
+        favorites: starredCount(),
+        lang: LANG,
+        langToggle: (function(){ var b = $('#langToggle'); return b ? b.textContent : null; })(),
+        citationButtons: $$('.cite-btn').length,
+        relatedChips: $$('.rel-chip').length,
+        relatedTargets: (function(){
+          var n = 0;
+          PAPERS.forEach(function(p){ n += (p.related || []).length; });
+          return n;
+        })(),
+        serviceWorkerControlled: (function(){ try{ return !!(navigator.serviceWorker && navigator.serviceWorker.controller); }catch(e){ return false; } })(),
         openedCount: openedCount(),
         lastId: reading.last ? reading.last.id : null,
         relatedOpen: relatedOpen,
@@ -3647,7 +4146,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     syncChip.className = 'sync-chip' + (kind ? ' is-' + kind : '');
   }
   function syncTimeChip(){
-    setSyncChip('更新于 ' + hms(lastSync) + ' · ' + TOTAL_PAPERS + ' 篇', 'live');
+    setSyncChip(t('updatedChip', { t: hms(lastSync), n: TOTAL_PAPERS }), 'live');
   }
   function flashStatus(text){
     setSyncChip(text, 'live');
@@ -3663,7 +4162,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
       syncBtn.classList.toggle('is-loading', !!on);
       syncBtn.setAttribute('aria-busy', on ? 'true' : 'false');
     }
-    if(on) setSyncChip('同步中…', '');
+    if(on) setSyncChip(t('syncing'), '');
   }
   function showBadge(text){ if(syncBadge){ syncBadge.textContent = text; syncBadge.hidden = false; } }
   function hideBadge(){ if(syncBadge) syncBadge.hidden = true; }
@@ -3722,13 +4221,13 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     refreshReadingUI();
     lastSync = new Date().toISOString();
     if(opts && opts.initial) syncTimeChip();
-    else flashStatus('已更新 · ' + TOTAL_PAPERS + ' 篇');
+    else flashStatus(t('updatedFlash', { n: TOTAL_PAPERS }));
     if(y) requestAnimationFrame(function(){ window.scrollTo(0, y); });
   }
   function onFetchError(){
     fetching = false;
     setFetchingUI(false);
-    setSyncChip('离线快照', 'error');
+    setSyncChip(t('offlineSnapshot'), 'error');
   }
   function fetchLibrary(opts){
     opts = opts || {};
@@ -3775,7 +4274,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     }
     if(syncWrap) syncWrap.hidden = false;
     if(staticHint) staticHint.hidden = true;
-    setSyncChip('同步中…', '');
+    setSyncChip(t('syncing'), '');
     fetchLibrary({ initial: true });
     autoTimer = setInterval(function(){
       fetchLibrary({ auto: true });
@@ -3795,8 +4294,8 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     if(!fontToggle) return;
     var mono = document.documentElement.getAttribute('data-font') === 'mono';
     fontToggle.setAttribute('aria-pressed', mono ? 'true' : 'false');
-    fontToggle.setAttribute('aria-label', mono ? '切换阅读字体' : '切换等宽字体');
-    fontToggle.setAttribute('title', mono ? '等宽字体（点击切回阅读字体）' : '阅读字体（点击切换等宽字体）');
+    fontToggle.setAttribute('aria-label', t(mono ? 'fontToRead' : 'fontToMono'));
+    fontToggle.setAttribute('title', t(mono ? 'fontMono' : 'fontRead'));
   }
   function setFont(mode){
     var next = mode === 'mono' ? 'mono' : 'read';
@@ -3815,9 +4314,9 @@ html[data-density="compact"] .list-title{font-size:12.4px}
   function paintDensityBtn(){
     if(!densityBtn) return;
     var compact = document.documentElement.getAttribute('data-density') === 'compact';
-    densityBtn.textContent = compact ? '紧凑' : '舒适';
+    densityBtn.textContent = compact ? t('densityCompact') : t('densityComfort');
     densityBtn.setAttribute('aria-pressed', compact ? 'true' : 'false');
-    densityBtn.setAttribute('title', (compact ? '当前紧凑密度' : '当前舒适密度') + '，点击切换');
+    densityBtn.setAttribute('title', (compact ? t('densityCompact') : t('densityComfort')) + ' · ' + t('densityToggleHint'));
   }
   function setDensity(mode){
     var next = mode === 'compact' ? 'compact' : 'comfort';
@@ -3906,7 +4405,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     top.appendChild(el('div', 'peek-title', p.title));
     var close = el('button', 'peek-close', '×');
     close.type = 'button';
-    close.setAttribute('aria-label', '关闭快速预览');
+    close.setAttribute('aria-label', t('peekClose'));
     close.addEventListener('click', hidePeek);
     top.appendChild(close);
     peekEl.appendChild(top);
@@ -3919,7 +4418,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     p.tags.forEach(function(t){ chips.appendChild(el('span', 'tchip', t)); });
     if(chips.childNodes.length) peekEl.appendChild(chips);
     var counts = el('div', 'peek-counts');
-    [[p.figures, '图表'], [p.claims, '证据'], [p.sectionsN, '章节']].forEach(function(pair){
+    [[p.figures, t('figuresShort')], [p.claims, t('claimsShort')], [p.sectionsN, t('sectionsShort')]].forEach(function(pair){
       if(pair[0] === null) return;
       var sp = el('span');
       sp.appendChild(el('b', null, String(pair[0])));
@@ -3929,13 +4428,13 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     if(counts.childNodes.length) peekEl.appendChild(counts);
     var acts = el('div', 'peek-acts');
     if(p.html){
-      var read = el('button', 'btn-read', '阅读');
+      var read = el('button', 'btn-read', t('read'));
       read.type = 'button';
-      read.setAttribute('aria-label', '阅读报告：' + p.title);
+      read.setAttribute('aria-label', t('readAria', { t: p.title }));
       read.addEventListener('click', function(){ hidePeek(); openViewer(p); });
       acts.appendChild(read);
     }
-    if(p.raw) acts.appendChild(actionLink('查看原文', p.raw, null, { target: true, ext: true, title: '在新标签查看原文 PDF：' + p.title }));
+    if(p.raw) acts.appendChild(actionLink(t('openRawShort'), p.raw, null, { target: true, ext: true, title: t('openRawAria', { t: p.title }) }));
     if(acts.childNodes.length) peekEl.appendChild(acts);
   }
   function positionPeek(card){
@@ -4037,6 +4536,8 @@ html[data-density="compact"] .list-title{font-size:12.4px}
 
   /* ================================================================ boot */
   function boot(){
+    loadLang();
+    applyI18n();
     loadReading();
     if(liveMode && LIVE && typeof LIVE === 'object'){
       if(str(LIVE.title)) TITLE = str(LIVE.title);
@@ -4044,9 +4545,11 @@ html[data-density="compact"] .list-title{font-size:12.4px}
     }
     refreshDataset(RAW);
     currentSig = sigOfRaw(RAW);
+    applyI18n();
     paintHeader();
     buildRail();
     initTheme();
+    initLangToggle();
     initFontToggle();
     initDensityToggle();
     initRailGroups();
@@ -4092,6 +4595,12 @@ html[data-density="compact"] .list-title{font-size:12.4px}
       setDensity: function(v){ setDensity(v); },
       setFont: function(v){ setFont(v); },
       setQuick: function(v){ setQuick(v); },
+      setLang: function(v){ setLang(v); },
+      getLang: function(){ return LANG; },
+      relatedOfBuilt: function(p){ return relatedPapersOf(p); },
+      focusCard: focusCard,
+      bibtexOf: bibtexOf,
+      risOf: risOf,
       getList: function(){ return lastRendered.slice(); }
     };
   }

@@ -55,7 +55,7 @@ function buildTools() {
   const dataDir = mkdtempSync(join(tmpdir(), 'pdr-lossless-'))
   const manager = createManager({
     packageDir: REPO,
-    config: { dataDir, libraryDir: REAL_LIBRARY },
+    config: { dataDir, libraryDir: REAL_LIBRARY, skillsDir: join(dataDir, 'skills') },
   })
   const fakeDefineTool = options => options
   const tools = manager.tools(fakeDefineTool)

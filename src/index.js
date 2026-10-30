@@ -16,6 +16,14 @@
  * The plugin never calls a model itself: upload -> deep-read is agent-driven
  * through `paper_deepread_uploads` / `paper_deepread_reports`.
  *
+ * v1.2.0 adds two optional integrations on top of that layout:
+ *
+ *   - the bundled skill is installed and kept in sync with a hash-tracked,
+ *     backup-first policy (`skillSync: update|keep`, `<dataDir>/skill-state.json`);
+ *   - with `siteUrl` configured, the panel can hand PDFs to a standalone
+ *     Paper Deepread site through a small health/upload proxy (`src/site.js`)
+ *     whose background worker runs the same pipeline unattended.
+ *
  * Every registration goes through the plugin `ctx`, so Cordis disposes routes
  * and tools with the plugin fiber; a missing optional feature degrades
  * gracefully instead of failing activation.
@@ -31,7 +39,8 @@ import { defineTool } from '@deepseek-ai/dsh-tools'
 import { fileURLToPath } from 'node:url'
 import { createLibraryHandler, ROUTE_PREFIX } from './route.js'
 import { createManager } from './manager.js'
-import { installBundledSkill } from './skill.js'
+import { syncBundledSkill } from './skill.js'
+import { resolveDataDir } from './store.js'
 
 /** Stable plugin name. */
 export const name = 'dsh-paper-deepread'
@@ -46,13 +55,19 @@ const PACKAGE_DIR = dirname(fileURLToPath(new URL('../package.json', import.meta
  * Plugin activation.
  * @param {object} ctx Cordis plugin context.
  * @param {{dataDir?: string, libraryDir?: string, skillsDir?: string,
- *   registerSkill?: boolean, maxUploadBytes?: number}} [config]
+ *   registerSkill?: boolean, skillSync?: 'update'|'keep', siteUrl?: string,
+ *   maxUploadBytes?: number}} [config]
  *   Optional row config: managed data directory (default `$DSH_HOME/paper-deepread`),
  *   an external 文献精读库 root (legacy `libraryDir`, disables seeding), skill
- *   installation overrides, and the upload size limit.
+ *   installation/sync overrides, the optional standalone site URL, and the
+ *   local upload size limit.
  */
 export function apply(ctx, config = {}) {
   const logger = ctx.logger
+
+  // The data directory is resolved before the manager so skill state still
+  // works when the managed library cannot be initialized.
+  const dataDir = resolveDataDir({ dataDir: config.dataDir })
 
   // The manager owns the managed library and the upload/report feature set.
   let manager = null
@@ -98,12 +113,18 @@ export function apply(ctx, config = {}) {
     }
   }
 
-  // Install the bundled skill only when the user has no copy yet.
-  installBundledSkill({
-    packageDir: PACKAGE_DIR,
-    dshHome: process.env.DSH_HOME,
-    skillsDir: typeof config.skillsDir === 'string' && config.skillsDir.trim() ? config.skillsDir : undefined,
-    registerSkill: config.registerSkill !== false,
-    logger,
-  })
+  // Install or update the bundled skill according to the version-sync policy.
+  try {
+    syncBundledSkill({
+      packageDir: PACKAGE_DIR,
+      dshHome: process.env.DSH_HOME,
+      skillsDir: typeof config.skillsDir === 'string' && config.skillsDir.trim() ? config.skillsDir : undefined,
+      dataDir,
+      skillSync: config.skillSync,
+      registerSkill: config.registerSkill !== false,
+      logger,
+    })
+  } catch (error) {
+    logger?.warn?.(`DSH-Paper-DeepRead: skill sync failed: ${String(error?.message || error)}`)
+  }
 }
