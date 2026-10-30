@@ -4,6 +4,19 @@ All notable changes to DSH-Paper-DeepRead are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] — 2026-10-30
+
+### Changed
+
+- Removed the legacy brand wording from the bundled 文献精读库 page: the footer now
+  shows the library title alone (plus the version chip) and the browser-title suffix is
+  gone.
+- Applied the same cleanup to the library README, the bundled skill's `SKILL.md`, and the
+  packaged `library_template.html`, so rebuilding the index or reinstalling the plugin
+  never reintroduces the wording.
+- No functional changes: upload, report management, the HTTP API, and the model tools are
+  identical to v1.1.0.
+
 ## [1.1.0] — 2026-10-30
 
 ### Added

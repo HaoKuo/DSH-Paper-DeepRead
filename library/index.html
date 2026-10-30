@@ -1597,7 +1597,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
 </div>
 
 <footer class="site-foot">
-  <p class="fam">程控数芯 · <span id="libTitleFoot">文献库</span> <span class="foot-ver" id="libVerFoot" hidden>v—</span></p>
+  <p class="fam"><span id="libTitleFoot">文献库</span> <span class="foot-ver" id="libVerFoot" hidden>v—</span></p>
   <p>由 <strong>paper-deepread-html</strong> skill 构建 · <span id="buildDateFoot">—</span></p>
   <p class="foot-hint" id="staticHint" hidden>静态快照 · 重跑 build_library.py 更新</p>
 </footer>
@@ -1989,7 +1989,7 @@ html[data-density="compact"] .list-title{font-size:12.4px}
   function paintHeader(){
     libTitleEl.textContent = TITLE;
     var verText = VERSION ? ('v' + VERSION) : '';
-    document.title = TITLE + (verText ? ' ' + verText : '') + ' · 程控数芯';
+    document.title = TITLE + (verText ? ' ' + verText : '') ;
     var metaVer = document.querySelector('meta[name="library-version"]');
     if(metaVer) metaVer.setAttribute('content', verText || '');
     if(libVerEl){

@@ -220,7 +220,7 @@ $PY "$SKILL_DIR/scripts/build_library.py" --root paper-read/ --title "文献精�
 # → paper-read/index.md    （Markdown 版，便于 git/编辑器浏览）
 ```
 
-库页顶栏/页脚会显示**品牌 logo**（程控数芯；浅色模式深蓝、深色模式近白）与**版本号**。版本号用 `--version`
+库页顶栏/页脚会显示**品牌 logo**（浅色模式深蓝、深色模式近白）与**版本号**。版本号用 `--version`
 指定（默认取脚本里的 `LIBRARY_VERSION`，当前 `1.2.0`），同时写入 `<meta name="library-version">` 与浏览器标签页标题：
 
 ```bash

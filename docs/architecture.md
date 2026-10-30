@@ -109,6 +109,13 @@ and the browser slots with the plugin fiber. A malformed library, an unavailable
 `webServer`, or a failed skill copy is logged and skipped; the plugin still loads.
 
 
+## v1.1.1 — brand wording removal
+
+Content-only release. The packaged `library/` snapshot, the library template, and the
+bundled skill documentation no longer contain the old brand name; the rendered footer is
+`<libTitle> + version` and the browser title is `TITLE + version`. Serving, upload, report
+management, and the API are unchanged from v1.1.0.
+
 ## v1.1.0 — managed library, upload inbox, report management
 
 ```text
