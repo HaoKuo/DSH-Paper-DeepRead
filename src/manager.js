@@ -10,7 +10,7 @@
  * @module dsh-paper-deepread/manager
  */
 
-import { existsSync, mkdirSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import {
   MAX_SEARCH_HITS,
@@ -49,6 +49,15 @@ import {
 
 /** Maximum JSON body accepted by management endpoints. */
 const MAX_JSON_BODY = 1024 * 1024
+
+/** Package version, exposed in the API state for the shared management page. */
+const APP_VERSION = (() => {
+  try { return JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version }
+  catch { return '' }
+})()
+
+/** Upload queue cap surfaced to the shared management page (plugin inbox is unbounded). */
+const QUEUE_MAX = 200
 
 /** API error-code to HTTP status mapping. */
 const STATUS_BY_CODE = {
@@ -181,20 +190,36 @@ export function createManager(options) {
         title: library?.title || '',
         version: library?.version || '',
         buildDate: library?.buildDate || '',
+        updated: library?.buildDate || '',
         count: library?.papers.length ?? 0,
         indexMtime: (() => {
           try { return statSync(join(store.libraryRoot, 'index.html')).mtimeMs } catch { return null }
         })(),
       },
       stats: library?.stats || {},
+      // Shapes below follow deploy/serve.py so library/manage.html can talk to
+      // either backend: site API or plugin API.
       uploads: uploads.map(upload => ({
         ...upload,
+        size: upload.bytes,
         pending: upload.status === 'uploaded',
+        downloadUrl: null,
       })),
-      reports: reportList,
+      reports: reportList.map(report => ({
+        ...report,
+        size: report.sizeBytes,
+        title_zh: report.titleZh || '',
+      })),
+      admin: { enabled: false, tokenRequired: false, header: 'X-KB-Token' },
+      publish: { dest: '', available: false, lastRelease: '', lastPublishedAt: '' },
       python: await python.describe(),
       skill: { dir: skillDir, installed: existsSync(join(skillDir, 'SKILL.md')) },
-      limits: { maxUploadBytes: store.maxUploadBytes },
+      limits: {
+        maxUploadBytes: store.maxUploadBytes,
+        maxUploadMb: Math.floor(store.maxUploadBytes / (1024 * 1024)),
+        queueMax: QUEUE_MAX,
+      },
+      version: APP_VERSION,
     }
   }
 

@@ -43,10 +43,10 @@ DSH-Paper-DeepRead 把一个 dsh 插件包做成两件事：
 
 ## 安装
 
-从 GitHub release 下载 `dsh-paper-deepread-1.1.1.tgz`，安装到 Web profile：
+从 GitHub release 下载 `dsh-paper-deepread-1.1.2.tgz`，安装到 Web profile：
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.1.1.tgz
+dsh plugin --profile web add ./dsh-paper-deepread-1.1.2.tgz
 ```
 
 重启 Web UI：
@@ -71,6 +71,9 @@ dsh web
 - **交给 Agent** —— 插件不调用模型。上传页提供一段预填指令，复制到对话中发送后，
   由 Agent 调用 `paper_deepread_uploads`（`list` / `ingest` / `env` / `delete`）与
   `paper_deepread_reports`（`list` / `build` / `rebuild` / `delete` / `hide`）驱动内置技能完成精读与成稿。
+- **独立 `manage.html`** —— 内置书库页头新增「上传」「管理」入口，打开同一份自包含管理控制台
+  （`library/manage.html`）：站点根路径 `/manage.html` 走站点 API，插件内 `/paper-deepread/manage.html`
+  走插件 API（所有 API URL 都是相对路径，一份页面两处可用）。
 - **报告管理** —— 报告表格支持打开报告/原文、隐藏/显示（写入 `library.json`，书库页面过滤）、
   删除单篇报告目录，以及一键**重建索引**（`build_library.py` 确定性重建 `index.html` / `index.md`，不需要模型）。
 

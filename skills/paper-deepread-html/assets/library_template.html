@@ -343,6 +343,26 @@ html.drawer-lock,html.drawer-lock body{overflow:hidden}
 html[data-theme="dark"] .theme-toggle .i-sun{display:none}
 html[data-theme="dark"] .theme-toggle .i-moon{display:block}
 
+/* v1.3.0 · management entry links (unpkg-free, works from file:// too) */
+.head-link{
+  flex:none;display:inline-flex;align-items:center;gap:5px;
+  height:38px;padding:0 12px;border:1px solid var(--rule);border-radius:10px;
+  background:var(--surface);color:var(--ink-2);font:inherit;font-size:13px;
+  line-height:1;text-decoration:none;white-space:nowrap;cursor:pointer;
+  transition:background .16s ease,color .16s ease,border-color .16s ease;
+}
+.head-link:hover{background:var(--surface-2);color:var(--ink);border-color:var(--ink-3)}
+.head-link svg{width:15px;height:15px;display:block}
+.head-link-accent{color:var(--teal-ink);border-color:var(--teal)}
+.head-link-accent:hover{background:var(--teal-soft);color:var(--teal-ink);border-color:var(--teal)}
+@media (max-width:760px){
+  .head-link{height:34px;padding:0 9px;font-size:12px}
+}
+@media (max-width:560px){
+  .head-link .head-link-text{display:none}
+  .head-link{padding:0 8px}
+}
+
 /* ==========================================================================
    3. LAYOUT: sticky rail + main column
    ========================================================================== */
@@ -1505,6 +1525,20 @@ html[data-density="compact"] .list-title{font-size:12.4px}
         <path d="M20.2 14.4A8.4 8.4 0 0 1 9.6 3.8a8.6 8.6 0 1 0 10.6 10.6Z"></path>
       </svg>
     </button>
+    <a class="head-link head-link-accent" href="manage.html#upload" target="_blank" rel="noopener"
+       aria-label="上传论文" title="上传论文 / Upload a paper">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 16V4"></path><path d="m7.4 8.6 4.6-4.6 4.6 4.6"></path><path d="M4.6 15.5v2.9A2.6 2.6 0 0 0 7.2 21h9.6a2.6 2.6 0 0 0 2.6-2.6v-2.9"></path>
+      </svg>
+      <span class="head-link-text">上传</span>
+    </a>
+    <a class="head-link" href="manage.html" target="_blank" rel="noopener"
+       aria-label="报告管理" title="上传与报告管理 / Management">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 6.4h10.2M4 12h10.2M4 17.6h6.4"></path><circle cx="17.6" cy="16.4" r="3.2"></circle><path d="m20 19 2 2"></path>
+      </svg>
+      <span class="head-link-text">管理</span>
+    </a>
   </div>
 </header>
 

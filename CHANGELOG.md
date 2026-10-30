@@ -4,6 +4,28 @@ All notable changes to DSH-Paper-DeepRead are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] — 2026-10-30
+
+### Changed (assets-only)
+
+- Bundled library page rebuilt from the patched template for v1.3.0: header now carries
+  compact 「上传」「管理」 entries that open the new self-contained management console.
+- Added `library/manage.html` — one tolerant page for two backends (site `/api/*` and plugin
+  `/paper-deepread/api/*`), with upload inbox + copyable agent handoff instruction and
+  report hide/delete/rebuild controls.
+- Bundled `library/{index.html,index.md,README.md}` regenerated at v1.3.0 with the reverted
+  compact logo and no legacy brand wording.
+- Management console validates the admin token before claiming success: the site
+  backend gained an ADMIN-only `GET /api/auth` (401 missing/wrong token, 503
+  `ADMIN_DISABLED` when the token is unset), and `manage.html` now shows an inline
+  "管理令牌无效" error instead of storing a wrong token; a sessionStorage token is
+  re-verified and cleared with a hint when it becomes invalid. Graceful fallback for
+  older backends via `GET /api/uploads/__verify__.pdf`.
+- Plugin API state now mirrors the standalone site's `state` shape (adds `size`,
+  `admin`, `publish`, `limits.maxUploadMb`, `version`, `library.updated`) so the shared
+  manage page runs unchanged against the plugin. No plugin behaviour change; upload,
+  report management, API routes, and model tools are identical to v1.1.1.
+
 ## [1.1.1] — 2026-10-30
 
 ### Changed

@@ -30,7 +30,7 @@ import sys
 from pathlib import Path
 
 # Shown in the index header/footer. Bump on content or presentation changes.
-LIBRARY_VERSION = "1.2.0"
+LIBRARY_VERSION = "1.3.0"
 
 META_RE = re.compile(r'<script[^>]*\bid="report-meta"[^>]*>(?P<body>.*?)</script>', re.S)
 MAIN_RE = re.compile(r'<main\b[^>]*\bid="report"[^>]*>(?P<body>.*?)</main>', re.S)

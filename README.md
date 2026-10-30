@@ -51,11 +51,11 @@ full text, and read a report locally or open its Web URL.
 
 ## Install
 
-Download `dsh-paper-deepread-1.1.1.tgz` from the GitHub release, then install it into the
+Download `dsh-paper-deepread-1.1.2.tgz` from the GitHub release, then install it into the
 Web profile:
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.1.1.tgz
+dsh plugin --profile web add ./dsh-paper-deepread-1.1.2.tgz
 ```
 
 Restart the Web UI:
@@ -85,6 +85,10 @@ The panel now has three tabs: **文献库 | 上传 | 报告管理**.
   (`list` / `ingest` / `env` / `delete`) and `paper_deepread_reports`
   (`list` / `build` / `rebuild` / `delete` / `hide`) to run the bundled skill and
   assemble the report.
+- **Standalone `manage.html`** — the bundled library page now has 「上传」「管理」 header
+  entries that open the same self-contained management console (`library/manage.html`).
+  It works at the site root (`/manage.html` → site API) and inside the plugin
+  (`/paper-deepread/manage.html` → plugin API) because every API URL is relative.
 - **Report management** — a table of reports with open/report-raw links, hide/unhide
   (current-window filtering via `library.json`), delete one report directory, and a
   one-click **重建索引** that deterministically rebuilds `index.html` / `index.md`
