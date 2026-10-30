@@ -6,7 +6,6 @@ DeepSeek Harness（dsh）Web 插件：把完整的「文献精读库」和产出
 左侧边栏多一个面板，可直接浏览交互式论文精读报告与原文 PDF；同时给模型一个工具，
 让它能在同一份书目里找到目标论文。
 
-![Harness Web UI 中的 DSH-Paper-DeepRead 面板](docs/screenshot-panel.png)
 
 ## 它包含什么
 
@@ -43,10 +42,10 @@ DSH-Paper-DeepRead 把一个 dsh 插件包做成两件事：
 
 ## 安装
 
-从 GitHub release 下载 `dsh-paper-deepread-1.1.5.tgz`，安装到 Web profile：
+从 GitHub release 下载 `dsh-paper-deepread-1.1.6.tgz`，安装到 Web profile：
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.1.5.tgz
+dsh plugin --profile web add ./dsh-paper-deepread-1.1.6.tgz
 ```
 
 重启 Web UI：

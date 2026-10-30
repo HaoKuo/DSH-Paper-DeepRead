@@ -4,6 +4,17 @@ All notable changes to DSH-Paper-DeepRead are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.6] — 2026-10-30
+
+### Changed (docs/screenshots only)
+
+- README (EN/ZH) no longer embeds the DSH panel screenshot that showed the local
+  Harness sidebar (workspace/session titles). The docs now use screenshots of the
+  standalone library and management console captured outside the DSH Web UI.
+- Removed the unused sidebar/mobile screenshots that contained the same sidebar;
+  `docs/` now ships only three sidebar-free images (library, upload tab, report tab).
+- No code, API, skill, or behaviour changes.
+
 ## [1.1.5] — 2026-10-30
 
 ### Changed (bundled skill)

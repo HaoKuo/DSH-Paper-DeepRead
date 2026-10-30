@@ -7,7 +7,6 @@ skill that produces it. One install gives you a sidebar panel with interactive p
 reading reports, the original PDFs beside them, and a model tool that can find the right
 paper in the same catalogue.
 
-![DSH-Paper-DeepRead panel in the Harness Web UI](docs/screenshot-panel.png)
 
 ## What it is
 
@@ -51,11 +50,11 @@ full text, and read a report locally or open its Web URL.
 
 ## Install
 
-Download `dsh-paper-deepread-1.1.5.tgz` from the GitHub release, then install it into the
+Download `dsh-paper-deepread-1.1.6.tgz` from the GitHub release, then install it into the
 Web profile:
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.1.5.tgz
+dsh plugin --profile web add ./dsh-paper-deepread-1.1.6.tgz
 ```
 
 Restart the Web UI:
