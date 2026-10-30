@@ -43,10 +43,10 @@ DSH-Paper-DeepRead 把一个 dsh 插件包做成两件事：
 
 ## 安装
 
-从 GitHub release 下载 `dsh-paper-deepread-1.1.4.tgz`，安装到 Web profile：
+从 GitHub release 下载 `dsh-paper-deepread-1.1.5.tgz`，安装到 Web profile：
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.1.4.tgz
+dsh plugin --profile web add ./dsh-paper-deepread-1.1.5.tgz
 ```
 
 重启 Web UI：

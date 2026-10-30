@@ -1,4 +1,4 @@
-# DSH-Paper-DeepRead 1.1.4
+# DSH-Paper-DeepRead 1.1.5
 
 Release date: 2026-10-30
 
@@ -6,28 +6,35 @@ Release date: 2026-10-30
 
 ## What changed
 
-A small UI-polish release for the DSH panel and the bundled management console.
+A skill update: deep-read reports now adapt to the **article type** and give the
+**main sections real narrative coverage**, not only figure/table commentary.
 
-- **Panel header de-duplicated** — the plugin panel dropped its own copy of the
-  "文献精读库 / Paper Deepread · 上传、精读与报告管理" header. The embedded library page
-  already shows the brand, so the panel now opens directly with the
-  **文献库 / 上传 / 报告管理** tab bar; the report count and library version sit on the
-  right of that bar, and the 文献库 tab shows the count badge.
-- **Upload step cards aligned** — in `manage.html` the three numbered step cards are an
-  `<ol>` that kept the browser default 40 px padding, so they were inset relative to the
-  cards below. With `padding: 0` they line up with the panel edge (verified with rendered
-  geometry: steps / cards / tabs all start at the same left edge).
-- **No API, tool, or behaviour changes.** Upload, auto deep-read worker, report
-  management, and the shared `paper-read` library are unchanged.
+- **Type-aware deep read** — the bundled `paper-deepread-html` skill first classifies the
+  paper as *research article*, *review / perspective / roadmap*, or
+  *methods / resource / benchmark*. Each type gets its own reading path, figure focus,
+  methods depth, required sections and critical-appraisal framework. Report headers state
+  the detected type.
+- **Section briefs (new, mandatory)** — every major section starts with a
+  `sec-brief` card: one-sentence section goal, 3–5 evidence-chipped key points, and a
+  one-sentence takeaway (150–300 characters per section), in addition to the original
+  figure/table deep-read. This applies to both research and review papers.
+- **Type-specific report structures** — research: problem → methods → evidence chain →
+  critique; review: domain map/classification → per-chapter briefs → comparison table →
+  evidence coverage → consensus vs controversy → trends/roadmap.
+- **Templates and checklists** — report template ships `.sec-brief` styles
+  (light/dark/print/mobile); reading protocol and QA checklist enforce the new rules;
+  the unattended worker prompt requests type classification and section briefs.
+- **No API, tool, or behaviour changes**; the library pages are untouched.
 
 ## Install / upgrade
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.1.4.tgz
-dsh web   # restart to load the updated client bundle
+dsh plugin --profile web add ./dsh-paper-deepread-1.1.5.tgz
+dsh web   # restart to reload the plugin package
 ```
 
-Then refresh the browser page; the panel appears without the duplicated header block.
+Existing reports are not modified — only newly generated reports follow the new rules.
+To regenerate an old report, re-run the skill (or ask the agent to re-deep-read that PDF).
 
 ## Compatibility
 
@@ -44,31 +51,34 @@ MIT © 2026 HaoKuo
 <details>
 <summary>中文</summary>
 
-# DSH-Paper-DeepRead 1.1.4
+# DSH-Paper-DeepRead 1.1.5
 
 发布日期：2026-10-30
 
 ## 变更内容
 
-针对 DSH 面板与内置管理台的小型 UI 修正。
+本次更新技能：精读报告现在会**先区分文章类型**，并给**正文主要章节补充详细介绍与总结**，
+不再只围绕原图/原表做解读。
 
-- **面板标题去重** —— 插件面板不再重复显示「文献精读库 / Paper Deepread · 上传、精读与报告管理」
-  这两行标题（内嵌的文献库页面本身已有品牌头部）。面板现在直接从
-  **文献库 / 上传 / 报告管理** 标签栏开始，报告数量与书库版本移到标签栏右侧，
-  文献库标签也带数量徽标。
-- **上传步骤卡片对齐** —— `manage.html` 的 3 张编号步骤卡使用 `<ol>`，保留了浏览器默认的
-  40px 内边距，导致它们相对下方卡片内缩。改为 `padding: 0` 后与面板左边缘对齐
-  （已用渲染几何验证：步骤卡 / 卡片 / 标签栏左边缘一致）。
-- **无 API、工具或行为变更**：上传、自动精读 worker、报告管理与共享 `paper-read` 书库均不受影响。
+- **按类型精读** —— 内置 `paper-deepread-html` 技能先判定论文类型：研究类（research）、
+  综述类（review / perspective / roadmap）、方法或资源与基准类；每种类型有独立的阅读路径、
+  图表重点、方法深度、必写章节与批判框架，报告开头会标注类型。
+- **章节导读（新增，强制）** —— 报告每个主要章节开头都要有 `sec-brief` 卡片：1 句本节目标、
+  3–5 条带证据 chip 的要点、1 句小结（每节 150–300 字），与原图/原表精读并存，研究类与综述类都需要。
+- **按类型的报告结构** —— 研究类：问题 → 方法 → 证据链 → 批判；综述类：领域地图/分类框架 →
+  逐章导读 → 横向对比表 → 证据覆盖 → 共识/争议 → 趋势与路线图。
+- **模板与清单** —— 报告模板新增 `.sec-brief` 样式（深浅色/打印/移动端）；阅读协议与 QA 清单
+  加入对应验收项；自动精读 worker 的提示词也要求先分类并写章节导读。
+- **无 API、工具或行为变更**；文献库页面不受影响。
 
 ## 安装 / 升级
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.1.4.tgz
-dsh web   # 重启以加载新的客户端 bundle
+dsh plugin --profile web add ./dsh-paper-deepread-1.1.5.tgz
+dsh web   # 重启以重新加载插件包
 ```
 
-重启后刷新浏览器页面即可看到去掉重复标题的面板。
+已有报告不会被改动，只有新生成的报告采用新规则；如需重做旧报告，重跑该篇精读即可。
 
 ## 兼容性
 

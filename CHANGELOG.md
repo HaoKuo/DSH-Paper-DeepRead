@@ -4,6 +4,26 @@ All notable changes to DSH-Paper-DeepRead are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.5] — 2026-10-30
+
+### Changed (bundled skill)
+
+- Skill `paper-deepread-html` now **classifies the paper first**: research article vs
+  review / perspective / roadmap vs methods-resource-benchmark, with a dedicated reading
+  path, figure focus, methods depth and critical-appraisal framework for each type.
+- New mandatory **section briefs**: every major section of the report starts with a
+  `<div class="sec-brief">` card — section goal (one sentence), 3–5 evidence-chipped
+  points, and a one-sentence takeaway (150–300 characters per section). This is in
+  addition to the original figure/table deep-read.
+- Default report structures split by type: research papers keep problem → methods →
+  evidence chain → critique; reviews get a domain map, taxonomy/class, per-chapter
+  briefs, comparison table, evidence coverage, consensus vs controversy, trend/roadmap.
+- Read protocol and QA checklist updated to enforce the above; report template gained
+  the `.sec-brief` component styles (light/dark/print/mobile).
+- Auto worker prompt now asks for the type classification and section briefs, so
+  unattended reports follow the same structure.
+- No API/tool behaviour changes; library pages untouched.
+
 ## [1.1.4] — 2026-10-30
 
 ### Changed (UI polish)

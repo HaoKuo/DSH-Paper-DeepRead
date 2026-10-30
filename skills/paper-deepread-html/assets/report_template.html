@@ -1059,6 +1059,31 @@ html[data-theme="dark"] .step-dot.is-active{color:#04201d}
 }
 
 /* ==========================================================================
+   9b. SECTION BRIEF（章节导读卡）
+   ========================================================================== */
+.sec-brief{
+  margin:18px 0 22px;
+  padding:14px 18px 12px;
+  border:1px solid var(--rule);
+  border-left:3px solid var(--teal);
+  border-radius:4px 10px 10px 4px;
+  background:color-mix(in srgb,var(--teal-soft) 30%,var(--surface));
+  font-size:clamp(14.2px,1vw,15px);line-height:1.8;color:var(--ink-2);
+}
+.sec-brief .sec-goal{margin:0 0 6px;color:var(--ink)}
+.sec-brief .sec-goal strong,
+.sec-brief .sec-takeaway strong{color:var(--teal-ink)}
+.sec-brief .sec-points{margin:4px 0 6px;padding-left:1.2em}
+.sec-brief .sec-points li{margin:2px 0}
+.sec-brief .sec-takeaway{
+  margin:8px 0 0;padding-top:7px;
+  border-top:1px dashed var(--rule);color:var(--ink);
+}
+.sec-brief .ev{white-space:nowrap}
+@media print{.sec-brief{break-inside:avoid;page-break-inside:avoid}}
+@media (max-width:520px){.sec-brief{padding:12px 13px;margin:14px 0 18px}}
+
+/* ==========================================================================
    10. CLAIM-EVIDENCE CHIP
    ========================================================================== */
 .ev{
