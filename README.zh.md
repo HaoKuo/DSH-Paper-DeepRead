@@ -57,17 +57,17 @@ DSH-Paper-DeepRead 把一个 dsh 插件包做成两件事：
 | 精读站点后端（`deploy/serve.py`） | 1.4.0 |
 | 文献精读库索引 | 1.4.0 |
 | **DSH-Paper-DeepRead 插件（本包）** | **1.2.0** |
-| 内置 `paper-deepread-html` 技能 | 1.5.0 |
+| 内置 `paper-deepread-html` 技能 | 1.5.1 |
 
 插件可独立使用；「自动精读」卡片还需要运行中的站点 ≥ 1.4.0（`/api/health`、上传令牌与
 队列控制接口）。
 
 ## 安装
 
-从 GitHub release 下载 `dsh-paper-deepread-1.5.0.tgz`，安装到 Web profile：
+从 GitHub release 下载 `dsh-paper-deepread-1.5.1.tgz`，安装到 Web profile：
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.5.0.tgz
+dsh plugin --profile web add ./dsh-paper-deepread-1.5.1.tgz
 ```
 
 重启 Web UI：
@@ -229,7 +229,7 @@ DSH-Paper-DeepRead/
 ```bash
 npm run check   # 对全部 JS 执行 node --check
 npm test        # node:test 测试（单元/API/技能同步/站点代理）
-npm run pack    # 生成 dist/dsh-paper-deepread-1.5.0.tgz 与 dist/SHA256SUMS
+npm run pack    # 生成 dist/dsh-paper-deepread-1.5.1.tgz 与 dist/SHA256SUMS
 ```
 
 本插件以 GitHub release tarball 形式发布，无需上架 npm。

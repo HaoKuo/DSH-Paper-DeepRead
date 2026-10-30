@@ -4,6 +4,16 @@ All notable changes to DSH-Paper-DeepRead are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] — 2026-10-31
+
+### Bundled skill
+
+- `paper-deepread-html` **1.5.1** — TOC/anchor repair:
+  - `build_report.py` now assigns `id`s to every `h2`/`h3` that lacks one, so TOC links always
+    resolve (previously an agent-authored report without heading ids produced dead TOC entries).
+  - The report shell self-heals a server-generated TOC whose anchors no longer resolve.
+  - No plugin code or API changes.
+
 ## [1.5.0] — 2026-10-30
 
 ### Bundled skill

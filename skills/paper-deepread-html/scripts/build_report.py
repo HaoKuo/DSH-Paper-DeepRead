@@ -309,6 +309,46 @@ def build_cover(meta, figures, raw_name=None):
     )
 
 
+def ensure_heading_ids(content: str) -> str:
+    """Give every h2/h3 an id so TOC links always resolve.
+
+    The report authoring contract asks for ids, but agents occasionally omit
+    them; build_nav() would then emit links to non-existent anchors and the TOC
+    silently does nothing. Assign ``sec-N`` / ``sec-h3-N`` for headings that are
+    missing an id (existing ids are preserved).
+    """
+    used = set(ID_RE.findall(content))
+    h2_counter = [0]
+
+    def h2_repl(m):
+        attrs, title = m.group("attrs"), m.group("title")
+        if ID_RE.search(attrs):
+            h2_counter[0] += 1
+            return m.group(0)
+        h2_counter[0] += 1
+        sid = "sec-%d" % h2_counter[0]
+        while sid in used:
+            sid += "-x"
+        used.add(sid)
+        return '<h2%s id="%s">%s</h2>' % (attrs, sid, title)
+
+    content = H2_RE.sub(h2_repl, content)
+    h3_counter = [0]
+
+    def h3_repl(m):
+        attrs, title = m.group("attrs"), m.group("title")
+        if ID_RE.search(attrs):
+            return m.group(0)
+        h3_counter[0] += 1
+        sid = "sec-h3-%d" % h3_counter[0]
+        while sid in used:
+            sid += "-x"
+        used.add(sid)
+        return '<h3%s id="%s">%s</h3>' % (attrs, sid, title)
+
+    return H3_RE.sub(h3_repl, content)
+
+
 def build_nav(content):
     items = []
     for i, m in enumerate(H2_RE.finditer(content), 1):
@@ -591,6 +631,7 @@ def main():
         content = IMG_RE.sub(repl_img, content)
 
     cover = build_cover(meta, [f for f in figures if f.get("crop")], raw_name)
+    content = ensure_heading_ids(content)
     nav = build_nav(content)
     provenance = build_provenance(meta, [f for f in figures if f.get("id") in used], str(out_path), raw_name)
 

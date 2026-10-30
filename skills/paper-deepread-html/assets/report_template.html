@@ -1987,7 +1987,16 @@ body.lb-open{overflow:hidden}
   function buildToc(){
     var slot=$('.toc-scroll');
     if(!slot) return;
-    if($('.toc-list,.toc-sub,ol,ul',slot)) return;
+    var existing=$$('a.toc-link',slot);
+    if(existing.length){
+      // Self-heal a server-generated TOC whose anchors no longer resolve.
+      var broken=existing.some(function(a){
+        var h=a.getAttribute('href')||'';
+        return h.charAt(0)==='#' && !doc.getElementById(h.slice(1));
+      });
+      if(!broken) return;
+      slot.innerHTML='';
+    }
     var secs=$$('#report > section');
     var ol=doc.createElement('ol');
     ol.className='toc-list';

@@ -1,6 +1,6 @@
 ---
 name: paper-deepread-html
-version: 1.5.0
+version: 1.5.1
 description: 把一篇论文 PDF 深读成单文件、可离线打开的交互式 HTML 精读报告——自动从 PDF 裁切原文关键图表（带页码/图号/图注溯源），并用原生 JS + 内联 SVG 重绘机制图、流程图、对比图与数据图，附批判性评估；区分综述（review）与研究论文（research），分别采用不同的解读重点；研究类采用「结论+图融合」的结果单元结构。Deep-read one paper PDF into a self-contained interactive HTML reading companion that mixes high-fidelity original figure crops with JS/SVG redrawn schematics. Use when the user asks to 精读/解读/拆解一篇文献、生成论文精读报告 HTML、给论文配关键截图和示意图、paper deep read, figure highlights, SVG schematic, literature reading notes, or turn a paper into an interactive HTML report.
 ---
 
