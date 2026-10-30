@@ -12,6 +12,7 @@
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { losslessToolResult } from './lossless.js'
 import {
   MAX_SEARCH_HITS,
   findPaper,
@@ -602,6 +603,16 @@ export function createManager(options) {
     uploadsTool,
     reportsTool,
     catalogueTool,
-    tools: defineTool => [catalogueTool(defineTool), uploadsTool(defineTool), reportsTool(defineTool)],
+    // Every model-tool result must be a lossless JSON value (no undefined
+    // properties / NaN / Infinity): DSH's tool-output validator rejects values
+    // whose JSON round-trip loses keys. Wrap execute centrally so no tool can
+    // regress this invariant.
+    tools: defineTool => [catalogueTool(defineTool), uploadsTool(defineTool), reportsTool(defineTool)]
+      .map(tool => ({
+        ...tool,
+        execute: async (args, execution) => losslessToolResult(
+          await tool.execute(args, execution),
+        ),
+      })),
   }
 }

@@ -4,6 +4,30 @@ All notable changes to DSH-Paper-DeepRead are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] — 2026-10-30
+
+### Fixed
+
+- Model-tool outputs are now lossless JSON. The live `paper_deepread` tool failed with
+  `tool "paper_deepread" returned invalid output: value is not lossless JSON` because
+  absent optional fields were emitted as `undefined` properties (`publicPaper` used
+  `doi: paper.doi || undefined`, `publicLibrary` used `version/buildDate || undefined`,
+  uploads used `path/hint: ... ?? undefined`, reports `rebuild: ... : undefined`).
+  Every tool execute result now passes through a recursive `toLosslessJson` sanitizer
+  (`src/lossless.js`): undefined/function/symbol/BigInt object properties are omitted,
+  array holes become `null`, NaN/Infinity become `null`, cycles become `null`. The three
+  tools keep the same schemas and behaviour; only invalid properties disappear.
+- Added `tests/lossless.test.js`: recursively rejects undefined/NaN/Infinity and asserts
+  `JSON.parse(JSON.stringify(value))` deep-equals every tool payload, using the real
+  bundled library (catalogue list/query/id, reports list/errors) plus a synthetic upload
+  record for the uploads tool. It fails on v1.1.2 (`papers[1].doi: undefined`,
+  `python.hint: undefined`) and passes on v1.1.3.
+
+### Changed
+
+- Content-only patch: no library/skill asset changes, API routes and tool parameters are
+  identical to v1.1.2.
+
 ## [1.1.2] — 2026-10-30
 
 ### Changed (assets-only)
