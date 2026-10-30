@@ -32,7 +32,7 @@ import zlib
 from pathlib import Path
 
 # Shown in the index header/footer. Bump on content or presentation changes.
-LIBRARY_VERSION = "1.4.0"
+LIBRARY_VERSION = "1.5.0"
 
 META_RE = re.compile(r'<script[^>]*\bid="report-meta"[^>]*>(?P<body>.*?)</script>', re.S)
 MAIN_RE = re.compile(r'<main\b[^>]*\bid="report"[^>]*>(?P<body>.*?)</main>', re.S)
@@ -498,6 +498,34 @@ self.addEventListener('fetch', function (event) {
   if (/(^|\\/)api\\//.test(url.pathname)) return;        // never cache the management API
   if (/\\/sw\\.js$/.test(url.pathname)) return;
 
+  // Short links redirect to the canonical report: never cache the redirect.
+  if (/^\/r\//.test(url.pathname)) return;
+
+  if (request.mode === 'navigate') {
+    // Navigation is network-first, so rebuilt indexes/reports replace stale copies.
+    event.respondWith(
+      fetch(request, { cache: 'no-cache' }).then(function (response) {
+        if (response && response.ok && (response.type === 'basic' || response.type === 'default')) {
+          caches.open(CACHE).then(function (cache) {
+            cache.put(request, response.clone()).catch(function () {});
+          }).catch(function () {});
+        }
+        return response;
+      }).catch(function (error) {
+        return caches.open(CACHE).then(function (cache) {
+          return cache.match(request).then(function (hit) {
+            if (hit) return hit;
+            return cache.match('./index.html').then(function (shell) {
+              if (shell) return shell;
+              throw error;
+            });
+          });
+        });
+      })
+    );
+    return;
+  }
+
   event.respondWith(
     caches.open(CACHE).then(function (cache) {
       return cache.match(request, { ignoreSearch: true }).then(function (hit) {
@@ -507,14 +535,6 @@ self.addEventListener('fetch', function (event) {
             cache.put(request, response.clone()).catch(function () {});
           }
           return response;
-        }).catch(function (error) {
-          if (request.mode === 'navigate') {
-            return cache.match('./index.html').then(function (shell) {
-              if (shell) return shell;
-              throw error;
-            });
-          }
-          throw error;
         });
       });
     })

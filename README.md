@@ -67,18 +67,18 @@ pipeline described below.
 | Deep-read site backend (`deploy/serve.py`) | 1.4.0 |
 | 文献精读库 library index | 1.4.0 |
 | **DSH-Paper-DeepRead plugin (this package)** | **1.2.0** |
-| Bundled `paper-deepread-html` skill | 1.3.0 |
+| Bundled `paper-deepread-html` skill | 1.5.0 |
 
 The plugin works standalone. The 自动精读 card additionally needs a running site ≥ 1.4.0
 (the `/api/health` endpoint plus the upload-token and queue controls).
 
 ## Install
 
-Download `dsh-paper-deepread-1.3.0.tgz` from the GitHub release, then install it into the
+Download `dsh-paper-deepread-1.5.0.tgz` from the GitHub release, then install it into the
 Web profile:
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.3.0.tgz
+dsh plugin --profile web add ./dsh-paper-deepread-1.5.0.tgz
 ```
 
 Restart the Web UI:
@@ -256,7 +256,7 @@ See [docs/architecture.md](docs/architecture.md) for the host/client design.
 ```bash
 npm run check   # node --check every shipped JavaScript file
 npm test        # node:test suites (units, API, skill sync, site proxy)
-npm run pack    # dist/dsh-paper-deepread-1.3.0.tgz + dist/SHA256SUMS
+npm run pack    # dist/dsh-paper-deepread-1.5.0.tgz + dist/SHA256SUMS
 ```
 
 The package is published as a GitHub release tarball; it is not required to be on npm.

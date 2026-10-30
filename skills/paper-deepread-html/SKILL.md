@@ -1,7 +1,7 @@
 ---
 name: paper-deepread-html
-version: 1.3.0
-description: 把一篇论文 PDF 深读成单文件、可离线打开的交互式 HTML 精读报告——自动从 PDF 裁切原文关键图表（带页码/图号/图注溯源），并用原生 JS + 内联 SVG 重绘机制图、流程图、对比图与数据图，附批判性评估；区分综述（review）与研究论文（research），分别采用不同的解读重点与章节导读。Deep-read one paper PDF into a self-contained interactive HTML reading companion that mixes high-fidelity original figure crops with JS/SVG redrawn schematics. Use when the user asks to 精读/解读/拆解一篇文献、生成论文精读报告 HTML、给论文配关键截图和示意图、paper deep read, figure highlights, SVG schematic, literature reading notes, or turn a paper into an interactive HTML report.
+version: 1.5.0
+description: 把一篇论文 PDF 深读成单文件、可离线打开的交互式 HTML 精读报告——自动从 PDF 裁切原文关键图表（带页码/图号/图注溯源），并用原生 JS + 内联 SVG 重绘机制图、流程图、对比图与数据图，附批判性评估；区分综述（review）与研究论文（research），分别采用不同的解读重点；研究类采用「结论+图融合」的结果单元结构。Deep-read one paper PDF into a self-contained interactive HTML reading companion that mixes high-fidelity original figure crops with JS/SVG redrawn schematics. Use when the user asks to 精读/解读/拆解一篇文献、生成论文精读报告 HTML、给论文配关键截图和示意图、paper deep read, figure highlights, SVG schematic, literature reading notes, or turn a paper into an interactive HTML report.
 ---
 
 # Paper Deep-Read → 交互式 HTML 精读报告
@@ -79,7 +79,7 @@ $PY "$SKILL_DIR/scripts/paper_ingest.py" paper.pdf --out work/paper --debug
 
 先按文章类型确定**覆盖范围**，再决定精读顺序。**覆盖优先于"精选"**：漏读一张主图比多读一张补充图严重得多。
 
-**通用第一步 · 建"阅读覆盖清单"（必做，后面写进报告）**
+**通用第一步 · 建"阅读覆盖清单"（必做；作为 `coverage.json` 侧车，不写进报告正文）**
 从 `captions.txt` / `tables.md` / `text.md` 列出：
 - 全部主图（Figure 1..N）与主表（Table 1..M）；
 - 支撑主结论的关键补充图/表（统计检验、对照、阴性结果、额外验证、参数扫描）；
@@ -133,8 +133,8 @@ $PY "$SKILL_DIR/scripts/paper_ingest.py" paper.pdf --out work/paper --debug
 - （可选）与我相关：对用户方向的可迁移点与待验证假设；
 - 术语表：英文 / 中文 / 一句话解释。
 
-**章节级精读（必做，两类论文都要）**：按类型选择章节重点，为正文的每个主要章节（研究类：Introduction /
-Methods / Results 各小节 / Discussion；综述类：各主题章节 + 框架/展望章）写一份**章节导读卡**：
+**章节级精读（按类型）**：综述类为每个主章节（含框架/展望章）写章节导读卡；研究类**不用导读卡**，
+改为把这一章的内容融进对应「结果单元」的结论/证据/边界三段里（见 Step 5 结果单元模板）。
 
 | 字段 | 要求 |
 |---|---|
@@ -148,11 +148,11 @@ Methods / Results 各小节 / Discussion；综述类：各主题章节 + 框架/
 章节导读不是目录复述——只写"本章介绍了…"视为不合格。
 **Review 不得用图注/摘要替代章节总结；Research 不得用 Abstract 替代结果链。**
 
-**Research 的逐章节解读是硬要求**：报告须有「逐章节精读」一节；Results 每个小节 =
-`sec-brief` + 2–4 段正文（本节目标 / 关键证据与数字 / 结论与在论证链中的位置 / 可疑处），
-每段引用该节对应的图/表/页码。**只有导读卡、没有正文段落视为不合格。**
-**图/表覆盖是硬要求**：报告末尾（批判性评估前）必须有「阅读覆盖清单」，主图/主表 100% 有精读位置，
-关键补充图/表有解读或引用；覆盖清单与实际内容不一致视为不合格。
+**Research 的逐章节内容不单独成章**：原文每个 Results 小节的内容必须被吸收进对应「结果单元」
+（结论 → 图 → 面板解读 → 意味着什么 → 边界），不得再写独立的「逐章节精读」或「逐图精读」章节；
+未被任何单元覆盖的结果小节视为漏读。
+**图/表覆盖是硬要求，但不进报告正文**：把覆盖清单写成 `work/paper/coverage.json` 供 QA/审计；
+报告里不再显示覆盖清单。主图/主表 100% 有精读位置（对应结果单元），关键补充图/表有解读或引用。
 
 ### Step 4 · 规划 SVG 示意图（先定目的，再画）
 
@@ -195,7 +195,7 @@ device-layout / hierarchy / data-redraw），不要从白纸开始。
 `<div class="appraisal"><div class="card pro|unc|con">…</div></div>`、`<dl class="glossary">`、
 `<ol class="refs">`、`<aside class="callout insight|caveat|method|quote">`。
 
-**章节导读卡（必写，每个主要章节开头放一个）**：
+**章节导读卡（综述类必写；研究类不再使用——研究类改用「结果单元」见下）**：
 
 ```html
 <div class="sec-brief">
@@ -212,63 +212,68 @@ device-layout / hierarchy / data-redraw），不要从白纸开始。
 规则：每个主要章节 1 个、150–300 字；3–5 条要点；`sec-takeaway` 必须给出判断而不是重复标题；
 证据 chip 用 `.ev`/`data-ev` 与正文页码一致。
 
-**阅读覆盖清单（研究类必写，放在「批判性评估」之前）**：
+**阅读覆盖清单（QA 侧车，不进入阅读界面）**
 
-```html
-<details class="coverage" open>
-  <summary>阅读覆盖清单（主图/主表/关键补充图逐项核对）</summary>
-  <table class="cmp-table">
-    <thead><tr><th>编号</th><th>类型</th><th>页码</th><th>是否精读</th><th>精读位置 / 跳过理由</th></tr></thead>
-    <tbody>
-      <tr><td>Fig. 1</td><td>主图</td><td>p.3</td><td>✔ 图卡</td><td>fig1</td></tr>
-      <tr><td>Table 1</td><td>主表</td><td>p.5</td><td>✔ 表卡</td><td>tbl1</td></tr>
-      <tr><td>Fig. S7</td><td>补充图</td><td>p.12</td><td>◐ 正文引用</td><td>支撑解码准确率，正文 §2 引用</td></tr>
-      <tr><td>Fig. S12</td><td>补充图</td><td>p.20</td><td>✘ 跳过</td><td>与主结论无关的染色示例（理由）</td></tr>
-    </tbody>
-  </table>
-</details>
+研究类仍需逐项核对主图/主表/关键补充，但**覆盖清单不再渲染进报告正文**——它和阅读体验无关。
+做法：把清单写成 `work/paper/coverage.json`（提交前自检用），格式：
+
+```json
+{"items": [
+  {"id": "fig1", "type": "main-figure", "page": 3, "status": "read", "where": "R1"},
+  {"id": "figS7", "type": "supp-figure", "page": 12, "status": "referenced", "where": "R1"},
+  {"id": "figS12", "type": "supp-figure", "page": 20, "status": "skipped", "why": "与主结论无关的染色示例"}
+]}
 ```
 
-规则：研究类清单必须覆盖**全部主图与主表**；关键补充图/表不得跳过；跳过项必须有具体理由；
-清单中的"精读位置"须能在正文里找到对应图卡/表卡/段落。
-需要编号热点时，在 `data-fig` 图卡内放 `<template data-hotspots>` 包住一段
-`<svg class="pf-hotspots" aria-hidden="true">`（**不要 viewBox**），builder 会把它移进图片容器。
-热点坐标用百分比（相对图片显示框），结构：
-
-```html
-<template data-hotspots>
-<svg class="pf-hotspots" aria-hidden="true">
-  <g class="hs" tabindex="0" role="button" data-tip="悬停说明" data-tip-kicker="原文 Fig. 2a · p.4">
-    <circle class="hs-halo" cx="26%" cy="17%" r="19"/>
-    <circle class="hs-dot" cx="26%" cy="17%" r="13"/>
-    <text class="hs-num" x="26%" y="17%">1</text>
-  </g>
-</svg>
-</template>
-```
-
-热点只标 2–4 个"读者会走错"的位置（装置、编码、关键数据），不要给每个面板都打点。
+规则：研究类主图/主表 100% 为 `read`；关键补充项 `read`/`referenced`；跳过项必须给 `why`。
+该文件只供 QA 与审计，**不要写进 `content.html`**。
 
 默认结构（可裁剪，但不要省掉"批判性评估"和"证据"）。**开头必须标注文章类型**（研究类 / 综述类 /
 方法或资源类），并按对应结构组织；**每个主要章节开头都要有 `sec-brief` 章节导读卡**。
 
-**A. 研究类（research）**
+**A. 研究类（research）——结论与图融合的「结果单元」结构**
 
-1. **文章类型 + 一句话结论** 摘要式结论 + 3–5 张关键发现卡（每卡带证据 chip）
-2. **研究问题与缺口**：这个领域卡在哪、本文赌的是什么
-3. **方法拆解**：一张 SVG 流程图 + 原文装置图 + 可复现参数表（含 n、对照、统计方法）
-4. **逐章节精读（必做）**：Introduction / Results 的每个小节 / Discussion 各 = `sec-brief` +
-   2–4 段正文（本节目标 / 关键证据与数字 / 结论与在论证链中的位置 / 可疑处），逐节引用对应图/表/页码
-5. **逐图精读（主图全覆盖）**：每张主图 = 原文裁切 + 图注 + 逐面板 + 读图注意 + takeaway；
-   主表用 `<figure class="tbl">` 表卡；关键补充图/表在主图解读中引用或单列小节
-6. **机制解释**：SVG 机制图（编号步骤、可交互）
-7. **数据重绘**（可选）：把关键趋势重画成更易读的图，标注来源
-8. **阅读覆盖清单（必做）**：`<details class="coverage">` 列出全部主图/主表/关键补充图与表，
-   标注精读位置；跳过项写理由（见 Step 5 模板）
-9. **批判性评估**：强项 / 不确定处 / 局限 / 替代解释；用表格或卡片
-10. **与我相关**（用户给了领域时）
-11. **术语表 + 延伸阅读 + 引用**
-12. 证据与溯源（builder 自动生成）
+目标：PI 10 分钟内读完主线；细节全部折叠。**正文可见文字控制在 8,000–12,000 字符**（不含图注/表格/折叠内容）。
+
+1. **速览（1 屏）**：一句话结论（含关键数字）+ 3–5 张发现卡。每张卡 = `结论句` + `证据（原文 p.N / Fig.X）` + `强度 A/B/C`。
+2. **缺口与假说（≤0.5 屏）**：领域卡在哪、本文赌什么、为什么现在能做。
+3. **方法一张图（1 屏）**：1 张 SVG 流程/装置图 + 一张**默认折叠**的参数表（体系、n、对照、统计、关键试剂/版本）。
+4. **结果主线（核心）**：N 个**结果单元**（通常 4–7 个，按论证链排序，不按图号流水账）。
+   每个单元 = 陈述句结论标题 + 1 张主图（嵌在单元内）+ 3–4 条关键面板解读 + 2–3 句"意味着什么" +
+   1–2 句机制/为什么（推断标 [推断]）+ 1 句边界/反证条件。**每单元 400–650 字**，图与结论同屏，
+   不再单独设"逐图精读"或"逐章节精读"章；讲解比"只报数字"再多一层：数字 → 机制 → 边界。
+5. **证据盘点（1–2 屏，表格）**：`claim | 关键数字 | 证据 | 强度 A/B/C | 最弱环节 | 替代解释 | 还需要什么验证`。
+6. **批判性评估（≤1 屏，PI 视角）**：三段式短评，每段 3–5 条：
+   - **站得住的**：证据链最硬的部分（对照/独立验证/不利数据是否照登）；
+   - **最弱环节**：哪条结论依赖单点、单批次、单一体系或单一统计口径；
+   - **替代解释与边界**：至少 2 个替代解释 + 用什么实验区分；结论能推到哪、不能推到哪。
+7. **可复现与资源（折叠）**：代码/数据/方案/试剂/失败模式；只在正文留 3–5 个最影响复现的坑。
+8. **与我相关（≤0.5 屏）**：2–3 个可执行实验/决策建议（含预期结果与判据）。
+9. **附录（全部折叠）**：机制总图（全篇 1 张）、数据重绘（可选）、术语表、引用与延伸阅读。
+10. 证据与溯源（builder 自动生成）。
+
+**结果单元写法（关键）**：
+
+```html
+<section class="result-unit" id="ru-1">
+  <h2>R1 · 四轮 60 孔即可为 ~10<sup>5</sup> 细胞发唯一码</h2>
+  <p class="ru-claim"><strong>结论</strong>：免分离条形码的碰撞概率在 4 轮 × 60 孔下仍可忽略，
+    实测 92,016 个细胞中重复码比例 &lt;…（原文 p.3–4）。</p>
+  <figure class="paper-fig" data-fig="fig1">…逐面板解读…</figure>
+  <p class="ru-so-what"><strong>意味着什么</strong>：无需分选/微流控即可把单细胞标签成本压到 …
+    <span class="ev" data-ev="p.13">原文 p.13</span></p>
+  <p class="ru-mechanism"><strong>机制 / 为什么</strong>：碰撞率随孔数呈指数下降，而分池操作只增加线性成本，
+    所以"多轮少孔"比"少轮多孔"更划算 [推断]。</p>
+  <p class="ru-caveat"><strong>边界 / 反证</strong>：若细胞数再提高一个量级（&gt;10<sup>6</sup>），
+    40 轮 × 60 孔的码空间会饱和；另外 50% 细胞丢失只影响稀有样本，不影响码唯一性。</p>
+</section>
+```
+
+规则：
+- 标题必须是**陈述句结论**（"R1 · 四轮 60 孔…"），不要"图 1 介绍""本节目标"这类元语言；
+- 一个单元 1 张主图（最多 2 张）；图只讲与结论有关的 2–3 个面板，其余面板折叠或用一句话带过；
+- 同一数字/结论只在一个地方做主叙述，其它位置写"见 R3"，**全文不允许重复讲同一张图/同一条结论**；
+- 批判性评估不再单独成章，压缩成第 5 步的「证据盘点」表；机制解释只保留全篇 1 张总图放附录。
 
 **B. 综述类（review / perspective / roadmap）**
 
@@ -284,8 +289,8 @@ device-layout / hierarchy / data-redraw），不要从白纸开始。
 10. **术语表 + 关键参考文献（10–20 条）**
 11. 证据与溯源（builder 自动生成）
 
-**C. 方法/资源/基准类**：按研究类骨架处理，但把"方法拆解"换成"资源/流程规范与可用性"，
-把"逐图精读"换成"基准结果与对比基线"，并补"复现步骤/数据可得性"一节。
+**C. 方法/资源/基准类**：按研究类的「结果单元」骨架处理，但把结果单元换成"基准结果 × 基线对比"，
+方法区突出资源/流程规范与可用性，并补"复现步骤/数据可得性"折叠块。
 
 写作要求：先"图在证明什么"，再"怎么看出来的"，最后"哪里可疑"；给数字和对照，不写"显著提升"这类空话；
 每节至少一处批判性观察；首次出现的缩写给英文全称。

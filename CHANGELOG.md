@@ -4,6 +4,22 @@ All notable changes to DSH-Paper-DeepRead are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] — 2026-10-30
+
+### Bundled skill
+
+- `paper-deepread-html` **1.5.0** — research-report content pass:
+  - Result units carry a `机制 / 为什么` paragraph (inference tagged `[推断]`) and run 400–650 chars,
+    so each fused claim+figure block explains numbers → mechanism → boundary instead of only
+    restating results.
+  - The standalone **批判性评估** section returns for research papers (≤1 screen): what holds up /
+    weakest link / alternative explanations and boundaries (3–5 bullets each), on top of the
+    evidence table.
+  - Library page: short links now 302 to the canonical report URL (fixes TOC anchors resolving to
+    the paper directory and returning 404); the service worker serves navigations network-first so
+    rebuilt reports replace stale copies (library version 1.5.0).
+- No plugin code or API changes.
+
 ## [1.3.0] — 2026-10-30
 
 ### Bundled skill

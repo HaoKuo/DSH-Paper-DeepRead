@@ -161,7 +161,7 @@ test('GET api/state exposes site config and both skill versions', async () => {
     assert.equal(state.skill.installed, true)
     assert.equal(state.skill.installedPresent, false)
     assert.equal(state.skill.syncMode, 'update')
-    assert.equal(state.version, '1.3.0')
+    assert.equal(state.version, '1.5.0')
 
     const tools = manager.tools(options => options)
     const catalogue = await tools[0].execute({}, {})

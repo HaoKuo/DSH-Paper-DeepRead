@@ -129,7 +129,7 @@
     window.addEventListener('load', function(){
       var url;
       try{ url = new URL('sw.js', document.baseURI).toString(); }catch(e){ return; }
-      navigator.serviceWorker.register(url, { scope: './' }).catch(function(){});
+      navigator.serviceWorker.register(url, { scope: './', updateViaCache: 'none' }).catch(function(){});
     });
   }catch(e){}
 })();

@@ -2,11 +2,11 @@
 
 ## 1. Install from the release tarball
 
-Download `dsh-paper-deepread-1.3.0.tgz` (or use the copy from `dist/`) and install it into
+Download `dsh-paper-deepread-1.5.0.tgz` (or use the copy from `dist/`) and install it into
 the Web profile:
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.3.0.tgz
+dsh plugin --profile web add ./dsh-paper-deepread-1.5.0.tgz
 ```
 
 `dsh plugin` forwards to pnpm inside the profile directory. The package declares
@@ -17,7 +17,7 @@ If your shell cannot find `pnpm`, run the same command through the pnpm binary t
 installed dsh, for example:
 
 ```bash
-PATH="$HOME/Library/pnpm/bin:$PATH" dsh plugin --profile web add ./dsh-paper-deepread-1.3.0.tgz
+PATH="$HOME/Library/pnpm/bin:$PATH" dsh plugin --profile web add ./dsh-paper-deepread-1.5.0.tgz
 ```
 
 ## 2. Restart and open the UI
@@ -88,14 +88,14 @@ the skill version sync.
 ```bash
 npm run check   # node --check on every shipped JavaScript file
 npm test        # node:test suites (units, API, skill sync, site proxy)
-npm run pack    # -> dist/dsh-paper-deepread-1.3.0.tgz + dist/SHA256SUMS
+npm run pack    # -> dist/dsh-paper-deepread-1.5.0.tgz + dist/SHA256SUMS
 ```
 
 Test against a throwaway profile instead of your live one:
 
 ```bash
 dsh --profile pdr-test --from-default-profile web --dump-config >/dev/null
-PATH="$HOME/Library/pnpm/bin:$PATH" dsh plugin --profile pdr-test add "$PWD/dist/dsh-paper-deepread-1.3.0.tgz"
+PATH="$HOME/Library/pnpm/bin:$PATH" dsh plugin --profile pdr-test add "$PWD/dist/dsh-paper-deepread-1.5.0.tgz"
 dsh --profile pdr-test --dump-config | grep -A2 paper-deepread
 dsh --profile pdr-test --port 3099 --no-open   # then curl 127.0.0.1:3099/paper-deepread/index.html
 ```

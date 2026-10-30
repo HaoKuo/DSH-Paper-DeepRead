@@ -43,7 +43,7 @@ test('GET api/state reports the managed library, skill, and limits', async () =>
     assert.equal(body.installedSkillVersion, '')
     assert.equal(body.skill.syncMode, 'update')
     assert.deepEqual(body.site, { configured: false, url: '' })
-    assert.equal(body.version, '1.3.0')
+    assert.equal(body.version, '1.5.0')
     assert.equal(typeof body.python.ok, 'boolean')
     // Static route still works next to the API.
     const staticResponse = await fetch(`${server.base}/paper-deepread/index.html`)
