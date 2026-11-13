@@ -2,11 +2,11 @@
 
 ## 1. Install from the release tarball
 
-Download `dsh-paper-deepread-1.6.2.tgz` (or use the copy from `dist/`) and install it into
+Download `dsh-paper-deepread-1.7.0.tgz` (or use the copy from `dist/`) and install it into
 the Web profile:
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.6.2.tgz
+dsh plugin --profile web add ./dsh-paper-deepread-1.7.0.tgz
 ```
 
 `dsh plugin` forwards to pnpm inside the profile directory. The package declares
@@ -17,7 +17,7 @@ If your shell cannot find `pnpm`, run the same command through the pnpm binary t
 installed dsh, for example:
 
 ```bash
-PATH="$HOME/Library/pnpm/bin:$PATH" dsh plugin --profile web add ./dsh-paper-deepread-1.6.2.tgz
+PATH="$HOME/Library/pnpm/bin:$PATH" dsh plugin --profile web add ./dsh-paper-deepread-1.7.0.tgz
 ```
 
 ## 2. Restart and open the UI
@@ -26,14 +26,16 @@ PATH="$HOME/Library/pnpm/bin:$PATH" dsh plugin --profile web add ./dsh-paper-dee
 dsh web
 ```
 
-Click the **Paper Deepread** icon in the left sidebar. The page renders inside the main
-panel; the single tab row carries *刷新*, *在新标签页打开* and the *手机访问* entry in its
-right-side action cluster. The same page is available directly:
+Click the **Paper Deepread** icon in the left sidebar. The panel shows only the bundled
+library page as a full-height iframe — the plugin has no tab row or toolbar of its own.
+The library header's **上传** and **管理** entries open the management console (upload,
+report management, 手机访问) in a new browser tab. The same pages are available directly:
 
 ![The bundled Paper Deepread library](screenshot-library.png)
 
 ```text
-http://127.0.0.1:3080/paper-deepread/index.html
+http://127.0.0.1:3080/paper-deepread/index.html    # library
+http://127.0.0.1:3080/paper-deepread/manage.html   # management console
 ```
 
 ## 3. Verify the installation
@@ -52,19 +54,19 @@ curl -s -o /dev/null -w '%{http_code} %{content_type}\n' \
 # 200 text/html; charset=utf-8
 
 curl -s http://127.0.0.1:3080/paper-deepread/api/state | head -c 400
-# {"ok":true,...,"version":"1.6.2","skillVersion":"1.5.1","installedSkillVersion":"1.5.1",...}
+# {"ok":true,...,"version":"1.7.0","skillVersion":"1.5.1","installedSkillVersion":"1.5.1",...}
 ```
 
-Mobile access (v1.6.0):
+Mobile access runtime (v1.6.0; its UI is a management-page tab since v1.7.0):
 
 ```bash
 curl -s http://127.0.0.1:3080/paper-deepread/api/access | head -c 600
-# {"ok":true,"version":"1.6.2","target":{"kind":"site","base":"http://127.0.0.1:8080/",
+# {"ok":true,"version":"1.7.0","target":{"kind":"site","base":"http://127.0.0.1:8080/",
 #  "label":"文献站点"},"local":{"url":"http://127.0.0.1:8080/",...},"lan":[...],
 #  "tunnel":{"available":true,"status":"off","url":null,...},"hints":[...]}
 ```
 
-Expected fields: `ok` (`true`), `version` (`1.6.2`), `target.kind` (`site` when `siteUrl` is
+Expected fields: `ok` (`true`), `version` (`1.7.0`), `target.kind` (`site` when `siteUrl` is
 configured, otherwise `library` for the plugin's read-only LAN fallback server, otherwise
 `web`), `target.base`, `local.url`, `lan[]` (each with `address`, `iface`, `label`, `url`,
 `note`, `reachable`, `qrSvg`), `tunnel` (`available`, `status`, `url`, `upstream`, `error`,
@@ -106,32 +108,41 @@ the skill version sync.
 ```bash
 npm run check   # node --check on every shipped JavaScript file
 npm test        # node:test suites (units, API, skill sync, site proxy, mobile access)
-npm run pack    # -> dist/dsh-paper-deepread-1.6.2.tgz + dist/SHA256SUMS
+npm run pack    # -> dist/dsh-paper-deepread-1.7.0.tgz + dist/SHA256SUMS
 ```
 
 Test against a throwaway profile instead of your live one:
 
 ```bash
 dsh --profile pdr-test --from-default-profile web --dump-config >/dev/null
-PATH="$HOME/Library/pnpm/bin:$PATH" dsh plugin --profile pdr-test add "$PWD/dist/dsh-paper-deepread-1.6.2.tgz"
+PATH="$HOME/Library/pnpm/bin:$PATH" dsh plugin --profile pdr-test add "$PWD/dist/dsh-paper-deepread-1.7.0.tgz"
 dsh --profile pdr-test --dump-config | grep -A2 paper-deepread
 dsh --profile pdr-test --port 3099 --no-open   # then curl 127.0.0.1:3099/paper-deepread/index.html
 ```
 
-## 6. Upload and report management (v1.1.0)
+## 6. Upload and report management
 
-1. Open the **Paper Deepread** panel and switch to **上传**.
+Upload and report management happen in the **management console** (`library/manage.html`),
+served both by the plugin and by the standalone site:
+
+1. Open the **Paper Deepread** panel, then click **管理** in the library header (or **上传**
+   to land on the console's upload tab). The console opens in a new browser tab; through
+   the plugin it is `/paper-deepread/manage.html` and it talks to the plugin API.
 2. Drag PDFs onto the drop zone (or click to pick). Uploads are capped at 80 MB and
    validated by their `%PDF-` signature; each file shows progress and joins the queue.
-3. Copy the prefilled instruction with **复制指令** and paste it into a chat. The plugin
-   does not call a model: an agent calls `paper_deepread_uploads` (`ingest`) and
+   Through the plugin the files land in the managed inbox the agent tools read.
+3. Copy the prefilled instruction with **复制指令** and paste it into a chat (or just ask).
+   The plugin does not call a model: an agent calls `paper_deepread_uploads` (`ingest`) and
    `paper_deepread_reports` (`build`) to run the bundled skill.
 4. The first ingest/build prepares a PyMuPDF interpreter through the bundled skill's
    `setup_env.sh` (cached under `~/.cache/paper-deepread`; first run may download once).
    Preparation can also be triggered in chat with
    `paper_deepread_uploads` `{action: "env"}`.
-5. Switch to **报告管理** to open a report or its RAW PDF, hide/show it, delete one
+5. In the console's **报告管理** tab, open a report or its RAW PDF, hide/show it, delete one
    report directory, or click **重建索引** (deterministic, no model needed).
+
+The console also has the third **手机访问** tab — see §9. On the standalone site the same
+page is `/manage.html` and uploads go to the site worker instead (see §8).
 
 Managed data (defaults to `$DSH_HOME/paper-deepread`):
 
@@ -158,7 +169,7 @@ Optional row config:
         libraryDir: /path/to/existing/paper-read  # external library root, skips seeding
         maxUploadBytes: 52428800                  # 50 MB
         skillSync: update                         # update | keep
-        siteUrl: http://127.0.0.1:8080            # optional auto deep-read site
+        siteUrl: http://127.0.0.1:8080            # optional standalone site (phone target)
         cloudflaredPath: /opt/homebrew/bin/cloudflared  # optional quick-tunnel binary
         cloudflaredProxy: "socks5://127.0.0.1:7890"     # optional proxy for cloudflared
         lanPort: 0                                # optional 手机访问 LAN fallback port
@@ -190,7 +201,7 @@ Verify by editing a file under `~/.dsh/skills/paper-deepread-html` and restartin
 plugin logs a warning and leaves the edit in place. To hand the copy back to the plugin,
 delete the installed directory once and restart.
 
-## 8. Automatic deep-read site integration (v1.2.0)
+## 8. Standalone site integration (v1.2.0)
 
 When a standalone Paper Deepread site is running (default `http://127.0.0.1:8080`), add
 its base URL to the plugin config:
@@ -200,20 +211,18 @@ config:
   siteUrl: http://127.0.0.1:8080
 ```
 
-The 上传 tab then shows an **自动精读** card:
+`siteUrl` makes the site the preferred 手机访问 target and enables two same-origin proxy
+routes (unchanged since v1.2.0):
 
-1. **Status** — worker online dot, queue `uploaded`/`processing`, library count, and site
-   version, refreshed every 8 s via `GET /paper-deepread/api/site/health` (the host
-   proxies `<siteUrl>/api/health` with a 5 s timeout and a 5 s cache).
-2. **Upload** — drag & drop or pick PDFs. Each file posts to
-   `POST /paper-deepread/api/site/upload`; the host forwards the raw body with
-   `X-Filename`, `Content-Type`, and the optional `X-KB-Upload-Token` header to
-   `<siteUrl>/api/upload` (120 s timeout) and returns the site JSON verbatim.
-3. **Feedback** — duplicates show the site message, possible duplicates show the matched
-   title, `401 UPLOAD_TOKEN_REQUIRED` opens the token field (sessionStorage only; the
-   plugin config never stores it), and `429 RATE_LIMITED` / queue-full are shown as
-   returned.
-4. **Links** — 打开站点管理台 → `<siteUrl>/manage.html`; 打开站点书库 → `<siteUrl>/`.
+1. `GET /paper-deepread/api/site/health` proxies `<siteUrl>/api/health` (5 s timeout, 5 s
+   cache) and returns `{"configured":false}` when `siteUrl` is unset.
+2. `POST /paper-deepread/api/site/upload` forwards a raw PDF body with `X-Filename`,
+   `Content-Type`, and the optional `X-KB-Upload-Token` header to `<siteUrl>/api/upload`
+   (120 s timeout) and returns the site JSON verbatim.
+
+Since v1.7.0 the plugin panel renders no site status/upload card of its own: to hand a PDF
+to the site's worker, open the site's own management console at `<siteUrl>/manage.html` and
+use its 上传 tab.
 
 Verify the proxy from the command line (with the site running):
 
@@ -222,16 +231,20 @@ curl -s http://127.0.0.1:3080/paper-deepread/api/site/health | head -c 300
 # {"configured":true,"url":"http://127.0.0.1:8080","ok":true,...,"worker":{"online":true,...}}
 ```
 
-With no `siteUrl` the card is hidden and `/api/site/health` returns `{"configured":false}`;
-the local inbox workflow is unchanged.
+With no `siteUrl` the routes return the unconfigured payload and the local inbox workflow is
+unchanged.
 
 ## 9. 手机访问 — mobile access
 
-The **报告管理** tab has a **手机访问** card; **打开手机访问** opens the mobile-access modal.
+The mobile-access UI is a tab in the management console: open the library page, click
+**管理** in its header (the console opens in a new browser tab), then select the
+**手机访问** tab. Through the plugin the console is `/paper-deepread/manage.html`, so the
+tab's `api/access` calls reach the plugin host. Opened directly on the standalone site
+(`:8080/manage.html`) the tab instead shows a note that 手机访问 requires the DSH panel.
 Nothing is probed or bound on page load.
 
-1. **Two blocks** — the modal shows 外网（临时） (Cloudflare quick tunnel, started
-   automatically when the modal opens) and 局域网 · `<IP>` (the first non-loopback IPv4
+1. **Two blocks** — the tab shows 外网（临时） (Cloudflare quick tunnel, started
+   automatically when the tab opens) and 局域网 · `<IP>` (the first non-loopback IPv4
    address; exactly one LAN address, no loopback or Bonjour entry). Each block carries a
    status chip: `连接中…` / `已开启` / `连接失败` / `未开启` for the tunnel, `可用` /
    `待确认` for the LAN address.
@@ -242,18 +255,20 @@ Nothing is probed or bound on page load.
    network. With `siteUrl` configured the phone opens the standalone site; otherwise it
    opens the plugin's read-only LAN fallback server.
 4. **Tunnel** — the external block starts automatically; stop it with 关闭外网访问 when
-   finished. The plugin spawns `cloudflared` and shows the
-   `https://<words>.trycloudflare.com` URL (usually within 5–20 s) once cloudflared prints
-   its `quick Tunnel has been created` banner; the address changes whenever the tunnel or
-   `dsh web` restarts. Check that `cloudflared` is installed (`command -v cloudflared`);
-   without it the block reports `未找到 cloudflared，无法开启外网访问。` and the LAN block
-   still works. If quick-tunnel creation fails the block shows cloudflared's trimmed
-   message (no QR code) — **连不上？刷新链接** posts `refresh` and retries.
+   finished. The tunnel is not retried automatically after the first attempt on a page
+   load — reload the management page to start it again. The plugin spawns `cloudflared`
+   and shows the `https://<words>.trycloudflare.com` URL (usually within 5–20 s) once
+   cloudflared prints its `quick Tunnel has been created` banner; the address changes
+   whenever the tunnel or `dsh web` restarts. Check that `cloudflared` is installed
+   (`command -v cloudflared`); without it the block reports
+   `未找到 cloudflared，无法开启外网访问。` and the LAN block still works. If quick-tunnel
+   creation fails the block shows `连接失败` with cloudflared's trimmed message (no QR
+   code) — **连不上？刷新链接** posts `refresh` and retries.
 
 Command-line checks:
 
 ```bash
-# The payload the modal renders (expected fields are listed in §3).
+# The payload the 手机访问 tab renders (expected fields are listed in §3).
 curl -s http://127.0.0.1:3080/paper-deepread/api/access | head -c 400
 
 # Tunnel actions: stop is safe even when the tunnel never started.
@@ -282,7 +297,7 @@ config:
 `/opt/homebrew/bin/cloudflared`, `/usr/local/bin/cloudflared`, or `PATH`, in that order.
 
 Tunnel troubleshooting: on macOS, cloudflared is a Go program and ignores the system proxy,
-so behind a proxy such as ClashX `开启外网访问（临时）` can end in 外网（异常） with
+so behind a proxy such as ClashX the automatic tunnel start can end in `连接失败` with
 `failed to request quick Tunnel ... context deadline exceeded` / `connection reset`. Set
 `cloudflaredProxy` to the proxy your system uses — `socks5://127.0.0.1:7890` works on this
 machine, while routing the quick-tunnel API through a plain HTTP proxy is flakier — and the

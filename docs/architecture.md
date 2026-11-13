@@ -16,11 +16,14 @@ the library, the skill, and both JavaScript halves.
   └───────────────┬──────────────────────────────────────────────┘
                   │ same-origin HTTP
   ┌───────────────▼──────────────────────────────────────────────┐
-  │  Browser fiber (lib/client.js)                                │
+  │  Browser fiber (lib/client.js) — thin wrapper since v1.7.0    │
   │   ├─ slots.register('main', key:'paper-deepread')             │
   │   └─ slots.register('sidebar.panellist', id:'paper-deepread') │
-  │         └─ page → <iframe src="/paper-deepread/index.html">   │
-  │         └─ 手机访问 modal (v1.6.0)                            │
+  │         └─ page → full-height <iframe>                         │
+  │              src="/paper-deepread/index.html"                  │
+  │              └─ header 上传 / 管理 ──► new tab: manage.html    │
+  │                   (upload / reports / 手机访问)                 │
+  │                   → /paper-deepread/api/* (same origin)         │
   └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -85,7 +88,7 @@ A plain script (no build step) registered through `window.__ModuleLoader__.load(
 'dsh-paper-deepread', factory })`. React comes from the browser module table:
 `const React = require('react')`.
 
-`apply(ctx)`:
+Since v1.7.0 the browser half is a **thin client**. `apply(ctx)`:
 
 - injects a `<style data-plugin-css="dsh-paper-deepread">` element and removes it in the
   effect disposer,
@@ -97,16 +100,19 @@ A plain script (no build step) registered through `window.__ModuleLoader__.load(
   `Paper Deepread`. The sidebar's panel id matches the `main` key, so selecting the icon
   switches the main panel to the plugin page and selecting another panel leaves it intact.
 
-The page is a flex column: a compact toolbar (title 文献精读库 / Paper Deepread, an
-*open in new tab* link, and a reload button that re-keys the iframe) above a flexing
-same-origin iframe pointing at `/paper-deepread/index.html`. No sandbox attribute is
-needed because the route is served by the host half on the same origin.
+The page is a flex column containing exactly one element: a full-height, same-origin
+iframe pointing at `/paper-deepread/index.html`. It renders no tab row, toolbar or modal.
+Upload, report management and 手机访问 are UI *inside that page* — i.e. inside the bundled
+`library/manage.html` console, which the library header opens in a new browser tab. No
+sandbox attribute is needed because the route is served by the host half on the same
+origin.
 
 ## Payload directories
 
-- `library/` — the 文献精读库 static site: `index.html`, `index.md`, `README.md`, and one
-  directory per paper with the interactive report HTML, the report PDF, and the untouched
-  `RAW-*.pdf`. It is shipped as-is; the plugin never writes into it.
+- `library/` — the 文献精读库 static site: `index.html`, `index.md`, `README.md`,
+  `manage.html` (the self-contained management console: upload, report management and
+  手机访问), and one directory per paper with the interactive report HTML, the report PDF,
+  and the untouched `RAW-*.pdf`. It is shipped as-is; the plugin never writes into it.
 - `skills/paper-deepread-html/` — the deep-read skill. It is shipped as-is and only ever
   copied out to the Harness skills directory.
 
@@ -184,10 +190,12 @@ unknown routes return `405`/`404`; management bodies must be `application/json`.
 
 ### Browser half
 
-`lib/client.js` keeps the same sidebar/main-slot registration and adds a three-tab page:
-文献库 (the iframe), 上传 (optional 自动精读 card, drop zone, XHR progress, queue, copyable
-agent instruction), 报告管理 (summary, report table, hide/delete, one-click rebuild + log
-tail). The panel header/tab design is unchanged from v1.1.4.
+`lib/client.js` keeps the same sidebar/main-slot registration and, from v1.1.0 to v1.6.2,
+carried a three-tab page: 文献库 (the iframe), 上传 (optional 自动精读 card, drop zone, XHR
+progress, queue, copyable agent instruction) and 报告管理 (summary, report table,
+hide/delete, one-click rebuild + log tail). v1.7.0 removed that chrome again — the browser
+half is a thin iframe wrapper and the same management functionality is exercised from the
+site's own `manage.html` console.
 
 ## v1.2.0 — skill version sync + standalone site integration
 
@@ -254,14 +262,15 @@ upload token is never stored in the plugin config — it is per-request browser 
 | `src/qr.js` | Pure QR Code Model 2 encoder: byte mode/UTF-8, EC L/M/Q/H, versions 1–40, smallest fitting version, automatic mask selection with ISO penalty rules N1–N4; renders one `<svg>` with a single compact `<path>` for direct injection. No I/O, no dependencies. |
 | `src/access.js` | Access runtime: target resolution (`siteUrl` site → lazy LAN fallback server → DSH Web page), non-internal IPv4 discovery ranked `en0` first (virtual and link-local interfaces skipped) plus one Bonjour candidate, 8 s reachability probe cache with `?refresh=1` bypass, per-candidate QR SVGs, concurrency-deduped snapshots, serialized tunnel actions, and `dispose()`. |
 | `src/lan.js` | Lazy read-only LAN fallback server for the managed library. Reuses `createLibraryHandler` from `src/route.js` (the request URL is rewritten to `/paper-deepread<pathname>`), binds `0.0.0.0` on `lanPort` or an ephemeral port, and persists the bound port in `<dataDir>/lan-server.json` so the LAN URL survives reactivation. |
-| `src/tunnel.js` | Cloudflare quick-tunnel child manager (started automatically when the 手机访问 modal opens since v1.6.2; **关闭外网访问** stops it): `findCloudflared` (config `cloudflaredPath` → `CLOUDFLARED_BIN` → `/opt/homebrew/bin` → `/usr/local/bin` → `PATH`), `cloudflared tunnel --url <target> --no-autoupdate`, `config.cloudflaredProxy` forwarded to the child as `HTTPS_PROXY`/`HTTP_PROXY`, banner-gated URL parsing, `off|starting|running|error` state with a persisted `tunnel.json` snapshot, 25 s start timeout, and SIGTERM→SIGKILL disposal that never leaves an orphan child. |
+| `src/tunnel.js` | Cloudflare quick-tunnel child manager (started automatically when the 手机访问 tab opens since v1.6.2; **关闭外网访问** stops it): `findCloudflared` (config `cloudflaredPath` → `CLOUDFLARED_BIN` → `/opt/homebrew/bin` → `/usr/local/bin` → `PATH`), `cloudflared tunnel --url <target> --no-autoupdate`, `config.cloudflaredProxy` forwarded to the child as `HTTPS_PROXY`/`HTTP_PROXY`, banner-gated URL parsing, `off|starting|running|error` state with a persisted `tunnel.json` snapshot, 25 s start timeout, and SIGTERM→SIGKILL disposal that never leaves an orphan child. |
 
 ### Data flow
 
-The browser modal is a pure renderer; all resolution happens on the host.
+The 手机访问 tab (inside `library/manage.html`, in the browser) is a pure renderer; all
+resolution happens on the host.
 
 ```text
-browser modal (lib/client.js)             host (src/access.js)
+手机访问 tab (library/manage.html)        host (src/access.js)
   │  GET /paper-deepread/api/access          │
   ├─────────────────────────────────────────►│ 1. target resolution
   │                                          │    siteUrl site → lan.js ensure()
@@ -274,8 +283,9 @@ browser modal (lib/client.js)             host (src/access.js)
   │             tunnel, hints}                │     are tolerated)
   │                                          │
   │ blocks 外网（临时） / 局域网 · <first IP>│
-  │ copy URL + inject `qrSvg` via            │
-  │ dangerouslySetInnerHTML                  │
+  │ URL + 复制链接 + inject the host-rendered │
+  │ `qrSvg` (guarded: only strings that       │
+  │ start with `<svg`)                        │
   │                                          │
   │ phone scans QR ──► resolved target        │
   │                                          │
@@ -284,15 +294,15 @@ browser modal (lib/client.js)             host (src/access.js)
   │◄──────── fresh payload (new URL) ────────┤ → https://<words>.trycloudflare.com
 ```
 
-Since v1.6.2 the modal renders no candidate tab row and no loopback/Bonjour entries: it
-shows the external tunnel block and the first LAN IPv4 block, and the browser half starts
-the tunnel automatically on open (one auto-start per modal open; failures stay visible and
-are retried through **连不上？刷新链接** or **开启外网访问（临时）**).
+Since v1.6.2 the UI renders no candidate tab row and no loopback/Bonjour entries: it
+shows the external tunnel block and the first LAN IPv4 block, and the tab starts the
+tunnel automatically on first activation (one auto-start per page load; failures stay
+visible and are retried through **连不上？刷新链接**).
 
 `dsh web` listens on loopback only, so the phone target is deliberately never the DSH Web
 listener: it is the standalone site (`siteUrl`) or the plugin's own read-only LAN server,
 optionally fronted by the temporary public tunnel. The `target.kind === 'web'` fallback
-exists only so the modal can explain that limitation.
+exists only so the UI can explain that limitation.
 
 ### Tunnel URL discovery and failure handling
 
@@ -321,8 +331,8 @@ URL discovery and failure handling are deliberately conservative:
   prefix stripped and capped at 800 characters. A failure can never look like a running
   tunnel.
 
-The browser modal shows this as `外网（异常）` with the `tunnel.error` message (no QR code),
-and **连不上？刷新链接** posts `refresh` (stop + start) to retry.
+The 手机访问 tab shows this as a `连接失败` status chip with the `tunnel.error` message (no QR
+code), and **连不上？刷新链接** posts `refresh` (stop + start) to retry.
 
 ### State and lifecycle
 
@@ -334,9 +344,10 @@ dataDir additions (v1.6.0)
 
 Both files are disposable: losing them only means the next activation picks a new ephemeral
 port or shows the tunnel as `off`. The LAN server starts only when a snapshot is requested
-and no `siteUrl` is configured; the tunnel child starts only after an explicit `start` or
-`refresh` action from the modal. `createManager` returns `dispose()` and the plugin registers
-it through `ctx.effect`, so both are released with the plugin fiber.
+and no `siteUrl` is configured; the tunnel child starts when the 手机访问 tab auto-starts it
+(once per page load) or after an explicit `start` / `refresh` action. `createManager` returns
+`dispose()` and the plugin registers it through `ctx.effect`, so both are released with the
+plugin fiber.
 
 ### Payload contract
 
@@ -345,3 +356,32 @@ Every field is always present: missing values are `null`, never `undefined`, and
 model tools). `qrSvg` is SVG markup, not a data URL. Errors keep the standard shape
 `{"ok":false,"error":{"code","message"}}` (`BAD_REQUEST` 400, `TUNNEL_UNAVAILABLE` 503,
 `METHOD_NOT_ALLOWED` 405, `NOT_FOUND` 404).
+
+## v1.7.0 — thin client
+
+The browser half no longer renders plugin UI of its own. `lib/client.js` registers the
+sidebar entry and one main-panel page, and that page is a full-height, same-origin iframe of
+the bundled site at `/paper-deepread/index.html`. There is no plugin tab row, no toolbar /
+reload action, no upload or report-management panel and no mobile-access modal.
+
+Everything that used to live in those panels is UI inside the bundled site itself, reached
+from the library page header:
+
+```text
+library/index.html  ── header 上传 / 管理 ──►  library/manage.html
+                                                ├─ 上传       upload (plugin managed
+                                                │              inbox or site queue)
+                                                ├─ 报告管理   hide / delete / rebuild
+                                                └─ 手机访问   tunnel + LAN + QR
+```
+
+The same `manage.html` is served from two origins and uses only relative API URLs:
+
+- through the plugin: `/paper-deepread/manage.html` → `/paper-deepread/api/*` (plugin host —
+  managed inbox, reports, mobile-access payload), so its 手机访问 tab works;
+- on the standalone site: `/manage.html` → `/api/*` (`deploy/serve.py`), where `api/access`
+  does not exist, so the 手机访问 tab renders a note explaining that the feature requires
+  the DSH panel.
+
+The host half, API routes and payloads, config keys and the bundled skill are unchanged by
+this release; only the browser half and the bundled `library/manage.html` console changed.

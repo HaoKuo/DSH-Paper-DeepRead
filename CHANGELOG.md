@@ -4,6 +4,63 @@ All notable changes to DSH-Paper-DeepRead are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] — 2026-11-13
+
+### Added
+
+- **手机访问 tab in the site management page.** The library page's 管理 console
+  (`library/manage.html`, served by the plugin at `/paper-deepread/manage.html`) gains a
+  third **手机访问** tab next to 上传 / 报告管理. It shows two blocks — **外网（临时）** (the
+  Cloudflare quick tunnel, started automatically when the tab opens, with the status chips
+  `连接中…` / `已开启` / `连接失败` / `未开启`, **关闭外网访问** and **连不上？刷新链接**)
+  and **局域网 · `<IP>`** (the first non-loopback IPv4 address, with URL, **复制链接** and a
+  locally rendered QR code) — plus the security note that the tunnel URL is public and
+  unauthenticated. The tab calls `api/access` relatively, so it works through the plugin
+  origin; on the standalone site (`:8080`) it shows a note that 手机访问 requires the DSH
+  panel.
+- `docs/screenshot-access.png` is re-captured for this release (the 手机访问 tab in the
+  management console); the README (EN/ZH) references it once.
+
+### Changed
+
+- **Thin client browser half.** `lib/client.js` is now a thin wrapper: selecting Paper
+  Deepread in the sidebar shows only the bundled 文献精读库 page as a full-height,
+  same-origin iframe. It injects no tabs, toolbar or modal chrome of its own; the sidebar
+  entry, main-slot registration and `.pdr`-scoped styles are unchanged.
+- **Management UI lives in the bundled site page.** Uploading, report management and
+  手机访问 are reached from the library page header (上传 / 管理 → `manage.html`), which is
+  served both as `/paper-deepread/manage.html` (plugin API) and `/manage.html` (site API).
+  README (EN/ZH), `RELEASE_NOTES.md`, `docs/architecture.md` and `docs/install.md` now
+  document the manage-page walkthroughs; the mobile-access section describes the tab.
+- Package version bumped to `1.7.0` (`package.json`; `tests/api.test.js` and
+  `tests/site.test.js` version assertions). Tarball references in the docs now read
+  `dsh-paper-deepread-1.7.0.tgz`.
+- **Unchanged host side:** the library route, the management API, the model tools
+  (`paper_deepread`, `paper_deepread_uploads`, `paper_deepread_reports`), skill
+  install/sync, the mobile-access runtime (`src/qr.js`, `src/access.js`, `src/lan.js`,
+  `src/tunnel.js`), both `/paper-deepread/api/access*` routes and their payload, the
+  config keys `cloudflaredPath` / `cloudflaredProxy` / `lanPort`, and the bundled skill
+  (1.5.1). No data migration is required.
+
+### Removed
+
+- The plugin panel's 文献库 / 上传 / 报告管理 tab row and its 刷新 / 在新标签页打开
+  actions, the embedded 上传 panel (local inbox uploader and the 自动精读 card) and 报告管理
+  panel, and the 手机访问 modal. Upload and report management now happen in the management
+  console or through the agent tools; 手机访问 lives in the console's tab.
+
+### Testing
+
+- `npm run check` (`node --check` on every shipped JavaScript file, including the thin
+  `lib/client.js`) and `npm test` (`node --test tests/*.test.js`) pass; the host suites
+  (API, skill sync, site proxy, QR, access, LAN, tunnel) are unchanged apart from the
+  version assertions.
+- Manual browser verification: the Paper Deepread panel renders only the library page; the
+  library header's 管理 opens the console with the 上传 / 报告管理 / 手机访问 tabs; through
+  the plugin the 手机访问 tab auto-starts the tunnel, shows both blocks with QR codes and
+  supports 关闭外网访问 / 连不上？刷新链接; on `:8080` the tab shows the "requires the DSH
+  panel" note. `docs/screenshot-access.png` is re-captured from the manage-page tab.
+
 ## [1.6.2] — 2026-11-13
 
 ### Changed
