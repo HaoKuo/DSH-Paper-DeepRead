@@ -2,35 +2,35 @@
 
 Release date: 2026-11-13
 
-**English** | [中文](#中文)
+**English** | Chinese below
 
 ## What changed
 
-This release simplifies the plugin panel into a **thin client** and moves **手机访问
-(mobile access)** into the library's own management page.
+This release simplifies the plugin panel into a **thin client** and moves **mobile access**
+into the library's own management page.
 
 - **Thin client panel** — selecting Paper Deepread in the DSH sidebar now shows only the
-  bundled 文献精读库 page, as a full-height same-origin iframe. The plugin's own
-  文献库 / 上传 / 报告管理 tab row, the *刷新* and *在新标签页打开* actions, the 上传 and
-  报告管理 panels, and the 手机访问 modal are gone. The sidebar entry and the host half
-  (library route, management API, model tools, skill install/sync, mobile-access runtime)
-  are unchanged.
-- **手机访问 moved into the site management page** — on the library page click **管理**
-  (top-right) and the management console opens in a new browser tab; its third tab,
-  **手机访问**, sits next to 上传 / 报告管理. It shows two blocks:
-  **外网（临时）** — the Cloudflare quick tunnel, started automatically when the tab opens,
-  with status chips `连接中…` / `已开启` / `连接失败` / `未开启`, **关闭外网访问** to stop
-  it and **连不上？刷新链接** to rebuild it — and **局域网 · `<IP>`** — the first
-  non-loopback IPv4 address, with URL, **复制链接** and a locally rendered QR code. The
-  tunnel block carries the security note that the tunnel URL is public and
-  unauthenticated.
+  bundled library page, as a full-height same-origin iframe. The plugin's own
+  Library / Upload / Report management tab row, the *Refresh* and *Open in new tab*
+  actions, the Upload and Report management panels, and the mobile access modal are gone.
+  The sidebar entry and the host half (library route, management API, model tools, skill
+  install/sync, mobile-access runtime) are unchanged.
+- **Mobile access moved into the site management page** — on the library page click
+  **Manage** (top-right) and the management console opens in a new browser tab; its third
+  tab, **mobile access**, sits next to Upload / Report management. It shows two blocks:
+  **external (temporary)** — the Cloudflare quick tunnel, started automatically when the
+  tab opens, with status chips `connecting` / `enabled` / `failed` / `not started`,
+  **Stop external access** to stop it and **Refresh link** to rebuild it — and
+  **LAN · `<IP>`** — the first non-loopback IPv4 address, with URL, **Copy link** and a
+  locally rendered QR code. The tunnel block carries the security note that the tunnel URL
+  is public and unauthenticated.
 - **Where the tab works** — the console opened through the plugin
   (`/paper-deepread/manage.html`, same-origin plugin API) serves the tab fully; the same
-  page opened on the standalone site (`:8080`) shows a note that 手机访问 requires the DSH
-  panel.
-- **Upload and report management** — now done from the management console (the 上传 tab
-  feeds the plugin's managed inbox through the plugin API; the 报告管理 tab keeps
-  hide/unhide, delete and 重建索引) or through the agent tools, which keep their
+  page opened on the standalone site (`:8080`) shows a note that mobile access requires
+  the DSH panel.
+- **Upload and report management** — now done from the management console (the Upload tab
+  feeds the plugin's managed inbox through the plugin API; the Report management tab keeps
+  hide/unhide, delete and Rebuild index) or through the agent tools, which keep their
   parameters and behaviour.
 - **No host-side or data changes** — `GET /paper-deepread/api/access` and
   `POST /paper-deepread/api/access/tunnel` keep the same payload; `src/qr.js`,
@@ -44,10 +44,10 @@ This release simplifies the plugin panel into a **thin client** and moves **手�
 
 The Cloudflare quick tunnel publishes the library to the public internet **without
 authentication**: anyone who has the URL can read every report and PDF. It is started
-automatically when the 手机访问 tab opens; stop it with **关闭外网访问** when you are done,
-and share the link or QR code only with people you trust. The LAN fallback server is
-read-only (GET/HEAD static files only) but reachable by any device on the same network for
-as long as `dsh web` runs. `dsh web` itself stays loopback-only.
+automatically when the mobile access tab opens; stop it with **Stop external access** when
+you are done, and share the link or QR code only with people you trust. The LAN fallback
+server is read-only (GET/HEAD static files only) but reachable by any device on the same
+network for as long as `dsh web` runs. `dsh web` itself stays loopback-only.
 
 ## Install / upgrade
 
@@ -57,18 +57,18 @@ dsh web   # restart to reload the plugin package
 ```
 
 Upgrading in place keeps the managed data directory; nothing is migrated or rewritten.
-`cloudflared` is optional: without it the 外网（临时） block reports that the tunnel is
-unavailable and the 局域网 block keeps working.
+`cloudflared` is optional: without it the external (temporary) tunnel block reports that
+the tunnel is unavailable and the LAN block keeps working.
 
 See [docs/install.md](docs/install.md) for verification commands, including the
-`/paper-deepread/api/access` check and the 文献库 → 管理 → 手机访问 walkthrough.
+`/paper-deepread/api/access` check and the Library → Manage → Mobile access walkthrough.
 
 ## Compatibility
 
 - DeepSeek Harness `0.2.0-rc.2` – `0.2.1-rc.3` (the engine range declared in `package.json`)
 - Node.js `>= 24`
 - The `web` profile
-- Optional: `cloudflared` (Cloudflare) for the 外网（临时） quick tunnel
+- Optional: `cloudflared` (Cloudflare) for the external (temporary) quick tunnel
 
 The SHA-256 of the tarball is listed in `SHA256SUMS` on this release.
 
@@ -76,7 +76,8 @@ The SHA-256 of the tarball is listed in `SHA256SUMS` on this release.
 
 MIT © 2026 HaoKuo
 
-## 中文
+<details>
+<summary>Chinese</summary>
 
 **DSH-Paper-DeepRead 1.7.0** · 发布日期：2026-11-13
 
@@ -138,3 +139,5 @@ tarball 的 SHA-256 见本 release 的 `SHA256SUMS`。
 ### 许可证
 
 MIT © 2026 HaoKuo
+
+</details>

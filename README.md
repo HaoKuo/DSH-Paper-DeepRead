@@ -1,6 +1,6 @@
 # DSH-Paper-DeepRead
 
-**English** | [中文](README.zh.md)
+**English** | [Chinese](README.zh.md)
 
 A DeepSeek Harness (dsh) Web plugin that ships a complete deep-read paper library and the
 skill that produces it. One install gives you a sidebar entry that opens the bundled
@@ -12,7 +12,7 @@ model tool that can find the right paper in the same catalogue.
 
 DSH-Paper-DeepRead bundles two things into one installable dsh bundle:
 
-1. **文献精读库 / Paper Deepread library** — a static site with four deep-read papers
+1. **Paper Deepread library** — a static site with four deep-read papers
    (2025–2026, Nature Communications / bioRxiv / Anthropic · BigHat Biosciences). Every
    paper has an interactive single-file HTML report with original figure crops, redrawn
    SVG schematics, a claims ledger, a critical appraisal, and the untouched source PDF.
@@ -26,9 +26,12 @@ DSH-Paper-DeepRead bundles two things into one installable dsh bundle:
 ![The bundled Paper Deepread library](docs/screenshot-library.png)
 
 Since v1.7.0 the plugin panel is a **thin client**: selecting **Paper Deepread** in the
-sidebar shows only the bundled 文献精读库 page. Uploading, report management and 手机访问
-live in the library's own **管理** console, which the library page header opens in a new
-browser tab.
+sidebar shows only the bundled library page. Uploading, report management and mobile access
+live in the library's own **management console**, which the library page header opens in a
+new browser tab.
+
+The library page has its own **Chinese / English** language toggle; the management console
+UI itself is Chinese-only, so this README names its controls by function.
 
 The plugin also exposes the **`paper_deepread`** model tool, so an agent can list the
 bundled papers, substring-search titles / Chinese titles / journals / tags / summaries /
@@ -39,9 +42,9 @@ pipeline described below.
 ## Features
 
 - **Thin client panel (v1.7.0)** — the **Paper Deepread** sidebar entry shows the bundled
-  文献精读库 page as a full-height, same-origin iframe and nothing else: no plugin tab row,
-  no toolbar. The library page header keeps the 上传 / 管理 entries that open the
-  management console in a new browser tab.
+  library page as a full-height, same-origin iframe and nothing else: no plugin tab row,
+  no toolbar. The library page header keeps the **Upload** / **Manage** entries that open
+  the management console in a new browser tab.
 - Host route `GET|HEAD /paper-deepread/*` serving the bundled `library/` directory with
   correct content types, `Content-Length`, percent-decoded paths (spaces, `·`, Chinese
   characters), and traversal protection.
@@ -55,14 +58,14 @@ pipeline described below.
   `paper_deepread` tool.
 - **Optional standalone-site integration (v1.2.0)** — with `siteUrl` configured the host
   still proxies a running Paper Deepread site (`GET /paper-deepread/api/site/health`,
-  `POST /paper-deepread/api/site/upload`) and prefers it as the 手机访问 target. The
+  `POST /paper-deepread/api/site/upload`) and prefers it as the mobile-access target. The
   plugin panel no longer renders its own upload card: PDFs are handed to the site's
   worker from the site's own management console at `<siteUrl>/manage.html`.
-- **手机访问 / mobile access (v1.7.0)** — the management console has a third **手机访问**
-  tab next to 上传 / 报告管理: an automatically started Cloudflare quick tunnel (外网) and
-  the first LAN address, each with a copyable URL and a locally rendered, scannable QR
-  code. Nothing is probed or bound on page load; the host API and config keys are
-  unchanged from v1.6.0.
+- **Mobile access (v1.7.0)** — the management console has a third **mobile access** tab
+  next to **Upload** / **Report management**: an automatically started Cloudflare quick
+  tunnel (external) and the first LAN address, each with a copyable URL and a locally
+  rendered, scannable QR code. Nothing is probed or bound on page load; the host API and
+  config keys are unchanged from v1.6.0.
 - No runtime dependencies: the host imports only Node built-ins plus the
   `@deepseek-ai/dsh-tools` peer; the browser half is a single dependency-free file.
 
@@ -71,14 +74,14 @@ pipeline described below.
 - DeepSeek Harness `0.2.0-rc.2` − `0.2.1-rc.3`
 - Node.js `>= 24`
 - The `web` profile (the plugin needs `webServer` and `tools`)
-- Optional: `cloudflared` (Cloudflare) for the 外网（临时） quick tunnel
+- Optional: `cloudflared` (Cloudflare) for the external (temporary) quick tunnel
 
 ## Version matrix
 
 | Component | Version |
 | --- | --- |
 | Deep-read site backend (`deploy/serve.py`) | 1.6.0 |
-| 文献精读库 library index | 1.6.0 |
+| Paper Deepread library index | 1.6.0 |
 | **DSH-Paper-DeepRead plugin (this package)** | **1.7.0** |
 | Bundled `paper-deepread-html` skill | 1.5.1 |
 
@@ -102,8 +105,8 @@ dsh web
 ```
 
 Then open <http://127.0.0.1:3080> and click the **Paper Deepread** icon in the left
-sidebar. The panel shows the bundled library page; its header's **管理** entry opens the
-management console (upload, report management, 手机访问) in a new browser tab, also
+sidebar. The panel shows the bundled library page; its header's **Manage** entry opens the
+management console (upload, report management, mobile access) in a new browser tab, also
 reachable directly at <http://127.0.0.1:3080/paper-deepread/manage.html>. The library is
 available at <http://127.0.0.1:3080/paper-deepread/index.html>.
 
@@ -113,10 +116,10 @@ uninstall instructions.
 ## Upload papers and manage reports
 
 Uploading and report management happen in the **management console** — the
-self-contained `library/manage.html` page that the 文献精读库 ships with. The library page
-header has two entries, **上传** (the console on its upload tab) and **管理** (the console
-as opened), and both open it in a new browser tab. Every API URL in the page is relative,
-so the same page adapts to where it is served:
+self-contained `library/manage.html` page that the Paper Deepread library ships with. The
+library page header has two entries, **Upload** (the console on its upload tab) and
+**Manage** (the console as opened), and both open it in a new browser tab. Every API URL in
+the page is relative, so the same page adapts to where it is served:
 
 - **Through the plugin** — the library page lives at `/paper-deepread/index.html`, so
   these links resolve to `/paper-deepread/manage.html` and the console talks to the
@@ -124,10 +127,10 @@ so the same page adapts to where it is served:
 - **On the standalone site** — at the site root the page is `/manage.html` and talks to
   the site API (`deploy/serve.py`), whose background worker deep-reads uploads by itself.
 
-The console has three tabs: **上传 | 报告管理 | 手机访问** — the third one is described
-under Mobile access below.
+The console has three tabs: **Upload | Report management | Mobile access** — the third one
+is described under Mobile access below.
 
-- **上传** — drag & drop (or pick) one or more PDFs. Through the plugin they go into the
+- **Upload** — drag & drop (or pick) one or more PDFs. Through the plugin they go into the
   managed inbox at `<dataDir>/uploads/<id>.pdf` (80 MB default limit, `%PDF-` magic
   checked), with per-file progress and a list of uploads/statuses you can delete.
 - **Agent handoff** — the plugin never calls a model. When the console is opened through
@@ -135,9 +138,9 @@ under Mobile access below.
   just ask) so an agent calls `paper_deepread_uploads` (`list` / `ingest` / `env` /
   `delete`) and `paper_deepread_reports` (`list` / `build` / `rebuild` / `delete` /
   `hide`) to run the bundled skill and assemble the report.
-- **报告管理** — a table of reports with open/report-raw links, hide/unhide
+- **Report management** — a table of reports with open/report-raw links, hide/unhide
   (current-window filtering via `library.json`), delete one report directory, and a
-  one-click **重建索引** that deterministically rebuilds `index.html` / `index.md`
+  one-click **Rebuild index** that deterministically rebuilds `index.html` / `index.md`
   with `build_library.py` (no model involved).
 
 ![Report management tab in the management console](docs/screenshot-manage.png)
@@ -146,19 +149,19 @@ The managed library lives in a data directory (`$DSH_HOME/paper-deepread` by def
 
 ```text
 ~/.dsh/paper-deepread/
-├── library/          seeded once from the packaged 文献精读库, then user-owned
+├── library/          seeded once from the packaged library, then user-owned
 ├── uploads/          uploaded PDFs waiting to be deep-read
 ├── work/<id>/        ingest output + agent-authored report sources
 ├── state.json        upload inbox and statuses
 ├── skill-state.json  installed skill version + content hash (v1.2.0)
-├── lan-server.json   remembered 手机访问 LAN fallback port (v1.6.0)
-├── tunnel.json       last 手机访问 tunnel state snapshot (v1.6.0)
+├── lan-server.json   remembered mobile-access LAN fallback port (v1.6.0)
+├── tunnel.json       last mobile-access tunnel state snapshot (v1.6.0)
 └── .seed.json        one-time seed marker
 ```
 
 Report statuses flow `uploaded -> ingested -> reported` (`failed` carries the error).
 If you set the legacy `libraryDir` option, that directory is used as the managed root
-and seeding is skipped, so you can point the plugin at an existing local 文献精读库.
+and seeding is skipped, so you can point the plugin at an existing local library.
 
 ## Standalone site integration (v1.2.0)
 
@@ -173,8 +176,8 @@ config:
 
 `siteUrl` has two host-side effects, unchanged since v1.2.0:
 
-- it becomes the preferred target for 手机访问 (the phone opens the standalone site, not
-  `dsh web`), and
+- it becomes the preferred target for mobile access (the phone opens the standalone site,
+  not `dsh web`), and
 - it enables two same-origin proxy routes: `GET /paper-deepread/api/site/health` (proxies
   `<siteUrl>/api/health`, 5 s timeout, 5 s cache) and
   `POST /paper-deepread/api/site/upload` (forwards a raw PDF body with `X-Filename`,
@@ -183,7 +186,7 @@ config:
 
 The plugin panel no longer renders a site status/upload card of its own (v1.7.0): to hand
 PDFs to the site's worker, open the site's own management console at
-`<siteUrl>/manage.html` — its 上传 tab uploads straight to the site API. The plugin never
+`<siteUrl>/manage.html` — its Upload tab uploads straight to the site API. The plugin never
 stores site credentials; the upload token is per-request browser state only, and the site
 API stays same-origin-only.
 
@@ -207,41 +210,42 @@ content hash, the plugin package version, and `installedAt`. Copies that existed
 v1.2.0 have no recorded hash and are therefore treated as user-managed (kept, warned);
 delete the installed directory once if you want the plugin to manage it from then on.
 
-## Mobile access — 手机访问
+## Mobile access
 
-The 手机访问 UI lives in the library's **management console** (v1.6.0 feature; a console
-tab since v1.7.0). On the bundled library page click **管理** in the top-right header —
-the console opens in a new browser tab — then select the **手机访问** tab next to
-上传 / 报告管理. The tab is part of `manage.html` and calls `api/access` relatively, which
-resolves to the plugin's same-origin `/paper-deepread/api/access` when the console is
-opened through the plugin. That is the supported origin: when the same page is opened
-directly on the standalone site (e.g. `http://<host>:8080/manage.html`), the tab shows a
-note that 手机访问 requires the DSH panel.
+The mobile-access UI lives in the library's **management console** (v1.6.0 feature; a
+console tab since v1.7.0). On the bundled library page click **Manage** in the top-right
+header — the console opens in a new browser tab — then select the **mobile access** tab
+next to **Upload** / **Report management**. The tab is part of `manage.html` and calls
+`api/access` relatively, which resolves to the plugin's same-origin
+`/paper-deepread/api/access` when the console is opened through the plugin. That is the
+supported origin: when the same page is opened directly on the standalone site (e.g.
+`http://<host>:8080/manage.html`), the tab shows a note that mobile access requires the
+DSH panel.
 
 The tab shows two blocks, side by side on wide screens:
 
-- **外网（临时）** — the Cloudflare quick tunnel. It starts automatically when the tab is
-  opened (default-on since v1.6.2) and shows a status chip: `连接中…` / `已开启` /
-  `连接失败` / `未开启`. **关闭外网访问** stops it. Without `cloudflared` the block explains
-  the limitation and the LAN block still works.
-- **局域网 · `<IP>`** — the first non-loopback IPv4 address of this machine (`en0` ranked
+- **External (temporary)** — the Cloudflare quick tunnel. It starts automatically when the
+  tab is opened (default-on since v1.6.2) and shows a status chip: `connecting` /
+  `enabled` / `failed` / `not started`. **Stop external access** stops it. Without
+  `cloudflared` the block explains the limitation and the LAN block still works.
+- **LAN · `<IP>`** — the first non-loopback IPv4 address of this machine (`en0` ranked
   first). Exactly one LAN address is shown; the loopback and Bonjour entries are not
   rendered. It works for a phone on the same Wi-Fi network.
 
-Each block shows the URL (selectable, with **复制链接**) and a QR code rendered locally by the
-plugin host from that same URL — no external QR service is involved. **连不上？刷新链接**
-re-probes the LAN address and, while the tunnel is running or failed, rebuilds it with a new
-URL.
+Each block shows the URL (selectable, with **Copy link**) and a QR code rendered locally by
+the plugin host from that same URL — no external QR service is involved. **Refresh link**
+re-probes the LAN address and, while the tunnel is running or failed, rebuilds it with a
+new URL.
 
-![The 手机访问 tab in the management console](docs/screenshot-access.png)
+![The mobile access tab in the management console](docs/screenshot-access.png)
 
 ### What the phone opens
 
 `dsh web` binds loopback only (`127.0.0.1:3080`), so a phone cannot open the DSH Web page
 itself. The mobile-access runtime therefore resolves its target in this order:
 
-1. the standalone 文献精读库 when `siteUrl` is configured — the phone opens the site, not
-   `dsh web`;
+1. the standalone Paper Deepread library site when `siteUrl` is configured — the phone
+   opens the site, not `dsh web`;
 2. otherwise a **read-only LAN static server** that the plugin starts lazily on first use.
    It serves the managed library on `0.0.0.0` with GET/HEAD static files only (no API and
    no uploads, so a management page may load but its API calls are not answered), prefers
@@ -255,8 +259,8 @@ The LAN fallback server and the tunnel child are released when the plugin is dis
 
 ### Optional Cloudflare quick tunnel
 
-**外网（临时）** starts automatically when the 手机访问 tab is opened (default-on since
-v1.6.2; stop it with **关闭外网访问**): the plugin runs
+The **external (temporary)** tunnel starts automatically when the mobile access tab is
+opened (default-on since v1.6.2; stop it with **Stop external access**): the plugin runs
 `cloudflared tunnel --url <target> --no-autoupdate` and reads the random
 `https://<words>.trycloudflare.com` URL it prints. Nothing is spawned on page load or on
 plugin activation, and nothing runs while the tab has never been opened; after the first
@@ -266,13 +270,14 @@ again).
 `cloudflared` is auto-detected from, in order: the `cloudflaredPath` config, the
 `CLOUDFLARED_BIN` environment variable, `/opt/homebrew/bin/cloudflared`,
 `/usr/local/bin/cloudflared`, then every directory on `PATH`. Without it the block reports
-`未找到 cloudflared，无法开启外网访问。` and the LAN block still works.
+that `cloudflared` was not found, so the external tunnel cannot be started, and the LAN
+block still works.
 
 The printed URL is accepted only after cloudflared's `quick Tunnel has been created`
 banner and only for multi-word `https://<words>.trycloudflare.com` hostnames, so the
 Cloudflare API endpoint that appears in an error message can never be shown as the tunnel
-URL. When quick-tunnel creation fails, the block shows `连接失败` with the trimmed
-cloudflared message — never a dead QR code — and **连不上？刷新链接** retries.
+URL. When quick-tunnel creation fails, the block shows `failed` with the trimmed
+cloudflared message — never a dead QR code — and **Refresh link** retries.
 
 On macOS, `cloudflared` is a Go program and ignores the system proxy, so behind a proxy
 such as ClashX quick-tunnel creation can fail with a `failed to request quick Tunnel` error
@@ -283,9 +288,9 @@ child as both `HTTPS_PROXY` and `HTTP_PROXY`. With no `cloudflaredProxy` the chi
 the plugin environment.
 
 The quick-tunnel URL is temporary: it changes whenever the tunnel or `dsh web` restarts, so
-refresh the QR code before sharing. **关闭外网访问** stops the tunnel; reload the management
-page to start it again, and **连不上？刷新链接** rebuilds a running or failed tunnel with a
-new address.
+refresh the QR code before sharing. **Stop external access** stops the tunnel; reload the
+management page to start it again, and **Refresh link** rebuilds a running or failed tunnel
+with a new address.
 
 > **Security:** the tunnel publishes the library to the public internet with no
 > authentication — anyone who has the link can read every report and PDF. Enable it only
@@ -324,7 +329,7 @@ The plugin works with no configuration. Optional row config:
         skillsDir: /absolute/path/to/skills     # copy the skill elsewhere
         registerSkill: false                    # disable skill install/sync
         skillSync: update                       # update | keep (bundled skill sync)
-        siteUrl: http://127.0.0.1:8080          # optional standalone site (preferred 手机访问 target)
+        siteUrl: http://127.0.0.1:8080          # optional standalone site (preferred mobile-access target)
         cloudflaredPath: /opt/homebrew/bin/cloudflared  # optional quick-tunnel binary
         cloudflaredProxy: "socks5://127.0.0.1:7890"     # optional proxy for cloudflared
         lanPort: 0                              # optional preferred LAN fallback port
@@ -333,14 +338,14 @@ The plugin works with no configuration. Optional row config:
 | Option | Default | Description |
 | --- | --- | --- |
 | `dataDir` | `$DSH_HOME/paper-deepread` | Managed library, uploads, work directory, `state.json`, and `skill-state.json`. |
-| `libraryDir` | unset (use seeded `dataDir/library`) | External 文献精读库 root; disables seeding (legacy-compatible). |
+| `libraryDir` | unset (use seeded `dataDir/library`) | External library root; disables seeding (legacy-compatible). |
 | `skillsDir` | `$DSH_HOME/skills` (`~/.dsh/skills`) | Where the bundled skill is installed/updated. |
 | `registerSkill` | `true` | Set `false` to never install or update the bundled skill. |
 | `skillSync` | `update` | `update` syncs the skill when tracked and unmodified; `keep` never updates an existing copy. |
-| `siteUrl` | unset (feature off) | Base URL of a running deep-read site, e.g. `http://127.0.0.1:8080`. Enables the two site proxy routes and is the preferred target for 手机访问. |
-| `cloudflaredPath` | unset (auto-detect) | Explicit `cloudflared` binary for the 外网（临时） quick tunnel. Detection also checks `CLOUDFLARED_BIN`, the Homebrew locations, and `PATH`. |
+| `siteUrl` | unset (feature off) | Base URL of a running deep-read site, e.g. `http://127.0.0.1:8080`. Enables the two site proxy routes and is the preferred target for mobile access. |
+| `cloudflaredPath` | unset (auto-detect) | Explicit `cloudflared` binary for the external (temporary) quick tunnel. Detection also checks `CLOUDFLARED_BIN`, the Homebrew locations, and `PATH`. |
 | `cloudflaredProxy` | unset (inherit the plugin environment) | Optional proxy handed to the `cloudflared` child as `HTTPS_PROXY`/`HTTP_PROXY`, e.g. `socks5://127.0.0.1:7890`. Needed on macOS because cloudflared (Go) ignores the system proxy. |
-| `lanPort` | `0` (ephemeral) | Preferred port for the read-only LAN fallback server used by 手机访问; the chosen port is remembered in `<dataDir>/lan-server.json`. |
+| `lanPort` | `0` (ephemeral) | Preferred port for the read-only LAN fallback server used by mobile access; the chosen port is remembered in `<dataDir>/lan-server.json`. |
 | `maxUploadBytes` | `83886080` (80 MB) | Per-upload size limit for the plugin's own inbox. |
 
 ## Repository layout
@@ -357,13 +362,13 @@ DSH-Paper-DeepRead/
 ├── src/skill.js        # skill install + version sync + content hashes (stdlib only)
 ├── src/site.js         # optional standalone-site health/upload proxy (stdlib only)
 ├── src/qr.js           # pure QR Code encoder + compact SVG renderer (stdlib only)
-├── src/access.js       # 手机访问 target resolution, LAN/Bonjour candidates, QR payloads
+├── src/access.js       # mobile-access target resolution, LAN/Bonjour candidates, QR payloads
 ├── src/lan.js          # lazy read-only LAN fallback server for the managed library
 ├── src/tunnel.js       # optional Cloudflare quick-tunnel child manager
 ├── lib/client.js       # browser half: thin iframe wrapper (sidebar icon + library page)
 ├── cordis.patch.yml    # one bundle row: paper-deepread → dsh-paper-deepread
 ├── skills/paper-deepread-html/   # the bundled deep-read skill
-├── library/            # the bundled 文献精读库 static site (index + reports + manage.html)
+├── library/            # the bundled library static site (index + reports + manage.html)
 ├── tests/              # node:test suites (units, API, skill sync, site proxy, mobile access)
 ├── assets/icon.svg     # original plugin artwork
 ├── docs/               # install + architecture notes, screenshots
@@ -399,12 +404,12 @@ The package is published as a GitHub release tarball; it is not required to be o
 - The standalone-site integration needs the site to be running and reachable from the
   Harness host; the site API stays same-origin-only, and the plugin's two proxy routes are
   the only way to reach it from the Harness origin.
-- The 手机访问 tab only works when the management console is opened through the plugin
+- The mobile access tab only works when the management console is opened through the plugin
   (`/paper-deepread/manage.html`); on the standalone site it shows a note that the feature
   requires the DSH panel.
-- 手机访问 never exposes `dsh web` itself: the DSH Web listener stays loopback-bound, and the
-  phone opens the standalone site, the plugin's read-only LAN fallback server, or the
-  temporary tunnel in front of one of those.
+- Mobile access never exposes `dsh web` itself: the DSH Web listener stays loopback-bound,
+  and the phone opens the standalone site, the plugin's read-only LAN fallback server, or
+  the temporary tunnel in front of one of those.
 - The tunnel is public and unauthenticated, and its URL changes on restart; enable it only
   when needed and close it when done. The LAN fallback server is read-only but stays
   reachable on `0.0.0.0` (ephemeral port or `lanPort`) for as long as the plugin runs.

@@ -28,8 +28,9 @@ dsh web
 
 Click the **Paper Deepread** icon in the left sidebar. The panel shows only the bundled
 library page as a full-height iframe — the plugin has no tab row or toolbar of its own.
-The library header's **上传** and **管理** entries open the management console (upload,
-report management, 手机访问) in a new browser tab. The same pages are available directly:
+The library header's **Upload** and **Manage** entries open the management console
+(upload, report management, mobile access) in a new browser tab. The same pages are
+available directly:
 
 ![The bundled Paper Deepread library](screenshot-library.png)
 
@@ -62,7 +63,7 @@ Mobile access runtime (v1.6.0; its UI is a management-page tab since v1.7.0):
 ```bash
 curl -s http://127.0.0.1:3080/paper-deepread/api/access | head -c 600
 # {"ok":true,"version":"1.7.0","target":{"kind":"site","base":"http://127.0.0.1:8080/",
-#  "label":"文献站点"},"local":{"url":"http://127.0.0.1:8080/",...},"lan":[...],
+#  "label":"<site label>"},"local":{"url":"http://127.0.0.1:8080/",...},"lan":[...],
 #  "tunnel":{"available":true,"status":"off","url":null,...},"hints":[...]}
 ```
 
@@ -70,9 +71,11 @@ Expected fields: `ok` (`true`), `version` (`1.7.0`), `target.kind` (`site` when 
 configured, otherwise `library` for the plugin's read-only LAN fallback server, otherwise
 `web`), `target.base`, `local.url`, `lan[]` (each with `address`, `iface`, `label`, `url`,
 `note`, `reachable`, `qrSvg`), `tunnel` (`available`, `status`, `url`, `upstream`, `error`,
-`label`, `qrSvg`, `binary`) and `hints[]`. Every URL is absolute `http(s)` and each non-null
-`qrSvg` starts with `<svg`. Without `siteUrl` the first request also starts the LAN fallback
-server, so `target.kind` is `library` and `local.url` is its loopback address.
+`label`, `qrSvg`, `binary`) and `hints[]`. `label` / `note` values are Chinese UI display
+strings from the host payload (the console is Chinese-only), so they appear as placeholders
+here. Every URL is absolute `http(s)` and each non-null `qrSvg` starts with `<svg`. Without
+`siteUrl` the first request also starts the LAN fallback server, so `target.kind` is
+`library` and `local.url` is its loopback address.
 
 A report and a PDF inside a paper directory (URL-encoded path):
 
@@ -125,36 +128,39 @@ dsh --profile pdr-test --port 3099 --no-open   # then curl 127.0.0.1:3099/paper-
 Upload and report management happen in the **management console** (`library/manage.html`),
 served both by the plugin and by the standalone site:
 
-1. Open the **Paper Deepread** panel, then click **管理** in the library header (or **上传**
-   to land on the console's upload tab). The console opens in a new browser tab; through
-   the plugin it is `/paper-deepread/manage.html` and it talks to the plugin API.
+1. Open the **Paper Deepread** panel, then click **Manage** in the library header (or
+   **Upload** to land on the console's upload tab). The console opens in a new browser
+   tab; through the plugin it is `/paper-deepread/manage.html` and it talks to the plugin
+   API.
 2. Drag PDFs onto the drop zone (or click to pick). Uploads are capped at 80 MB and
    validated by their `%PDF-` signature; each file shows progress and joins the queue.
    Through the plugin the files land in the managed inbox the agent tools read.
-3. Copy the prefilled instruction with **复制指令** and paste it into a chat (or just ask).
+3. Copy the prefilled instruction with **Copy instruction** and paste it into a chat (or
+   just ask).
    The plugin does not call a model: an agent calls `paper_deepread_uploads` (`ingest`) and
    `paper_deepread_reports` (`build`) to run the bundled skill.
 4. The first ingest/build prepares a PyMuPDF interpreter through the bundled skill's
    `setup_env.sh` (cached under `~/.cache/paper-deepread`; first run may download once).
    Preparation can also be triggered in chat with
    `paper_deepread_uploads` `{action: "env"}`.
-5. In the console's **报告管理** tab, open a report or its RAW PDF, hide/show it, delete one
-   report directory, or click **重建索引** (deterministic, no model needed).
+5. In the console's **Report management** tab, open a report or its RAW PDF, hide/show it,
+   delete one report directory, or click **Rebuild index** (deterministic, no model
+   needed).
 
-The console also has the third **手机访问** tab — see §9. On the standalone site the same
-page is `/manage.html` and uploads go to the site worker instead (see §8).
+The console also has the third **mobile access** tab — see §9. On the standalone site the
+same page is `/manage.html` and uploads go to the site worker instead (see §8).
 
 Managed data (defaults to `$DSH_HOME/paper-deepread`):
 
 ```text
 ~/.dsh/paper-deepread/
-├── library/          seeded once from the packaged 文献精读库; user-owned afterwards
+├── library/          seeded once from the packaged library; user-owned afterwards
 ├── uploads/          uploaded PDFs
 ├── work/<id>/        ingest output + report sources (content.html, meta.json, figures.json)
 ├── state.json        upload inbox/status
 ├── skill-state.json  installed skill version + content hash (v1.2.0)
-├── lan-server.json   手机访问 LAN fallback port (v1.6.0, disposable)
-├── tunnel.json       手机访问 tunnel state snapshot (v1.6.0, disposable)
+├── lan-server.json   mobile-access LAN fallback port (v1.6.0, disposable)
+├── tunnel.json       mobile-access tunnel state snapshot (v1.6.0, disposable)
 └── .seed.json        seed marker
 ```
 
@@ -172,7 +178,7 @@ Optional row config:
         siteUrl: http://127.0.0.1:8080            # optional standalone site (phone target)
         cloudflaredPath: /opt/homebrew/bin/cloudflared  # optional quick-tunnel binary
         cloudflaredProxy: "socks5://127.0.0.1:7890"     # optional proxy for cloudflared
-        lanPort: 0                                # optional 手机访问 LAN fallback port
+        lanPort: 0                                # optional mobile-access LAN fallback port
 ```
 
 Reset: stop dsh, delete the data directory, restart. The packaged library is seeded
@@ -211,7 +217,7 @@ config:
   siteUrl: http://127.0.0.1:8080
 ```
 
-`siteUrl` makes the site the preferred 手机访问 target and enables two same-origin proxy
+`siteUrl` makes the site the preferred mobile-access target and enables two same-origin proxy
 routes (unchanged since v1.2.0):
 
 1. `GET /paper-deepread/api/site/health` proxies `<siteUrl>/api/health` (5 s timeout, 5 s
@@ -222,7 +228,7 @@ routes (unchanged since v1.2.0):
 
 Since v1.7.0 the plugin panel renders no site status/upload card of its own: to hand a PDF
 to the site's worker, open the site's own management console at `<siteUrl>/manage.html` and
-use its 上传 tab.
+use its Upload tab.
 
 Verify the proxy from the command line (with the site running):
 
@@ -234,41 +240,41 @@ curl -s http://127.0.0.1:3080/paper-deepread/api/site/health | head -c 300
 With no `siteUrl` the routes return the unconfigured payload and the local inbox workflow is
 unchanged.
 
-## 9. 手机访问 — mobile access
+## 9. Mobile access
 
 The mobile-access UI is a tab in the management console: open the library page, click
-**管理** in its header (the console opens in a new browser tab), then select the
-**手机访问** tab. Through the plugin the console is `/paper-deepread/manage.html`, so the
-tab's `api/access` calls reach the plugin host. Opened directly on the standalone site
-(`:8080/manage.html`) the tab instead shows a note that 手机访问 requires the DSH panel.
-Nothing is probed or bound on page load.
+**Manage** in its header (the console opens in a new browser tab), then select the
+**mobile access** tab. Through the plugin the console is `/paper-deepread/manage.html`, so
+the tab's `api/access` calls reach the plugin host. Opened directly on the standalone site
+(`:8080/manage.html`) the tab instead shows a note that mobile access requires the DSH
+panel. Nothing is probed or bound on page load.
 
-1. **Two blocks** — the tab shows 外网（临时） (Cloudflare quick tunnel, started
-   automatically when the tab opens) and 局域网 · `<IP>` (the first non-loopback IPv4
+1. **Two blocks** — the tab shows external (temporary) (Cloudflare quick tunnel, started
+   automatically when the tab opens) and LAN · `<IP>` (the first non-loopback IPv4
    address; exactly one LAN address, no loopback or Bonjour entry). Each block carries a
-   status chip: `连接中…` / `已开启` / `连接失败` / `未开启` for the tunnel, `可用` /
-   `待确认` for the LAN address.
+   status chip: `connecting` / `enabled` / `failed` / `not started` for the tunnel,
+   `reachable` / `pending` for the LAN address.
 2. **QR and copy** — every block renders a scannable QR code from the URL the browser
-   received in the host payload; 复制链接 copies the URL as text. 连不上？刷新链接 re-probes
+   received in the host payload; Copy link copies the URL as text. Refresh link re-probes
    the LAN address (and, while the tunnel is running or failed, rebuilds it).
 3. **Check it from a phone** — scan the LAN QR on a phone connected to the same Wi-Fi
    network. With `siteUrl` configured the phone opens the standalone site; otherwise it
    opens the plugin's read-only LAN fallback server.
-4. **Tunnel** — the external block starts automatically; stop it with 关闭外网访问 when
-   finished. The tunnel is not retried automatically after the first attempt on a page
-   load — reload the management page to start it again. The plugin spawns `cloudflared`
-   and shows the `https://<words>.trycloudflare.com` URL (usually within 5–20 s) once
-   cloudflared prints its `quick Tunnel has been created` banner; the address changes
-   whenever the tunnel or `dsh web` restarts. Check that `cloudflared` is installed
-   (`command -v cloudflared`); without it the block reports
-   `未找到 cloudflared，无法开启外网访问。` and the LAN block still works. If quick-tunnel
-   creation fails the block shows `连接失败` with cloudflared's trimmed message (no QR
-   code) — **连不上？刷新链接** posts `refresh` and retries.
+4. **Tunnel** — the external block starts automatically; stop it with Stop external access
+   when finished. The tunnel is not retried automatically after the first attempt on a
+   page load — reload the management page to start it again. The plugin spawns
+   `cloudflared` and shows the `https://<words>.trycloudflare.com` URL (usually within
+   5–20 s) once cloudflared prints its `quick Tunnel has been created` banner; the address
+   changes whenever the tunnel or `dsh web` restarts. Check that `cloudflared` is installed
+   (`command -v cloudflared`); without it the block reports that cloudflared was not found,
+   so the external tunnel cannot be started, and the LAN block still works. If quick-tunnel
+   creation fails the block shows `failed` with cloudflared's trimmed message (no QR code)
+   — **Refresh link** posts `refresh` and retries.
 
 Command-line checks:
 
 ```bash
-# The payload the 手机访问 tab renders (expected fields are listed in §3).
+# The payload the mobile access tab renders (expected fields are listed in §3).
 curl -s http://127.0.0.1:3080/paper-deepread/api/access | head -c 400
 
 # Tunnel actions: stop is safe even when the tunnel never started.
@@ -297,14 +303,14 @@ config:
 `/opt/homebrew/bin/cloudflared`, `/usr/local/bin/cloudflared`, or `PATH`, in that order.
 
 Tunnel troubleshooting: on macOS, cloudflared is a Go program and ignores the system proxy,
-so behind a proxy such as ClashX the automatic tunnel start can end in `连接失败` with
+so behind a proxy such as ClashX the automatic tunnel start can end in `failed` with
 `failed to request quick Tunnel ... context deadline exceeded` / `connection reset`. Set
 `cloudflaredProxy` to the proxy your system uses — `socks5://127.0.0.1:7890` works on this
 machine, while routing the quick-tunnel API through a plain HTTP proxy is flakier — and the
 plugin passes it to the child as `HTTPS_PROXY`/`HTTP_PROXY`. The tunnel URL is only accepted
 after the creation banner (multi-word `*.trycloudflare.com` hostnames), so an API endpoint
-from an error message never appears as the tunnel address. **连不上？刷新链接** retries with
-a fresh tunnel.
+from an error message never appears as the tunnel address. **Refresh link** retries with a
+fresh tunnel.
 
 State written under the managed data directory: `lan-server.json` (remembered LAN fallback
 port) and `tunnel.json` (last tunnel snapshot). Both are disposable and recreated on demand.

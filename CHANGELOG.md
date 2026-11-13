@@ -8,30 +8,31 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- **手机访问 tab in the site management page.** The library page's 管理 console
+- **Mobile access tab in the site management page.** The library page's Manage console
   (`library/manage.html`, served by the plugin at `/paper-deepread/manage.html`) gains a
-  third **手机访问** tab next to 上传 / 报告管理. It shows two blocks — **外网（临时）** (the
-  Cloudflare quick tunnel, started automatically when the tab opens, with the status chips
-  `连接中…` / `已开启` / `连接失败` / `未开启`, **关闭外网访问** and **连不上？刷新链接**)
-  and **局域网 · `<IP>`** (the first non-loopback IPv4 address, with URL, **复制链接** and a
-  locally rendered QR code) — plus the security note that the tunnel URL is public and
-  unauthenticated. The tab calls `api/access` relatively, so it works through the plugin
-  origin; on the standalone site (`:8080`) it shows a note that 手机访问 requires the DSH
-  panel.
-- `docs/screenshot-access.png` is re-captured for this release (the 手机访问 tab in the
-  management console); the README (EN/ZH) references it once.
+  third **mobile access** tab next to Upload / Report management. It shows two blocks —
+  **external (temporary)** (the Cloudflare quick tunnel, started automatically when the
+  tab opens, with the status chips `connecting` / `enabled` / `failed` / `not started`,
+  **Stop external access** and **Refresh link**) and **LAN · `<IP>`** (the first
+  non-loopback IPv4 address, with URL, **Copy link** and a locally rendered QR code) —
+  plus the security note that the tunnel URL is public and unauthenticated. The tab calls
+  `api/access` relatively, so it works through the plugin origin; on the standalone site
+  (`:8080`) it shows a note that mobile access requires the DSH panel.
+- `docs/screenshot-access.png` is re-captured for this release (the mobile access tab in
+  the management console); the README (EN/ZH) references it once.
 
 ### Changed
 
 - **Thin client browser half.** `lib/client.js` is now a thin wrapper: selecting Paper
-  Deepread in the sidebar shows only the bundled 文献精读库 page as a full-height,
+  Deepread in the sidebar shows only the bundled library page as a full-height,
   same-origin iframe. It injects no tabs, toolbar or modal chrome of its own; the sidebar
   entry, main-slot registration and `.pdr`-scoped styles are unchanged.
 - **Management UI lives in the bundled site page.** Uploading, report management and
-  手机访问 are reached from the library page header (上传 / 管理 → `manage.html`), which is
-  served both as `/paper-deepread/manage.html` (plugin API) and `/manage.html` (site API).
-  README (EN/ZH), `RELEASE_NOTES.md`, `docs/architecture.md` and `docs/install.md` now
-  document the manage-page walkthroughs; the mobile-access section describes the tab.
+  mobile access are reached from the library page header (Upload / Manage → `manage.html`),
+  which is served both as `/paper-deepread/manage.html` (plugin API) and `/manage.html`
+  (site API). README (EN/ZH), `RELEASE_NOTES.md`, `docs/architecture.md` and
+  `docs/install.md` now document the manage-page walkthroughs; the mobile-access section
+  describes the tab.
 - Package version bumped to `1.7.0` (`package.json`; `tests/api.test.js` and
   `tests/site.test.js` version assertions). Tarball references in the docs now read
   `dsh-paper-deepread-1.7.0.tgz`.
@@ -44,10 +45,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
-- The plugin panel's 文献库 / 上传 / 报告管理 tab row and its 刷新 / 在新标签页打开
-  actions, the embedded 上传 panel (local inbox uploader and the 自动精读 card) and 报告管理
-  panel, and the 手机访问 modal. Upload and report management now happen in the management
-  console or through the agent tools; 手机访问 lives in the console's tab.
+- The plugin panel's Library / Upload / Report management tab row and its Refresh / Open
+  in new tab actions, the embedded Upload panel (local inbox uploader and the Auto
+  deep-read card) and Report management panel, and the mobile access modal. Upload and
+  report management now happen in the management console or through the agent tools;
+  mobile access lives in the console's tab.
 
 ### Testing
 
@@ -56,23 +58,25 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (API, skill sync, site proxy, QR, access, LAN, tunnel) are unchanged apart from the
   version assertions.
 - Manual browser verification: the Paper Deepread panel renders only the library page; the
-  library header's 管理 opens the console with the 上传 / 报告管理 / 手机访问 tabs; through
-  the plugin the 手机访问 tab auto-starts the tunnel, shows both blocks with QR codes and
-  supports 关闭外网访问 / 连不上？刷新链接; on `:8080` the tab shows the "requires the DSH
-  panel" note. `docs/screenshot-access.png` is re-captured from the manage-page tab.
+  library header's Manage button opens the console with the Upload / Report management /
+  Mobile access tabs; through the plugin the mobile access tab auto-starts the tunnel,
+  shows both blocks with QR codes and supports Stop external access / Refresh link; on
+  `:8080` the tab shows the "requires the DSH panel" note. `docs/screenshot-access.png` is
+  re-captured from the manage-page tab.
 
 ## [1.6.2] — 2026-11-13
 
 ### Changed
 
-- **Simplified 手机访问 modal.** The entry moved from the tab bar into a 手机访问 card on the
-  报告管理 tab. The modal no longer has a candidate tab row: it shows two blocks — 外网（临时）
-  and the first LAN address (loopback and Bonjour entries are not rendered) — each with its
-  own URL, copy button and locally rendered QR code, side by side on wide screens.
+- **Simplified mobile access modal.** The entry moved from the tab bar into a mobile-access
+  card on the Report management tab. The modal no longer has a candidate tab row: it shows
+  two blocks — external (temporary) and the first LAN address (loopback and Bonjour entries
+  are not rendered) — each with its own URL, copy button and locally rendered QR code, side
+  by side on wide screens.
 - **External tunnel on by default.** Opening the modal starts the Cloudflare quick tunnel
-  automatically (status chip `连接中…` → `已开启` / `连接失败`); 关闭外网访问 stops it and
-  连不上？刷新链接 rebuilds it with a new URL. The security note is unchanged: the tunnel
-  URL is public and unauthenticated.
+  automatically (status chip `connecting` → `enabled` / `failed`); Stop external access
+  stops it and Refresh link rebuilds it with a new URL. The security note is unchanged:
+  the tunnel URL is public and unauthenticated.
 - Browser half only — no host-side, API or data changes.
 
 ## [1.6.1] — 2026-11-13
@@ -80,21 +84,22 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - **Single-row panel header (UI polish).** The plugin chrome above the library is now one
-  44 px tab row instead of three stacked bars. 刷新, 在新标签页打开 and 手机访问 share the
-  right-side action cluster; the separate library toolbar row and the duplicated
-  `N 篇 · vX` meta line are gone, and the library version moved into the 文献库 tab's
-  tooltip. Library actions only render on the 文献库 tab, so the other tabs keep a clean
+  44 px tab row instead of three stacked bars. Refresh, Open in new tab and Mobile access
+  share the right-side action cluster; the separate library toolbar row and the duplicated
+  `N papers · vX` meta line are gone, and the library version moved into the Library tab's
+  tooltip. Library actions only render on the Library tab, so the other tabs keep a clean
   row. No host-side, API or data changes — the browser half is a drop-in replacement.
 
 ## [1.6.0] — 2026-11-13
 
 ### Added
 
-- **手机访问 (mobile access QR).** A **手机访问** button on the right side of the panel tab
-  bar opens a modal with one tab per candidate address: 本机, 局域网 · `<IP>` (one per
-  reachable IPv4 address plus a Bonjour `<host>.local` entry) and 外网（临时）. Each tab
-  shows a copyable URL and a locally rendered, scannable SVG QR code; **连不上？刷新链接**
-  re-probes the addresses. Nothing is probed, bound or spawned until the button is pressed.
+- **Mobile access (QR codes).** A **Mobile access** button on the right side of the panel
+  tab bar opens a modal with one tab per candidate address: this machine, LAN · `<IP>` (one
+  per reachable IPv4 address plus a Bonjour `<host>.local` entry) and external (temporary).
+  Each tab shows a copyable URL and a locally rendered, scannable SVG QR code;
+  **Refresh link** re-probes the addresses. Nothing is probed, bound or spawned until the
+  button is pressed.
 - **Mobile-access runtime.** New host modules:
   - `src/access.js` — target resolution (`siteUrl` site → lazy read-only LAN fallback server
     → DSH Web page fallback with a hint), non-internal IPv4 candidates ranked `en0` first
@@ -140,7 +145,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   tunnel URL), and a failed quick-tunnel request reports `status:'error'` with cloudflared's
   trimmed message instead of a running tunnel with a dead URL. On macOS, where cloudflared
   (Go) ignores the system proxy, `cloudflaredProxy` is the documented workaround and the
-  外网（异常） tab can be retried with 连不上？刷新链接.
+  failed external-tunnel tab can be retried with Refresh link.
 - No new npm dependencies and no build step: the host still imports only Node built-ins
   plus the `@deepseek-ai/dsh-tools` peer, and the browser half stays a single plain-JS file.
 - No model-tool changes: `paper_deepread`, `paper_deepread_uploads` and
@@ -170,8 +175,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   start→running, timeout→error, exit→off, refresh→new URL, SIGTERM/SIGKILL stop, dispose
   idempotence, and binary detection order.
 - `npm test` (`node --test tests/*.test.js`) and `npm run check` (`node --check` on every
-  shipped file) pass. Manual check: open the panel, click 手机访问, confirm the QR renders
-  and the 外网 tab reports `off`/`unavailable`/`running` correctly (see
+  shipped file) pass. Manual check: open the panel, click Mobile access, confirm the QR
+  renders and the external-tunnel tab reports `off`/`unavailable`/`running` correctly (see
   `docs/install.md` §9).
 
 ## [1.5.2] — 2026-10-31
@@ -196,12 +201,12 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Bundled skill
 
 - `paper-deepread-html` **1.5.0** — research-report content pass:
-  - Result units carry a `机制 / 为什么` paragraph (inference tagged `[推断]`) and run 400–650 chars,
-    so each fused claim+figure block explains numbers → mechanism → boundary instead of only
-    restating results.
-  - The standalone **批判性评估** section returns for research papers (≤1 screen): what holds up /
-    weakest link / alternative explanations and boundaries (3–5 bullets each), on top of the
-    evidence table.
+  - Result units carry a `mechanism / why` paragraph (inference tagged `[inference]`) and
+    run 400–650 chars, so each fused claim+figure block explains numbers → mechanism →
+    boundary instead of only restating results.
+  - The standalone **Critical appraisal** section returns for research papers (≤1 screen):
+    what holds up / weakest link / alternative explanations and boundaries (3–5 bullets
+    each), on top of the evidence table.
   - Library page: short links now 302 to the canonical report URL (fixes TOC anchors resolving to
     the paper directory and returning 404); the service worker serves navigations network-first so
     rebuilt reports replace stale copies (library version 1.5.0).
@@ -246,8 +251,8 @@ The bundled skill `paper-deepread-html` is updated to **1.2.0**: library templat
   `POST /paper-deepread/api/site/upload` forwards the raw PDF with `X-Filename`,
   `Content-Type`, and the optional `X-KB-Upload-Token` to `<siteUrl>/api/upload`
   (120 s timeout), returning the site JSON verbatim.
-- **「自动精读」 card** in the 上传 tab when `siteUrl` is configured: worker/queue status
-  from site health, drag & drop uploader through the proxy with per-file progress,
+- **Auto deep-read card** in the Upload tab when `siteUrl` is configured: worker/queue
+  status from site health, drag & drop uploader through the proxy with per-file progress,
   duplicate / possible-duplicate feedback reused from the site response, optional upload
   token stored in sessionStorage, and links to `<siteUrl>/manage.html` / the site library.
   With no `siteUrl` the local upload UI and agent handoff stay exactly as in v1.1.6.
@@ -264,43 +269,6 @@ The bundled skill `paper-deepread-html` is updated to **1.2.0**: library templat
 - Package version bumped to `1.2.0`; `npm run check` includes the new host module.
 - Skill self-registration became a full install-and-sync step at activation; failures are
   still logged and swallowed so a read-only `$DSH_HOME` never breaks plugin activation.
-
-<details>
-<summary>中文</summary>
-
-### 新增
-
-- **技能版本同步。** `src/skill.js` 从 `paper-deepread-html` 的 SKILL.md frontmatter 读取
-  内置与已安装副本的 `version:`，把已安装目录的内容 hash 记录到
-  `<dataDir>/skill-state.json`，并执行保守的更新策略：缺失则安装；同版本跳过；绝不降级；
-  仅当目录内容与记录的 hash 完全一致时才更新旧版本，且先把旧副本备份到
-  `<skillsDir>/.backup/paper-deepread-html-<版本>-<UTC>/`；被用户修改或没有记录时保留并
-  告警。新增 `skillSync: "update" | "keep"` 配置（默认 `update`）。`/api/state` 与
-  `paper_deepread` 工具输出新增 `skillVersion`（内置）与 `installedSkillVersion`，并附带
-  同步/追踪信息。
-- **可选的独立站点集成。** 新增 `siteUrl` 配置，把插件面板接到运行中的 Paper Deepread
-  站点（`deploy/serve.py`）：`GET /paper-deepread/api/site/health` 代理
-  `<siteUrl>/api/health`（5 秒超时、5 秒缓存）；
-  `POST /paper-deepread/api/site/upload` 把原始 PDF 连同 `X-Filename`、`Content-Type`、
-  可选 `X-KB-Upload-Token` 转发到 `<siteUrl>/api/upload`（120 秒超时），并把站点 JSON
-  原样返回。
-- **「自动精读」卡片**：配置 `siteUrl` 后出现在上传标签页顶部——站点 health 提供
-  worker/队列状态；拖放 PDF 经代理上传并显示逐文件进度；重复/可能重复反馈直接复用站点
-  返回文案；可选上传令牌只存 sessionStorage；提供 `<siteUrl>/manage.html` 与站点书库
-  链接。未配置 `siteUrl` 时上传标签页保持 v1.1.6 的本地上传与 Agent 交接流程。
-- 新增宿主模块 `src/site.js`（仅标准库的站点代理）与 `tests/skill.test.js`、
-  `tests/site.test.js`：覆盖 frontmatter 解析、版本比较、hash 追踪的安装/更新/备份/
-  被修改/未追踪/不降级/keep 各路径，站点 URL 规范化、health 缓存、代理头/body 转发、
-  重复上传载荷原样透传，以及未配置/不可达状态。
-- 中英文 README 记录 `siteUrl` + `skillSync`、同步策略表与版本矩阵
-  （站点 1.4.0 / 书库 1.4.0 / 插件 1.2.0 / 技能 1.2.0）。
-
-### 变更
-
-- 包版本升到 `1.2.0`；`npm run check` 纳入新的宿主模块。
-- 技能自注册升级为激活时的完整安装+同步步骤；失败仍只记日志、不影响插件激活。
-
-</details>
 
 ## [1.1.6] — 2026-10-30
 
@@ -337,11 +305,11 @@ The bundled skill `paper-deepread-html` is updated to **1.2.0**: library templat
 
 ### Changed (UI polish)
 
-- Plugin panel: removed the duplicated header block (icon + 文献精读库 title +
-  "Paper Deepread · 上传、精读与报告管理" subtitle). The embedded library page already
-  carries its own header; the panel now starts with the 文献库 / 上传 / 报告管理 tab bar,
-  and the report count + library version moved to the right side of that bar (文献库 tab
-  also shows the count badge).
+- Plugin panel: removed the duplicated header block (icon + library title +
+  "Paper Deepread · upload, deep-read and report management" subtitle). The embedded
+  library page already carries its own header; the panel now starts with the
+  Library / Upload / Report management tab bar, and the report count + library version
+  moved to the right side of that bar (the Library tab also shows the count badge).
 - Bundled `library/manage.html`: fixed the step-card row on the upload tab — the `<ol>`
   kept the browser's default 40px padding, so the three numbered cards were inset
   relative to the cards below; `padding: 0` aligns them with the panel edge.
@@ -376,7 +344,7 @@ The bundled skill `paper-deepread-html` is updated to **1.2.0**: library templat
 ### Changed (assets-only)
 
 - Bundled library page rebuilt from the patched template for v1.3.0: header now carries
-  compact 「上传」「管理」 entries that open the new self-contained management console.
+  compact Upload / Manage entries that open the new self-contained management console.
 - Added `library/manage.html` — one tolerant page for two backends (site `/api/*` and plugin
   `/paper-deepread/api/*`), with upload inbox + copyable agent handoff instruction and
   report hide/delete/rebuild controls.
@@ -385,7 +353,7 @@ The bundled skill `paper-deepread-html` is updated to **1.2.0**: library templat
 - Management console validates the admin token before claiming success: the site
   backend gained an ADMIN-only `GET /api/auth` (401 missing/wrong token, 503
   `ADMIN_DISABLED` when the token is unset), and `manage.html` now shows an inline
-  "管理令牌无效" error instead of storing a wrong token; a sessionStorage token is
+  "invalid management token" error instead of storing a wrong token; a sessionStorage token is
   re-verified and cleared with a hint when it becomes invalid. Graceful fallback for
   older backends via `GET /api/uploads/__verify__.pdf`.
 - Plugin API state now mirrors the standalone site's `state` shape (adds `size`,
@@ -397,7 +365,7 @@ The bundled skill `paper-deepread-html` is updated to **1.2.0**: library templat
 
 ### Changed
 
-- Removed the legacy brand wording from the bundled 文献精读库 page: the footer now
+- Removed the legacy brand wording from the bundled library page: the footer now
   shows the library title alone (plus the version chip) and the browser-title suffix is
   gone.
 - Applied the same cleanup to the library README, the bundled skill's `SKILL.md`, and the
@@ -429,7 +397,7 @@ The bundled skill `paper-deepread-html` is updated to **1.2.0**: library templat
 - Host modules `src/store.js`, `src/uploads.js`, `src/reports.js`, `src/python.js`,
   `src/manager.js`, plus `node:test` suites for upload validation, atomic state, report
   scan/path safety, Python command builders, and the API handler.
-- Panel tabs 文献库 | 上传 | 报告管理 with drag & drop, queue/status list, handoff
+- Panel tabs Library | Upload | Report management with drag & drop, queue/status list, handoff
   prompt, report table, rebuild log, and 390px-friendly layout.
 
 ### Changed
@@ -453,8 +421,8 @@ The bundled skill `paper-deepread-html` is updated to **1.2.0**: library templat
   main-panel page with title, open-in-new-tab link, and reload button.
 - `skills/paper-deepread-html/` bundled and self-registered into `$DSH_HOME/skills` only
   when the target directory does not exist; an existing user skill is never overwritten.
-- `library/` bundled: the 文献精读库 static site with four deep-read papers (interactive
-  HTML reports, report PDFs, untouched source PDFs).
+- `library/` bundled: the Paper Deepread library static site with four deep-read papers
+  (interactive HTML reports, report PDFs, untouched source PDFs).
 - Optional row config: `libraryDir`, `skillsDir`, `registerSkill`.
 - Bilingual README (English default, Chinese mirror), architecture and install docs,
   MIT license, release notes, and `scripts/pack.sh` producing the installable tarball
