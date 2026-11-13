@@ -8,6 +8,14 @@
  *   - a proxy to a standalone deep-read site (`config.siteUrl`): health state
  *     for the 自动精读 card and a raw PDF upload pass-through.
  *
+ * v1.6.0 adds 手机访问 (mobile access): `GET /api/access` returns the local /
+ * LAN / tunnel URLs plus QR SVGs for the browser modal, and
+ * `POST /api/access/tunnel` starts, stops, or refreshes the optional Cloudflare
+ * quick tunnel (`src/access.js`), optionally through the `cloudflaredProxy`
+ * escape hatch for Macs behind a system proxy. `createManager` also exposes
+ * `dispose()` so the tunnel child and the lazy LAN fallback server are released
+ * with the plugin fiber.
+ *
  * The plugin never calls a model. Upload -> deep-read is agent-driven: the UI
  * shows a copyable handoff instruction, and an agent in any session calls
  * `paper_deepread_uploads` (ingest) and `paper_deepread_reports` (build) to run
@@ -19,6 +27,7 @@
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { createAccess } from './access.js'
 import { losslessToolResult } from './lossless.js'
 import { describeSkill, resolveSkillsDir } from './skill.js'
 import { createSiteProxy } from './site.js'
@@ -84,6 +93,7 @@ const STATUS_BY_CODE = {
   SITE_NOT_CONFIGURED: 503,
   SITE_TIMEOUT: 504,
   SITE_UNREACHABLE: 502,
+  TUNNEL_UNAVAILABLE: 503,
   UNSUPPORTED_MEDIA_TYPE: 415,
 }
 
@@ -136,6 +146,24 @@ async function readJsonBody(req) {
   }
 }
 
+/**
+ * Whether an API request carries `?refresh=1`.
+ *
+ * `src/route.js` hands over the decoded path without the query string, so the
+ * refresh flag is read from the original request URL.
+ */
+function wantsRefresh(req) {
+  try {
+    const target = String(req?.url || '')
+    const index = target.indexOf('?')
+    if (index < 0) return false
+    const value = new URLSearchParams(target.slice(index + 1)).get('refresh')
+    return value === '1' || value === 'true' || value === 'yes'
+  } catch {
+    return false
+  }
+}
+
 /** Sanitize a user-provided report name (single path segment, no dots). */
 export function safeReportName(value) {
   if (value === undefined || value === null || value === '') return ''
@@ -167,9 +195,15 @@ function listLibraryDirs(root) {
  * @param {object} options
  * @param {string} options.packageDir Installed package root.
  * @param {object} [options.config] Plugin row config (`dataDir`, `libraryDir`,
- *   `skillsDir`, `skillSync`, `siteUrl`, `maxUploadBytes`).
+ *   `skillsDir`, `skillSync`, `siteUrl`, `maxUploadBytes`, `cloudflaredPath`,
+ *   `cloudflaredProxy`, `lanPort`).
  * @param {{info?: Function, warn?: Function}} [options.logger] Plugin logger.
- * @returns {object} Manager with the store, API handler, and model tools.
+ * @param {(() => (string|null))} [options.getWebOrigin] Resolver for the DSH Web
+ *   origin, used only by the mobile-access fallback target.
+ * @param {object} [options.accessOptions] Extra `createAccess` options
+ *   (test seams such as `spawnImpl`, `fetchImpl`, `findCloudflaredImpl`, `env`).
+ * @returns {object} Manager with the store, API handler, model tools, and
+ *   `dispose()` for the mobile-access runtime.
  */
 export function createManager(options) {
   const { packageDir, config = {}, logger } = options
@@ -188,6 +222,23 @@ export function createManager(options) {
   // empty/invalid siteUrl leaves the whole feature disabled, so the plugin
   // behaves exactly like v1.1.6.
   const site = createSiteProxy({ siteUrl: config.siteUrl, logger })
+  // Optional 手机访问 runtime (§ v1.6.0): prefers the standalone site, lazily
+  // starts a read-only LAN fallback server for the managed library, and owns
+  // the opt-in Cloudflare quick tunnel. Nothing binds or spawns until the
+  // browser panel asks for a snapshot or a tunnel action.
+  const access = createAccess({
+    // Test/advanced overrides first, canonical wiring last so config wins.
+    ...(options.accessOptions && typeof options.accessOptions === 'object' ? options.accessOptions : {}),
+    siteUrl: config.siteUrl,
+    libraryDir: store.libraryRoot,
+    dataDir: store.dataDir,
+    logger,
+    getWebOrigin: options.getWebOrigin,
+    pluginVersion: APP_VERSION,
+    lanPort: config.lanPort,
+    cloudflaredPath: config.cloudflaredPath,
+    cloudflaredProxy: config.cloudflaredProxy,
+  })
   let cached = null
 
   /** Bundled/installed skill versions plus the tracked-hash record. */
@@ -647,6 +698,16 @@ export function createManager(options) {
         const proxied = await site.upload({ req })
         return proxiedResponse(res, proxied)
       }
+      // ---- optional mobile access (v1.6.0) ----------------------------------
+      if (route === '/api/access') {
+        if (method !== 'GET') return json(res, 405, { ok: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'GET required' } })
+        return json(res, 200, await access.snapshot({ refresh: wantsRefresh(req) }))
+      }
+      if (route === '/api/access/tunnel') {
+        if (method !== 'POST') return json(res, 405, { ok: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'POST required' } })
+        const body = await readJsonBody(req)
+        return json(res, 200, await access.tunnelAction(body.action))
+      }
       return json(res, 404, { ok: false, error: { code: 'NOT_FOUND', message: `unknown API route: ${route}` } })
     } catch (error) {
       const code = error instanceof StoreError ? error.code : 'INTERNAL'
@@ -662,6 +723,7 @@ export function createManager(options) {
     skillsDir,
     python,
     site,
+    access,
     currentLibrary,
     reports,
     rebuild,
@@ -671,6 +733,15 @@ export function createManager(options) {
     uploadsTool,
     reportsTool,
     catalogueTool,
+    // Release the mobile-access resources (tunnel child + LAN fallback server)
+    // when the plugin fiber is disposed. Idempotent; never throws.
+    dispose: async () => {
+      try {
+        await access.dispose()
+      } catch (error) {
+        logger?.warn?.(`DSH-Paper-DeepRead: mobile-access cleanup failed: ${String(error?.message || error)}`)
+      }
+    },
     // Every model-tool result must be a lossless JSON value (no undefined
     // properties / NaN / Infinity): DSH's tool-output validator rejects values
     // whose JSON round-trip loses keys. Wrap execute centrally so no tool can

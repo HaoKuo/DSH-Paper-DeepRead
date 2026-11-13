@@ -37,7 +37,7 @@
 import { dirname, join, resolve } from 'node:path'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { fileURLToPath } from 'node:url'
-import { createLibraryHandler, ROUTE_PREFIX } from './route.js'
+import { createLibraryHandler, ROUTE_PREFIX, webOrigin } from './route.js'
 import { createManager } from './manager.js'
 import { syncBundledSkill } from './skill.js'
 import { resolveDataDir } from './store.js'
@@ -56,11 +56,15 @@ const PACKAGE_DIR = dirname(fileURLToPath(new URL('../package.json', import.meta
  * @param {object} ctx Cordis plugin context.
  * @param {{dataDir?: string, libraryDir?: string, skillsDir?: string,
  *   registerSkill?: boolean, skillSync?: 'update'|'keep', siteUrl?: string,
- *   maxUploadBytes?: number}} [config]
+ *   maxUploadBytes?: number, cloudflaredPath?: string, cloudflaredProxy?: string,
+ *   lanPort?: number}} [config]
  *   Optional row config: managed data directory (default `$DSH_HOME/paper-deepread`),
  *   an external 文献精读库 root (legacy `libraryDir`, disables seeding), skill
- *   installation/sync overrides, the optional standalone site URL, and the
- *   local upload size limit.
+ *   installation/sync overrides, the optional standalone site URL, the local
+ *   upload size limit, and the 手机访问 (v1.6.0) options: an explicit
+ *   `cloudflared` binary path, an optional HTTP(S) proxy for the quick tunnel
+ *   (cloudflared ignores the macOS system proxy), and the preferred LAN
+ *   fallback port.
  */
 export function apply(ctx, config = {}) {
   const logger = ctx.logger
@@ -72,7 +76,14 @@ export function apply(ctx, config = {}) {
   // The manager owns the managed library and the upload/report feature set.
   let manager = null
   try {
-    manager = createManager({ packageDir: PACKAGE_DIR, config, logger })
+    manager = createManager({
+      packageDir: PACKAGE_DIR,
+      config,
+      logger,
+      // 手机访问 (v1.6.0): the mobile-access payload falls back to the DSH Web
+      // origin when neither siteUrl nor the LAN fallback server is available.
+      getWebOrigin: () => webOrigin(ctx),
+    })
   } catch (error) {
     logger?.warn?.(`DSH-Paper-DeepRead: cannot initialize the managed library: ${String(error?.message || error)}`)
   }
@@ -100,6 +111,19 @@ export function apply(ctx, config = {}) {
     }
   } catch (error) {
     logger?.warn?.(`DSH-Paper-DeepRead: could not register the /paper-deepread route: ${String(error?.message || error)}`)
+  }
+
+  // 手机访问 (v1.6.0): release the optional Cloudflare tunnel child and the lazy
+  // LAN fallback server when this plugin fiber is disposed.
+  try {
+    ctx.effect(() => () => {
+      const disposal = manager?.dispose?.()
+      if (disposal && typeof disposal.catch === 'function') {
+        disposal.catch(error => logger?.warn?.(`DSH-Paper-DeepRead: mobile-access cleanup failed: ${String(error?.message || error)}`))
+      }
+    }, 'DSH-Paper-DeepRead: access cleanup')
+  } catch (error) {
+    logger?.warn?.(`DSH-Paper-DeepRead: could not register the mobile-access cleanup effect: ${String(error?.message || error)}`)
   }
 
   // Model tools: catalogue/search, upload inbox, report management.

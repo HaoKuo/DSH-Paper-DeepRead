@@ -10,6 +10,8 @@ the library, the skill, and both JavaScript halves.
   │  Host fiber (src/index.js)                                   │
   │   ├─ webServer.register({kind:'prefix', path:'/paper-deepread'}) │
   │   ├─ tools.register(defineTool('paper_deepread'))             │
+  │   ├─ mobile-access runtime (src/access.js)                    │
+  │   │    └─ src/lan.js (LAN fallback) / src/tunnel.js (opt-in)  │
   │   └─ syncBundledSkill() → $DSH_HOME/skills/... (+ state)     │
   └───────────────┬──────────────────────────────────────────────┘
                   │ same-origin HTTP
@@ -18,6 +20,7 @@ the library, the skill, and both JavaScript halves.
   │   ├─ slots.register('main', key:'paper-deepread')             │
   │   └─ slots.register('sidebar.panellist', id:'paper-deepread') │
   │         └─ page → <iframe src="/paper-deepread/index.html">   │
+  │         └─ 手机访问 modal (v1.6.0)                            │
   └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -113,6 +116,9 @@ Every registration goes through the plugin `ctx`, so Cordis disposes the route, 
 and the browser slots with the plugin fiber. A malformed library, an unavailable
 `webServer`, or a failed skill copy is logged and skipped; the plugin still loads.
 
+Since v1.6.0 a second `ctx.effect` calls the manager's `dispose()`, which kills the optional
+Cloudflare tunnel child (SIGTERM, then SIGKILL after ~3 s) and closes the lazy LAN fallback
+server, so no child or listening socket outlives the plugin fiber.
 
 ## v1.1.1 — brand wording removal
 
@@ -170,6 +176,8 @@ and call `build`. The one-click index rebuild is deterministic and model-free.
 | POST | `/paper-deepread/api/reports/visibility` | `{dir, hidden}` — merges `library.json` |
 | GET | `/paper-deepread/api/site/health` | v1.2.0: proxies `<siteUrl>/api/health` (5 s timeout, 5 s cache); `{configured:false}` when `siteUrl` is unset |
 | POST | `/paper-deepread/api/site/upload` | v1.2.0: raw PDF body forwarded to `<siteUrl>/api/upload` with `X-Filename`/`Content-Type`/optional `X-KB-Upload-Token` (120 s timeout); returns the site JSON verbatim |
+| GET | `/paper-deepread/api/access` | v1.6.0: phone-access payload — `target`, `local`, `lan[]` (labels, URLs, `reachable`, QR SVGs), `tunnel` state, `hints`; `?refresh=1` bypasses the 8 s probe cache |
+| POST | `/paper-deepread/api/access/tunnel` | v1.6.0: `{action:"start"|"stop"|"refresh"}` → fresh payload; `400 BAD_REQUEST`, `503 TUNNEL_UNAVAILABLE`, `405` for wrong methods |
 
 Errors are `{"ok": false, "error": {"code", "message"}}`; non-GET on state/upload and
 unknown routes return `405`/`404`; management bodies must be `application/json`.
@@ -237,3 +245,98 @@ trailing slash removed); an invalid value disables the feature with a warning. T
 upload token is never stored in the plugin config — it is per-request browser state in
 `sessionStorage` and is only forwarded.
 
+## v1.6.0 — 手机访问 (mobile access)
+
+### Modules
+
+| Module | Role |
+| --- | --- |
+| `src/qr.js` | Pure QR Code Model 2 encoder: byte mode/UTF-8, EC L/M/Q/H, versions 1–40, smallest fitting version, automatic mask selection with ISO penalty rules N1–N4; renders one `<svg>` with a single compact `<path>` for direct injection. No I/O, no dependencies. |
+| `src/access.js` | Access runtime: target resolution (`siteUrl` site → lazy LAN fallback server → DSH Web page), non-internal IPv4 discovery ranked `en0` first (virtual and link-local interfaces skipped) plus one Bonjour candidate, 8 s reachability probe cache with `?refresh=1` bypass, per-candidate QR SVGs, concurrency-deduped snapshots, serialized tunnel actions, and `dispose()`. |
+| `src/lan.js` | Lazy read-only LAN fallback server for the managed library. Reuses `createLibraryHandler` from `src/route.js` (the request URL is rewritten to `/paper-deepread<pathname>`), binds `0.0.0.0` on `lanPort` or an ephemeral port, and persists the bound port in `<dataDir>/lan-server.json` so the LAN URL survives reactivation. |
+| `src/tunnel.js` | Opt-in Cloudflare quick-tunnel child manager: `findCloudflared` (config `cloudflaredPath` → `CLOUDFLARED_BIN` → `/opt/homebrew/bin` → `/usr/local/bin` → `PATH`), `cloudflared tunnel --url <target> --no-autoupdate`, `config.cloudflaredProxy` forwarded to the child as `HTTPS_PROXY`/`HTTP_PROXY`, banner-gated URL parsing, `off|starting|running|error` state with a persisted `tunnel.json` snapshot, 25 s start timeout, and SIGTERM→SIGKILL disposal that never leaves an orphan child. |
+
+### Data flow
+
+The browser modal is a pure renderer; all resolution happens on the host.
+
+```text
+browser modal (lib/client.js)             host (src/access.js)
+  │  GET /paper-deepread/api/access          │
+  ├─────────────────────────────────────────►│ 1. target resolution
+  │                                          │    siteUrl site → lan.js ensure()
+  │                                          │    → DSH Web page fallback + hint
+  │                                          │ 2. LAN/Bonjour candidates
+  │                                          │    (IPv4 non-internal, en0 first)
+  │                                          │ 3. probe each candidate URL (8 s cache)
+  │                                          │ 4. render a QR SVG for every URL
+  │◄────────── {target, local, lan[], ───────┤    (src/qr.js, per-candidate failures
+  │             tunnel, hints}                │     are tolerated)
+  │                                          │
+  │ tabs 本机 / 局域网 · <IP> / 外网（临时）  │
+  │ copy URL + inject `qrSvg` via            │
+  │ dangerouslySetInnerHTML                  │
+  │                                          │
+  │ phone scans QR ──► resolved target        │
+  │                                          │
+  │ POST /paper-deepread/api/access/tunnel    │
+  ├──────── {action:start|stop|refresh} ────►│ src/tunnel.js child process
+  │◄──────── fresh payload (new URL) ────────┤ → https://<words>.trycloudflare.com
+```
+
+`dsh web` listens on loopback only, so the phone target is deliberately never the DSH Web
+listener: it is the standalone site (`siteUrl`) or the plugin's own read-only LAN server,
+optionally fronted by the temporary public tunnel. The `target.kind === 'web'` fallback
+exists only so the modal can explain that limitation.
+
+### Tunnel URL discovery and failure handling
+
+The child is spawned as `cloudflared tunnel --url <target> --no-autoupdate` with
+`stdio: ['ignore', 'pipe', 'pipe']`. When `config.cloudflaredProxy` is a non-empty string
+after trimming, the child environment is `{...process.env, HTTPS_PROXY: proxy,
+HTTP_PROXY: proxy}`; otherwise it inherits the plugin environment. That is the escape hatch
+for macOS, where cloudflared is a Go program that ignores the system proxy: behind a
+ClashX-style proxy quick-tunnel creation fails with a `failed to request quick Tunnel` error
+(`context deadline exceeded` / `connection reset`). A SOCKS5 proxy such as
+`socks5://127.0.0.1:7890` works there; routing the quick-tunnel API through a plain HTTP
+proxy is flakier.
+
+URL discovery and failure handling are deliberately conservative:
+
+- a URL is accepted only after cloudflared prints its `quick Tunnel has been created`
+  banner (the scan starts at the banner; the whole output is a fallback for versions whose
+  banner wording differs);
+- only multi-word `https://<words>.trycloudflare.com` hostnames match, and the
+  `api.`/`www.`/`update.`/`pkg.` infrastructure hosts never do — the
+  `Post "https://api.trycloudflare.com/tunnel"` endpoint inside error output can never
+  become the tunnel URL;
+- output containing `failed to request quick Tunnel` sets `status:'error'` before any URL
+  scan: the child is terminated, the pending start resolves immediately, `url` is `null`,
+  and `error` carries cloudflared's last failure line with the `<ISO timestamp> <LEVEL>`
+  prefix stripped and capped at 800 characters. A failure can never look like a running
+  tunnel.
+
+The browser modal shows this as `外网（异常）` with the `tunnel.error` message (no QR code),
+and **连不上？刷新链接** posts `refresh` (stop + start) to retry.
+
+### State and lifecycle
+
+```text
+dataDir additions (v1.6.0)
+├── lan-server.json   last bound port of the read-only LAN fallback server
+└── tunnel.json       last Cloudflare tunnel state snapshot (available/status/url)
+```
+
+Both files are disposable: losing them only means the next activation picks a new ephemeral
+port or shows the tunnel as `off`. The LAN server starts only when a snapshot is requested
+and no `siteUrl` is configured; the tunnel child starts only after an explicit `start` or
+`refresh` action from the modal. `createManager` returns `dispose()` and the plugin registers
+it through `ctx.effect`, so both are released with the plugin fiber.
+
+### Payload contract
+
+Every field is always present: missing values are `null`, never `undefined`, and there are no
+`NaN`s, so the payload survives a JSON round-trip losslessly (the same convention as the
+model tools). `qrSvg` is SVG markup, not a data URL. Errors keep the standard shape
+`{"ok":false,"error":{"code","message"}}` (`BAD_REQUEST` 400, `TUNNEL_UNAVAILABLE` 503,
+`METHOD_NOT_ALLOWED` 405, `NOT_FOUND` 404).

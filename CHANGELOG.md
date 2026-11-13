@@ -4,6 +4,94 @@ All notable changes to DSH-Paper-DeepRead are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] — 2026-11-13
+
+### Added
+
+- **手机访问 (mobile access QR).** A **手机访问** button on the right side of the panel tab
+  bar opens a modal with one tab per candidate address: 本机, 局域网 · `<IP>` (one per
+  reachable IPv4 address plus a Bonjour `<host>.local` entry) and 外网（临时）. Each tab
+  shows a copyable URL and a locally rendered, scannable SVG QR code; **连不上？刷新链接**
+  re-probes the addresses. Nothing is probed, bound or spawned until the button is pressed.
+- **Mobile-access runtime.** New host modules:
+  - `src/access.js` — target resolution (`siteUrl` site → lazy read-only LAN fallback server
+    → DSH Web page fallback with a hint), non-internal IPv4 candidates ranked `en0` first
+    with virtual/link-local interfaces skipped, one Bonjour candidate, 8 s reachability
+    probe cache with `?refresh=1` bypass, per-candidate QR SVGs, concurrency-deduped
+    snapshots, and tunnel action serialization.
+  - `src/lan.js` — lazy read-only static server for the managed library, reusing
+    `createLibraryHandler` from `src/route.js`; binds `0.0.0.0`, prefers `lanPort`, and
+    persists the bound port in `<dataDir>/lan-server.json`. GET/HEAD static files only.
+  - `src/tunnel.js` — opt-in Cloudflare quick-tunnel child manager: `findCloudflared`
+    (config `cloudflaredPath` → `CLOUDFLARED_BIN` → `/opt/homebrew/bin` → `/usr/local/bin`
+    → `PATH`), `config.cloudflaredProxy` forwarded to the child as
+    `HTTPS_PROXY`/`HTTP_PROXY`, banner-gated URL parsing (only multi-word
+    `*.trycloudflare.com` hostnames after `quick Tunnel has been created`),
+    `off|starting|running|error` state, 25 s start timeout, `<dataDir>/tunnel.json`
+    snapshot, SIGTERM→SIGKILL stop, no orphan child.
+  - `src/qr.js` — pure QR Code Model 2 encoder (byte mode/UTF-8, EC L/M/Q/H, versions 1–40,
+    automatic version and mask selection with ISO penalty rules N1–N4) plus a compact
+    single-`<path>` SVG renderer, so the host hands the browser ready-to-inject markup
+    without any external QR service or dependency.
+- **HTTP API.** `GET /paper-deepread/api/access` returns `{ok, version, target, local, lan[],
+  tunnel, hints}` with `label`/`note`, `reachable` and `qrSvg` per candidate;
+  `POST /paper-deepread/api/access/tunnel` accepts `{action: "start"|"stop"|"refresh"}` and
+  returns a fresh payload (`400 BAD_REQUEST` for unknown actions, `503 TUNNEL_UNAVAILABLE`
+  without `cloudflared`, `405` for wrong methods).
+- New optional config keys: `cloudflaredPath` (explicit `cloudflared` binary),
+  `cloudflaredProxy` (proxy for the cloudflared child, passed as
+  `HTTPS_PROXY`/`HTTP_PROXY`; macOS system-proxy escape hatch, e.g.
+  `socks5://127.0.0.1:7890`) and `lanPort` (preferred LAN fallback port). New disposable
+  data files `lan-server.json` (remembered port) and `tunnel.json` (last tunnel state
+  snapshot).
+- `createManager` now exposes `dispose()`; `src/index.js` registers a `ctx.effect` cleanup
+  so the tunnel child and the LAN fallback server are released with the plugin fiber.
+
+### Changed
+
+- Package version bumped to `1.6.0` (`package.json`; `tests/api.test.js` version assertion);
+  `npm run check` now covers the four new host modules (`src/qr.js`, `src/access.js`,
+  `src/lan.js`, `src/tunnel.js`).
+- Tunnel discovery hardened for flaky/proxied networks: a URL is accepted only after
+  cloudflared's `quick Tunnel has been created` banner and only for multi-word
+  `*.trycloudflare.com` hostnames (the API endpoint in an error message never becomes the
+  tunnel URL), and a failed quick-tunnel request reports `status:'error'` with cloudflared's
+  trimmed message instead of a running tunnel with a dead URL. On macOS, where cloudflared
+  (Go) ignores the system proxy, `cloudflaredProxy` is the documented workaround and the
+  外网（异常） tab can be retried with 连不上？刷新链接.
+- No new npm dependencies and no build step: the host still imports only Node built-ins
+  plus the `@deepseek-ai/dsh-tools` peer, and the browser half stays a single plain-JS file.
+- No model-tool changes: `paper_deepread`, `paper_deepread_uploads` and
+  `paper_deepread_reports` keep their parameters and behaviour. No data migration is
+  required; an existing managed data directory, uploads, reports and skill state are reused
+  as-is.
+- README (EN/ZH) gained a "Mobile access (v1.6.0)" section with
+  `docs/screenshot-access.png`, the two new config rows, and updated version matrix and
+  tarball references. `RELEASE_NOTES.md` was rewritten for 1.6.0, and
+  `docs/architecture.md` / `docs/install.md` document the new modules, routes and
+  verification steps.
+
+### Testing
+
+- `tests/qr.test.js` + `tests/fixtures/qr-golden.json`: golden matrices from an independent
+  reference implementation covering short ASCII, long trycloudflare-like URLs, Chinese text,
+  all EC levels, versions 1/3/5/7 and mask coverage, plus structural assertions (finder
+  patterns, size `4*version+17`, quiet zone) and automatic version/mask sanity.
+- `tests/access.test.js`: target resolution (site / library / web fallback), interface
+  filtering and ranking, Bonjour candidate, probe cache and `?refresh=1` bypass, per-
+  candidate QR failure tolerance, snapshot dedupe, tunnel action validation, and both HTTP
+  routes end to end. `tests/lan.test.js`: ephemeral start, library `index.html`, read-only
+  404/405 behaviour, stop releases the port, port reuse and explicit-port precedence.
+  `tests/tunnel.test.js`: URL parsing (banner-gated, multi-word hostnames only), trimmed
+  quick-tunnel failure messages and prompt failure resolution (never a running URL), proxy
+  forwarding as `HTTPS_PROXY`/`HTTP_PROXY` (and environment inheritance when unset),
+  start→running, timeout→error, exit→off, refresh→new URL, SIGTERM/SIGKILL stop, dispose
+  idempotence, and binary detection order.
+- `npm test` (`node --test tests/*.test.js`) and `npm run check` (`node --check` on every
+  shipped file) pass. Manual check: open the panel, click 手机访问, confirm the QR renders
+  and the 外网 tab reports `off`/`unavailable`/`running` correctly (see
+  `docs/install.md` §9).
+
 ## [1.5.2] — 2026-10-31
 
 ### Docs only
