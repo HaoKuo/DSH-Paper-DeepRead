@@ -51,11 +51,10 @@ pipeline described below.
   uploader through `POST /paper-deepread/api/site/upload` (filename/content-type/optional
   upload token forwarded, 120 s timeout), duplicate / possible-duplicate feedback from the
   site response, and a link to `<siteUrl>/manage.html`.
-- **手机访问 / mobile access (v1.6.0)** — a **手机访问** button on the right side of the panel
-  tab bar opens a modal with 本机 / 局域网 / 外网 tabs, a copyable URL, and a locally
-  rendered, scannable QR code per candidate address; an optional Cloudflare quick tunnel
-  provides temporary internet access on demand. From v1.6.1 the panel chrome is a single
-  tab row: 刷新 / 在新标签页打开 and 手机访问 share one right-side action cluster.
+- **手机访问 / mobile access** — the **报告管理** tab has a **手机访问** card whose
+  **打开手机访问** button opens a modal with two blocks: an automatically started Cloudflare
+  quick tunnel (外网) and the first LAN address; each block shows a copyable URL and a
+  locally rendered, scannable QR code. Nothing is probed or bound on page load.
 - No runtime dependencies: the host imports only Node built-ins plus the
   `@deepseek-ai/dsh-tools` peer; the browser half is a single dependency-free file.
 
@@ -72,7 +71,7 @@ pipeline described below.
 | --- | --- |
 | Deep-read site backend (`deploy/serve.py`) | 1.6.0 |
 | 文献精读库 library index | 1.6.0 |
-| **DSH-Paper-DeepRead plugin (this package)** | **1.6.1** |
+| **DSH-Paper-DeepRead plugin (this package)** | **1.6.2** |
 | Bundled `paper-deepread-html` skill | 1.5.1 |
 
 The plugin works standalone. The 自动精读 card additionally needs a running site ≥ 1.4.0
@@ -80,11 +79,11 @@ The plugin works standalone. The 自动精读 card additionally needs a running 
 
 ## Install
 
-Download `dsh-paper-deepread-1.6.1.tgz` from the GitHub release, then install it into the
+Download `dsh-paper-deepread-1.6.2.tgz` from the GitHub release, then install it into the
 Web profile:
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.6.1.tgz
+dsh plugin --profile web add ./dsh-paper-deepread-1.6.2.tgz
 ```
 
 Restart the Web UI:
@@ -195,25 +194,20 @@ delete the installed directory once if you want the plugin to manage it from the
 
 ## Mobile access (v1.6.0) — 手机访问
 
-The right side of the panel tab bar has a **手机访问** button. It opens a modal with a
-copyable URL and a scannable QR code for reading this library from a phone; nothing is
-probed, bound, or spawned until the button is pressed.
+The **报告管理** tab has a **手机访问** card; **打开手机访问** opens a modal with two blocks,
+side by side on wide screens:
 
-![手机访问 modal](docs/screenshot-access.png)
+- **外网（临时）** — the Cloudflare quick tunnel. It starts automatically when the modal
+  opens (default-on since v1.6.2) and shows a status chip: `连接中…` / `已开启` /
+  `连接失败` / `未开启`. **关闭外网访问** stops it. Without `cloudflared` the block explains
+  the limitation and the LAN block still works.
+- **局域网 · `<IP>`** — the first non-loopback IPv4 address of this machine (`en0` ranked
+  first). Exactly one LAN address is shown; the loopback and Bonjour entries are not
+  rendered. It works for a phone on the same Wi-Fi network.
 
-The modal has one tab per candidate address:
-
-- **本机** — `http://127.0.0.1:<port>/`, the address on this computer only.
-- **局域网 · `<IP>`** — one tab per non-loopback IPv4 address (`en0` ranked first), plus a
-  Bonjour tab for `<hostname>.local` when the host name is not an IP or `localhost`. These
-  work for a phone on the same Wi-Fi network.
-- **外网（临时）** — the optional Cloudflare quick tunnel, with a state label:
-  `外网（未开启）` / `外网（连接中）` / `外网（临时）` / `外网（异常）`.
-
-Each tab shows the URL (selectable, with **复制链接**) and a QR code rendered locally by the
-plugin host from that same URL — no external QR service is involved. The modal opens on the
-running tunnel, else the first reachable LAN address, else 本机; **连不上？刷新链接**
-re-probes the addresses and, while the tunnel is running or failed, rebuilds it with a new
+Each block shows the URL (selectable, with **复制链接**) and a QR code rendered locally by the
+plugin host from that same URL — no external QR service is involved. **连不上？刷新链接**
+re-probes the LAN address and, while the tunnel is running or failed, rebuilds it with a new
 URL.
 
 ### What the phone opens
@@ -236,8 +230,8 @@ The LAN fallback server and the tunnel child are released when the plugin is dis
 
 ### Optional Cloudflare quick tunnel
 
-**外网（临时）** is strictly opt-in per button press: the plugin runs
-`cloudflared tunnel --url <target> --no-autoupdate` and reads the random
+**外网（临时）** starts automatically when the modal opens (v1.6.2 default-on; stop it with
+**关闭外网访问**): the plugin runs `cloudflared tunnel --url <target> --no-autoupdate` and reads the random
 `https://<words>.trycloudflare.com` URL it prints. The tunnel child never starts on page
 load, on plugin activation, or when the modal opens.
 

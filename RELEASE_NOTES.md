@@ -1,4 +1,4 @@
-# DSH-Paper-DeepRead 1.6.1
+# DSH-Paper-DeepRead 1.6.2
 
 Release date: 2026-11-13
 
@@ -9,14 +9,19 @@ Release date: 2026-11-13
 This release adds **手机访问 (mobile access)**: scan a QR code and read the 文献精读库 on a
 phone, without installing anything on the phone.
 
+- **Simplified 手机访问 modal (1.6.2)** — the entry is now a card on the 报告管理 tab. The
+  modal has no candidate tab row: it shows two blocks (外网（临时） and the first LAN address,
+  no loopback/Bonjour entries), each with URL, copy button and QR code. The external tunnel
+  is started automatically when the modal opens (default-on) and can be stopped with
+  关闭外网访问. Security caveat unchanged: the tunnel URL is public and unauthenticated.
 - **Single-row panel header (1.6.1 UI polish)** — the plugin chrome is one 44 px tab row
   now: 刷新, 在新标签页打开 and 手机访问 sit together in the right-side action cluster, the
   separate library toolbar row and the duplicated `N 篇 · vX` meta line are gone, and the
   library version moved into the 文献库 tab's tooltip. No host-side or API changes.
-- **手机访问 button and modal** — the panel tab bar now has a **手机访问** button on its right
-  side. It opens a modal with one tab per candidate address: 本机, 局域网 · `<IP>` (including
-  a Bonjour `<host>.local` entry) and 外网（临时）. Each tab shows a copyable URL and a
-  locally rendered, scannable SVG QR code, and **连不上？刷新链接** re-probes the addresses.
+- **手机访问 card and modal** — the 报告管理 tab has a **手机访问** card that opens a modal
+  with two blocks: 外网（临时） (auto-started Cloudflare quick tunnel) and 局域网 · `<IP>`
+  (the first non-loopback IPv4 address). Each block shows a copyable URL and a locally
+  rendered, scannable SVG QR code, and **连不上？刷新链接** re-probes/rebuilds the address.
 - **The phone target** — a phone cannot open `dsh web` itself, which stays loopback-bound on
   `127.0.0.1:3080`. With `siteUrl` configured the modal targets the standalone 文献精读库
   site; without it the plugin starts a lazy, read-only LAN static server for its managed
@@ -70,7 +75,7 @@ appears after cloudflared prints its `quick Tunnel has been created` banner; whe
 ## Install / upgrade
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.6.1.tgz
+dsh plugin --profile web add ./dsh-paper-deepread-1.6.2.tgz
 dsh web   # restart to reload the plugin package
 ```
 
@@ -102,13 +107,17 @@ MIT © 2026 HaoKuo
 
 本次新增 **手机访问**：扫码即可在手机上阅读文献精读库，手机端无需安装任何东西。
 
+- **手机访问弹窗简化（1.6.2）** —— 入口移到「报告管理」标签页的卡片；弹窗取消候选地址标签行，
+  改为两个区块（外网（临时）与本机第一个局域网地址，不再显示回环/Bonjour 条目），各自带
+  URL、复制按钮和二维码；外网隧道在弹窗打开时**默认自动开启**，可点「关闭外网访问」停止。
+  安全提示不变：外网链接公开、无鉴权。
 - **单行面板头部（1.6.1 UI 优化）** —— 插件自有的顶部界面合并成一行 44 px 标签栏：
   「刷新」「在新标签页打开」「手机访问」收进右侧动作区，独立的书库工具栏行与重复的
   `N 篇 · vX` 元数据行已删除，书库版本号移入「文献库」标签的 tooltip。宿主端与 API 无改动。
-- **手机访问按钮与弹窗** —— 面板标签栏右侧新增 **手机访问** 按钮，点开后每个候选地址一个
-  标签页：**本机**、**局域网 · `<IP>`**（含 Bonjour 的 `<主机名>.local`）与
-  **外网（临时）**。每个标签页都有可复制的 URL 和本地生成的可扫描 SVG 二维码；
-  **连不上？刷新链接** 会重新探测各地址。
+- **手机访问卡片与弹窗** —— 「报告管理」标签页里的 **手机访问** 卡片点开后是左右两个区块：
+  **外网（临时）**（自动开启的 Cloudflare 临时隧道）和 **局域网 · `<IP>`**（本机第一个
+  非回环 IPv4 地址）。每个区块都有可复制的 URL 和本地生成的可扫描 SVG 二维码；
+  **连不上？刷新链接** 会重新探测/重建地址。
 - **手机打开的目标** —— 手机无法直接打开 `dsh web` 本身（它只监听 `127.0.0.1:3080`）。
   配置 `siteUrl` 时目标是独立的文献精读库站点；未配置时插件懒启动一个只读的局域网静态
   服务器来提供受管书库（可用 `lanPort` 固定端口，实际端口会被记住）。两者都不可用时，
@@ -154,7 +163,7 @@ MIT © 2026 HaoKuo
 ### 安装 / 升级
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.6.1.tgz
+dsh plugin --profile web add ./dsh-paper-deepread-1.6.2.tgz
 dsh web   # 重启以重新加载插件包
 ```
 

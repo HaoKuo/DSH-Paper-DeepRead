@@ -2,11 +2,11 @@
 
 ## 1. Install from the release tarball
 
-Download `dsh-paper-deepread-1.6.1.tgz` (or use the copy from `dist/`) and install it into
+Download `dsh-paper-deepread-1.6.2.tgz` (or use the copy from `dist/`) and install it into
 the Web profile:
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.6.1.tgz
+dsh plugin --profile web add ./dsh-paper-deepread-1.6.2.tgz
 ```
 
 `dsh plugin` forwards to pnpm inside the profile directory. The package declares
@@ -17,7 +17,7 @@ If your shell cannot find `pnpm`, run the same command through the pnpm binary t
 installed dsh, for example:
 
 ```bash
-PATH="$HOME/Library/pnpm/bin:$PATH" dsh plugin --profile web add ./dsh-paper-deepread-1.6.1.tgz
+PATH="$HOME/Library/pnpm/bin:$PATH" dsh plugin --profile web add ./dsh-paper-deepread-1.6.2.tgz
 ```
 
 ## 2. Restart and open the UI
@@ -52,19 +52,19 @@ curl -s -o /dev/null -w '%{http_code} %{content_type}\n' \
 # 200 text/html; charset=utf-8
 
 curl -s http://127.0.0.1:3080/paper-deepread/api/state | head -c 400
-# {"ok":true,...,"version":"1.6.1","skillVersion":"1.5.1","installedSkillVersion":"1.5.1",...}
+# {"ok":true,...,"version":"1.6.2","skillVersion":"1.5.1","installedSkillVersion":"1.5.1",...}
 ```
 
 Mobile access (v1.6.0):
 
 ```bash
 curl -s http://127.0.0.1:3080/paper-deepread/api/access | head -c 600
-# {"ok":true,"version":"1.6.1","target":{"kind":"site","base":"http://127.0.0.1:8080/",
+# {"ok":true,"version":"1.6.2","target":{"kind":"site","base":"http://127.0.0.1:8080/",
 #  "label":"文献站点"},"local":{"url":"http://127.0.0.1:8080/",...},"lan":[...],
 #  "tunnel":{"available":true,"status":"off","url":null,...},"hints":[...]}
 ```
 
-Expected fields: `ok` (`true`), `version` (`1.6.1`), `target.kind` (`site` when `siteUrl` is
+Expected fields: `ok` (`true`), `version` (`1.6.2`), `target.kind` (`site` when `siteUrl` is
 configured, otherwise `library` for the plugin's read-only LAN fallback server, otherwise
 `web`), `target.base`, `local.url`, `lan[]` (each with `address`, `iface`, `label`, `url`,
 `note`, `reachable`, `qrSvg`), `tunnel` (`available`, `status`, `url`, `upstream`, `error`,
@@ -106,14 +106,14 @@ the skill version sync.
 ```bash
 npm run check   # node --check on every shipped JavaScript file
 npm test        # node:test suites (units, API, skill sync, site proxy, mobile access)
-npm run pack    # -> dist/dsh-paper-deepread-1.6.1.tgz + dist/SHA256SUMS
+npm run pack    # -> dist/dsh-paper-deepread-1.6.2.tgz + dist/SHA256SUMS
 ```
 
 Test against a throwaway profile instead of your live one:
 
 ```bash
 dsh --profile pdr-test --from-default-profile web --dump-config >/dev/null
-PATH="$HOME/Library/pnpm/bin:$PATH" dsh plugin --profile pdr-test add "$PWD/dist/dsh-paper-deepread-1.6.1.tgz"
+PATH="$HOME/Library/pnpm/bin:$PATH" dsh plugin --profile pdr-test add "$PWD/dist/dsh-paper-deepread-1.6.2.tgz"
 dsh --profile pdr-test --dump-config | grep -A2 paper-deepread
 dsh --profile pdr-test --port 3099 --no-open   # then curl 127.0.0.1:3099/paper-deepread/index.html
 ```
@@ -225,31 +225,30 @@ curl -s http://127.0.0.1:3080/paper-deepread/api/site/health | head -c 300
 With no `siteUrl` the card is hidden and `/api/site/health` returns `{"configured":false}`;
 the local inbox workflow is unchanged.
 
-## 9. 手机访问 — mobile access (v1.6.0)
+## 9. 手机访问 — mobile access
 
-The right side of the panel tab bar has a **手机访问** button. It opens the mobile-access
-modal; nothing is probed, bound, or spawned until you press it.
+The **报告管理** tab has a **手机访问** card; **打开手机访问** opens the mobile-access modal.
+Nothing is probed or bound on page load.
 
-1. **Tabs** — 本机 (`http://127.0.0.1:<port>/` on this computer), one 局域网 · `<IP>` tab per
-   non-loopback IPv4 address including the Bonjour `<hostname>.local` entry, and
-   外网（临时） for the optional Cloudflare quick tunnel. The modal selects the running
-   tunnel, else the first reachable LAN address, else 本机.
-2. **QR and copy** — every tab renders a scannable QR code from the URL the browser received
-   in the host payload; 复制链接 copies the URL as text. 连不上？刷新链接 re-probes
-   reachability (and, while the tunnel is running or failed, rebuilds it).
+1. **Two blocks** — the modal shows 外网（临时） (Cloudflare quick tunnel, started
+   automatically when the modal opens) and 局域网 · `<IP>` (the first non-loopback IPv4
+   address; exactly one LAN address, no loopback or Bonjour entry). Each block carries a
+   status chip: `连接中…` / `已开启` / `连接失败` / `未开启` for the tunnel, `可用` /
+   `待确认` for the LAN address.
+2. **QR and copy** — every block renders a scannable QR code from the URL the browser
+   received in the host payload; 复制链接 copies the URL as text. 连不上？刷新链接 re-probes
+   the LAN address (and, while the tunnel is running or failed, rebuilds it).
 3. **Check it from a phone** — scan the LAN QR on a phone connected to the same Wi-Fi
    network. With `siteUrl` configured the phone opens the standalone site; otherwise it
-   opens the plugin's read-only LAN fallback server. A QR pointing at `127.0.0.1` only works
-   on the same computer.
-4. **Tunnel** — switch to 外网（临时） and press 开启外网访问（临时）. The plugin spawns
-   `cloudflared` and shows the `https://<words>.trycloudflare.com` URL (usually within
-   5–20 s) once cloudflared prints its `quick Tunnel has been created` banner; the address
-   changes whenever the tunnel or `dsh web` restarts. Check that `cloudflared` is installed
-   (`command -v cloudflared`); the modal reports
-   `未找到 cloudflared，无法开启外网访问。` when it is missing. If quick-tunnel creation
-   fails, the tab switches to 外网（异常） with cloudflared's trimmed message (no QR code) —
-   **连不上？刷新链接** posts `refresh` and retries. Close the tunnel with 关闭外网访问 when
-   finished.
+   opens the plugin's read-only LAN fallback server.
+4. **Tunnel** — the external block starts automatically; stop it with 关闭外网访问 when
+   finished. The plugin spawns `cloudflared` and shows the
+   `https://<words>.trycloudflare.com` URL (usually within 5–20 s) once cloudflared prints
+   its `quick Tunnel has been created` banner; the address changes whenever the tunnel or
+   `dsh web` restarts. Check that `cloudflared` is installed (`command -v cloudflared`);
+   without it the block reports `未找到 cloudflared，无法开启外网访问。` and the LAN block
+   still works. If quick-tunnel creation fails the block shows cloudflared's trimmed
+   message (no QR code) — **连不上？刷新链接** posts `refresh` and retries.
 
 Command-line checks:
 

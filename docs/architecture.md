@@ -254,7 +254,7 @@ upload token is never stored in the plugin config — it is per-request browser 
 | `src/qr.js` | Pure QR Code Model 2 encoder: byte mode/UTF-8, EC L/M/Q/H, versions 1–40, smallest fitting version, automatic mask selection with ISO penalty rules N1–N4; renders one `<svg>` with a single compact `<path>` for direct injection. No I/O, no dependencies. |
 | `src/access.js` | Access runtime: target resolution (`siteUrl` site → lazy LAN fallback server → DSH Web page), non-internal IPv4 discovery ranked `en0` first (virtual and link-local interfaces skipped) plus one Bonjour candidate, 8 s reachability probe cache with `?refresh=1` bypass, per-candidate QR SVGs, concurrency-deduped snapshots, serialized tunnel actions, and `dispose()`. |
 | `src/lan.js` | Lazy read-only LAN fallback server for the managed library. Reuses `createLibraryHandler` from `src/route.js` (the request URL is rewritten to `/paper-deepread<pathname>`), binds `0.0.0.0` on `lanPort` or an ephemeral port, and persists the bound port in `<dataDir>/lan-server.json` so the LAN URL survives reactivation. |
-| `src/tunnel.js` | Opt-in Cloudflare quick-tunnel child manager: `findCloudflared` (config `cloudflaredPath` → `CLOUDFLARED_BIN` → `/opt/homebrew/bin` → `/usr/local/bin` → `PATH`), `cloudflared tunnel --url <target> --no-autoupdate`, `config.cloudflaredProxy` forwarded to the child as `HTTPS_PROXY`/`HTTP_PROXY`, banner-gated URL parsing, `off|starting|running|error` state with a persisted `tunnel.json` snapshot, 25 s start timeout, and SIGTERM→SIGKILL disposal that never leaves an orphan child. |
+| `src/tunnel.js` | Cloudflare quick-tunnel child manager (started automatically when the 手机访问 modal opens since v1.6.2; **关闭外网访问** stops it): `findCloudflared` (config `cloudflaredPath` → `CLOUDFLARED_BIN` → `/opt/homebrew/bin` → `/usr/local/bin` → `PATH`), `cloudflared tunnel --url <target> --no-autoupdate`, `config.cloudflaredProxy` forwarded to the child as `HTTPS_PROXY`/`HTTP_PROXY`, banner-gated URL parsing, `off|starting|running|error` state with a persisted `tunnel.json` snapshot, 25 s start timeout, and SIGTERM→SIGKILL disposal that never leaves an orphan child. |
 
 ### Data flow
 
@@ -273,7 +273,7 @@ browser modal (lib/client.js)             host (src/access.js)
   │◄────────── {target, local, lan[], ───────┤    (src/qr.js, per-candidate failures
   │             tunnel, hints}                │     are tolerated)
   │                                          │
-  │ tabs 本机 / 局域网 · <IP> / 外网（临时）  │
+  │ blocks 外网（临时） / 局域网 · <first IP>│
   │ copy URL + inject `qrSvg` via            │
   │ dangerouslySetInnerHTML                  │
   │                                          │
@@ -283,6 +283,11 @@ browser modal (lib/client.js)             host (src/access.js)
   ├──────── {action:start|stop|refresh} ────►│ src/tunnel.js child process
   │◄──────── fresh payload (new URL) ────────┤ → https://<words>.trycloudflare.com
 ```
+
+Since v1.6.2 the modal renders no candidate tab row and no loopback/Bonjour entries: it
+shows the external tunnel block and the first LAN IPv4 block, and the browser half starts
+the tunnel automatically on open (one auto-start per modal open; failures stay visible and
+are retried through **连不上？刷新链接** or **开启外网访问（临时）**).
 
 `dsh web` listens on loopback only, so the phone target is deliberately never the DSH Web
 listener: it is the standalone site (`siteUrl`) or the plugin's own read-only LAN server,

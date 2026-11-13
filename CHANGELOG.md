@@ -4,6 +4,20 @@ All notable changes to DSH-Paper-DeepRead are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.2] — 2026-11-13
+
+### Changed
+
+- **Simplified 手机访问 modal.** The entry moved from the tab bar into a 手机访问 card on the
+  报告管理 tab. The modal no longer has a candidate tab row: it shows two blocks — 外网（临时）
+  and the first LAN address (loopback and Bonjour entries are not rendered) — each with its
+  own URL, copy button and locally rendered QR code, side by side on wide screens.
+- **External tunnel on by default.** Opening the modal starts the Cloudflare quick tunnel
+  automatically (status chip `连接中…` → `已开启` / `连接失败`); 关闭外网访问 stops it and
+  连不上？刷新链接 rebuilds it with a new URL. The security note is unchanged: the tunnel
+  URL is public and unauthenticated.
+- Browser half only — no host-side, API or data changes.
+
 ## [1.6.1] — 2026-11-13
 
 ### Changed

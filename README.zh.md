@@ -27,7 +27,7 @@ DSH-Paper-DeepRead 把一个 dsh 插件包做成两件事：
 
 ## 功能
 
-- 侧边栏入口 **Paper Deepread**，点击后主面板全高显示精读库页面；标签栏右侧同一行收着「刷新」「在新标签页打开」两个书库动作和「手机访问」入口（v1.6.1 起合并为单行，不再有独立工具栏行）。
+- 侧边栏入口 **Paper Deepread**，点击后主面板全高显示精读库页面；标签栏右侧同一行是「刷新」「在新标签页打开」两个书库动作（v1.6.1 起合并为单行，不再有独立工具栏行），「手机访问」入口在「报告管理」标签页的卡片里（v1.6.2 起）。
 - 宿主路由 `GET|HEAD /paper-deepread/*`：正确的 Content-Type、Content-Length、百分号解码
   （路径含空格、`·`、中文）、路径穿越防护。
 - 模型工具 `paper_deepread`：返回论文 id、双语标题、期刊、标签、TL;DR、报告/PDF 绝对路径、
@@ -42,8 +42,9 @@ DSH-Paper-DeepRead 把一个 dsh 插件包做成两件事：
   `POST /paper-deepread/api/site/upload` 原样代理上传（转发文件名/Content-Type/可选
   上传令牌，120 秒超时）；重复/可能重复反馈直接复用站点返回文案，并提供
   `<siteUrl>/manage.html` 管理台链接。
-- **手机访问（v1.6.0）** —— 面板标签栏右侧新增 **手机访问** 按钮：弹窗按候选地址分标签
-  展示可复制链接与本地生成的二维码，可选开启 Cloudflare 临时隧道从外网访问。
+- **手机访问（v1.6.2 简化）** —— 「报告管理」标签页里有 **手机访问** 卡片：点「打开手机访问」
+  弹出两个并排区块——会自动开启的 Cloudflare 临时隧道（外网）与本机第一个局域网地址，
+  各带可复制链接与本地生成的二维码。
 - 无运行时依赖：宿主只用到 Node 内置模块与 `@deepseek-ai/dsh-tools` peer；浏览器端是单文件、无构建。
 
 ## 环境要求
@@ -59,7 +60,7 @@ DSH-Paper-DeepRead 把一个 dsh 插件包做成两件事：
 | --- | --- |
 | 精读站点后端（`deploy/serve.py`） | 1.6.0 |
 | 文献精读库索引 | 1.6.0 |
-| **DSH-Paper-DeepRead 插件（本包）** | **1.6.0** |
+| **DSH-Paper-DeepRead 插件（本包）** | **1.6.2** |
 | 内置 `paper-deepread-html` 技能 | 1.5.1 |
 
 插件可独立使用；「自动精读」卡片还需要运行中的站点 ≥ 1.4.0（`/api/health`、上传令牌与
@@ -67,10 +68,10 @@ DSH-Paper-DeepRead 把一个 dsh 插件包做成两件事：
 
 ## 安装
 
-从 GitHub release 下载 `dsh-paper-deepread-1.6.0.tgz`，安装到 Web profile：
+从 GitHub release 下载 `dsh-paper-deepread-1.6.2.tgz`，安装到 Web profile：
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.6.0.tgz
+dsh plugin --profile web add ./dsh-paper-deepread-1.6.2.tgz
 ```
 
 重启 Web UI：
@@ -163,26 +164,19 @@ config:
 v1.2.0 之前就存在、没有 hash 记录的副本视为用户自管（保留并告警）；如果想交给插件管理，
 删除该已安装目录一次即可。
 
-## 手机访问（v1.6.0）
+## 手机访问
 
-面板标签栏右侧新增 **手机访问** 按钮，点开是一个弹窗：可复制链接、显示可扫描二维码，
-把精读库投到手机上阅读。只有按下按钮才会动作，页面加载时不会探测网络、不会绑定端口、
-不会启动任何进程。
+「报告管理」标签页里有 **手机访问** 卡片，点「打开手机访问」弹出弹窗，宽屏下左右两个区块：
 
-![手机访问弹窗](docs/screenshot-access.png)
+- **外网（临时）** —— Cloudflare 临时隧道，弹窗打开时**默认自动开启**（v1.6.2 起），带状态
+  标签：`连接中…` / `已开启` / `连接失败` / `未开启`；点「关闭外网访问」可停止。没有
+  `cloudflared` 时该区块会说明原因，局域网区块照常可用。
+- **局域网 · `<IP>`** —— 本机第一个非回环 IPv4 地址（`en0` 排最前）。只显示这一个局域网
+  地址，不再显示本机回环与 Bonjour 条目。同一 Wi-Fi 下的手机可打开。
 
-弹窗按候选地址分标签页：
-
-- **本机** —— `http://127.0.0.1:<端口>/`，仅当前电脑可用。
-- **局域网 · `<IP>`** —— 每个非回环 IPv4 地址一个标签页（`en0` 排最前）；主机名不是 IP
-  或 `localhost` 时，额外提供 Bonjour 的 `<主机名>.local` 页。同一 Wi-Fi 下的手机可打开。
-- **外网（临时）** —— 可选的 Cloudflare 临时隧道，标签会显示状态：
-  `外网（未开启）` / `外网（连接中）` / `外网（临时）` / `外网（异常）`。
-
-每个标签页显示可选中复制的 URL（**复制链接**）和二维码。二维码由插件宿主在本地按同一
-URL 生成（不依赖任何外部二维码服务）。弹窗默认选中运行中的隧道，否则第一个可达的局域网
-地址，再否则本机；**连不上？刷新链接** 会重新探测可达性，隧道运行中或异常时会重建隧道并
-换新地址。
+每个区块都显示可选中复制的 URL（**复制链接**）和二维码；二维码由插件宿主在本地按同一
+URL 生成（不依赖任何外部二维码服务）。**连不上？刷新链接** 会重新探测局域网地址；隧道
+运行中或异常时会重建隧道并换新地址。
 
 ### 手机上打开的是什么
 
@@ -201,10 +195,9 @@ URL 生成（不依赖任何外部二维码服务）。弹窗默认选中运行�
 
 ### 可选的 Cloudflare 临时隧道
 
-**外网（临时）** 完全按需开启：每次点击才执行
-`cloudflared tunnel --url <目标地址> --no-autoupdate`，并从它的输出里读取随机的
-`https://<words>.trycloudflare.com` 地址。隧道子进程不会在页面加载、插件激活或打开弹窗时
-启动。
+**外网（临时）** 在弹窗打开时自动开启（v1.6.2 起默认开启；可用「关闭外网访问」停止）：
+插件执行 `cloudflared tunnel --url <目标地址> --no-autoupdate`，并从它的输出里读取随机的
+`https://<words>.trycloudflare.com` 地址。隧道子进程不会在页面加载或插件激活时启动。
 
 `cloudflared` 的查找顺序：`cloudflaredPath` 配置 → 环境变量 `CLOUDFLARED_BIN` →
 `/opt/homebrew/bin/cloudflared` → `/usr/local/bin/cloudflared` → `PATH` 中每个目录。
@@ -313,7 +306,7 @@ DSH-Paper-DeepRead/
 ```bash
 npm run check   # 对全部 JS 执行 node --check
 npm test        # node:test 测试（单元/API/技能同步/站点代理/手机访问）
-npm run pack    # 生成 dist/dsh-paper-deepread-1.6.0.tgz 与 dist/SHA256SUMS
+npm run pack    # 生成 dist/dsh-paper-deepread-1.6.2.tgz 与 dist/SHA256SUMS
 ```
 
 本插件以 GitHub release tarball 形式发布，无需上架 npm。
