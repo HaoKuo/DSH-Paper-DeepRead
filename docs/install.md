@@ -2,11 +2,11 @@
 
 ## 1. Install from the release tarball
 
-Download `dsh-paper-deepread-1.6.0.tgz` (or use the copy from `dist/`) and install it into
+Download `dsh-paper-deepread-1.6.1.tgz` (or use the copy from `dist/`) and install it into
 the Web profile:
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.6.0.tgz
+dsh plugin --profile web add ./dsh-paper-deepread-1.6.1.tgz
 ```
 
 `dsh plugin` forwards to pnpm inside the profile directory. The package declares
@@ -17,7 +17,7 @@ If your shell cannot find `pnpm`, run the same command through the pnpm binary t
 installed dsh, for example:
 
 ```bash
-PATH="$HOME/Library/pnpm/bin:$PATH" dsh plugin --profile web add ./dsh-paper-deepread-1.6.0.tgz
+PATH="$HOME/Library/pnpm/bin:$PATH" dsh plugin --profile web add ./dsh-paper-deepread-1.6.1.tgz
 ```
 
 ## 2. Restart and open the UI
@@ -27,7 +27,8 @@ dsh web
 ```
 
 Click the **Paper Deepread** icon in the left sidebar. The page renders inside the main
-panel; the toolbar has *在新标签页打开* and *刷新*. The same page is available directly:
+panel; the single tab row carries *刷新*, *在新标签页打开* and the *手机访问* entry in its
+right-side action cluster. The same page is available directly:
 
 ![The bundled Paper Deepread library](screenshot-library.png)
 
@@ -51,19 +52,19 @@ curl -s -o /dev/null -w '%{http_code} %{content_type}\n' \
 # 200 text/html; charset=utf-8
 
 curl -s http://127.0.0.1:3080/paper-deepread/api/state | head -c 400
-# {"ok":true,...,"version":"1.6.0","skillVersion":"1.5.1","installedSkillVersion":"1.5.1",...}
+# {"ok":true,...,"version":"1.6.1","skillVersion":"1.5.1","installedSkillVersion":"1.5.1",...}
 ```
 
 Mobile access (v1.6.0):
 
 ```bash
 curl -s http://127.0.0.1:3080/paper-deepread/api/access | head -c 600
-# {"ok":true,"version":"1.6.0","target":{"kind":"site","base":"http://127.0.0.1:8080/",
+# {"ok":true,"version":"1.6.1","target":{"kind":"site","base":"http://127.0.0.1:8080/",
 #  "label":"文献站点"},"local":{"url":"http://127.0.0.1:8080/",...},"lan":[...],
 #  "tunnel":{"available":true,"status":"off","url":null,...},"hints":[...]}
 ```
 
-Expected fields: `ok` (`true`), `version` (`1.6.0`), `target.kind` (`site` when `siteUrl` is
+Expected fields: `ok` (`true`), `version` (`1.6.1`), `target.kind` (`site` when `siteUrl` is
 configured, otherwise `library` for the plugin's read-only LAN fallback server, otherwise
 `web`), `target.base`, `local.url`, `lan[]` (each with `address`, `iface`, `label`, `url`,
 `note`, `reachable`, `qrSvg`), `tunnel` (`available`, `status`, `url`, `upstream`, `error`,
@@ -105,14 +106,14 @@ the skill version sync.
 ```bash
 npm run check   # node --check on every shipped JavaScript file
 npm test        # node:test suites (units, API, skill sync, site proxy, mobile access)
-npm run pack    # -> dist/dsh-paper-deepread-1.6.0.tgz + dist/SHA256SUMS
+npm run pack    # -> dist/dsh-paper-deepread-1.6.1.tgz + dist/SHA256SUMS
 ```
 
 Test against a throwaway profile instead of your live one:
 
 ```bash
 dsh --profile pdr-test --from-default-profile web --dump-config >/dev/null
-PATH="$HOME/Library/pnpm/bin:$PATH" dsh plugin --profile pdr-test add "$PWD/dist/dsh-paper-deepread-1.6.0.tgz"
+PATH="$HOME/Library/pnpm/bin:$PATH" dsh plugin --profile pdr-test add "$PWD/dist/dsh-paper-deepread-1.6.1.tgz"
 dsh --profile pdr-test --dump-config | grep -A2 paper-deepread
 dsh --profile pdr-test --port 3099 --no-open   # then curl 127.0.0.1:3099/paper-deepread/index.html
 ```

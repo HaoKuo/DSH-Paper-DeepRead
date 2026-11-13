@@ -4,6 +4,17 @@ All notable changes to DSH-Paper-DeepRead are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1] — 2026-11-13
+
+### Changed
+
+- **Single-row panel header (UI polish).** The plugin chrome above the library is now one
+  44 px tab row instead of three stacked bars. 刷新, 在新标签页打开 and 手机访问 share the
+  right-side action cluster; the separate library toolbar row and the duplicated
+  `N 篇 · vX` meta line are gone, and the library version moved into the 文献库 tab's
+  tooltip. Library actions only render on the 文献库 tab, so the other tabs keep a clean
+  row. No host-side, API or data changes — the browser half is a drop-in replacement.
+
 ## [1.6.0] — 2026-11-13
 
 ### Added

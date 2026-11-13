@@ -1,4 +1,4 @@
-# DSH-Paper-DeepRead 1.6.0
+# DSH-Paper-DeepRead 1.6.1
 
 Release date: 2026-11-13
 
@@ -9,6 +9,10 @@ Release date: 2026-11-13
 This release adds **手机访问 (mobile access)**: scan a QR code and read the 文献精读库 on a
 phone, without installing anything on the phone.
 
+- **Single-row panel header (1.6.1 UI polish)** — the plugin chrome is one 44 px tab row
+  now: 刷新, 在新标签页打开 and 手机访问 sit together in the right-side action cluster, the
+  separate library toolbar row and the duplicated `N 篇 · vX` meta line are gone, and the
+  library version moved into the 文献库 tab's tooltip. No host-side or API changes.
 - **手机访问 button and modal** — the panel tab bar now has a **手机访问** button on its right
   side. It opens a modal with one tab per candidate address: 本机, 局域网 · `<IP>` (including
   a Bonjour `<host>.local` entry) and 外网（临时）. Each tab shows a copyable URL and a
@@ -66,7 +70,7 @@ appears after cloudflared prints its `quick Tunnel has been created` banner; whe
 ## Install / upgrade
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.6.0.tgz
+dsh plugin --profile web add ./dsh-paper-deepread-1.6.1.tgz
 dsh web   # restart to reload the plugin package
 ```
 
@@ -98,6 +102,9 @@ MIT © 2026 HaoKuo
 
 本次新增 **手机访问**：扫码即可在手机上阅读文献精读库，手机端无需安装任何东西。
 
+- **单行面板头部（1.6.1 UI 优化）** —— 插件自有的顶部界面合并成一行 44 px 标签栏：
+  「刷新」「在新标签页打开」「手机访问」收进右侧动作区，独立的书库工具栏行与重复的
+  `N 篇 · vX` 元数据行已删除，书库版本号移入「文献库」标签的 tooltip。宿主端与 API 无改动。
 - **手机访问按钮与弹窗** —— 面板标签栏右侧新增 **手机访问** 按钮，点开后每个候选地址一个
   标签页：**本机**、**局域网 · `<IP>`**（含 Bonjour 的 `<主机名>.local`）与
   **外网（临时）**。每个标签页都有可复制的 URL 和本地生成的可扫描 SVG 二维码；
@@ -147,7 +154,7 @@ MIT © 2026 HaoKuo
 ### 安装 / 升级
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.6.0.tgz
+dsh plugin --profile web add ./dsh-paper-deepread-1.6.1.tgz
 dsh web   # 重启以重新加载插件包
 ```
 

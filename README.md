@@ -54,7 +54,8 @@ pipeline described below.
 - **手机访问 / mobile access (v1.6.0)** — a **手机访问** button on the right side of the panel
   tab bar opens a modal with 本机 / 局域网 / 外网 tabs, a copyable URL, and a locally
   rendered, scannable QR code per candidate address; an optional Cloudflare quick tunnel
-  provides temporary internet access on demand.
+  provides temporary internet access on demand. From v1.6.1 the panel chrome is a single
+  tab row: 刷新 / 在新标签页打开 and 手机访问 share one right-side action cluster.
 - No runtime dependencies: the host imports only Node built-ins plus the
   `@deepseek-ai/dsh-tools` peer; the browser half is a single dependency-free file.
 
@@ -71,7 +72,7 @@ pipeline described below.
 | --- | --- |
 | Deep-read site backend (`deploy/serve.py`) | 1.6.0 |
 | 文献精读库 library index | 1.6.0 |
-| **DSH-Paper-DeepRead plugin (this package)** | **1.6.0** |
+| **DSH-Paper-DeepRead plugin (this package)** | **1.6.1** |
 | Bundled `paper-deepread-html` skill | 1.5.1 |
 
 The plugin works standalone. The 自动精读 card additionally needs a running site ≥ 1.4.0
@@ -79,11 +80,11 @@ The plugin works standalone. The 自动精读 card additionally needs a running 
 
 ## Install
 
-Download `dsh-paper-deepread-1.6.0.tgz` from the GitHub release, then install it into the
+Download `dsh-paper-deepread-1.6.1.tgz` from the GitHub release, then install it into the
 Web profile:
 
 ```bash
-dsh plugin --profile web add ./dsh-paper-deepread-1.6.0.tgz
+dsh plugin --profile web add ./dsh-paper-deepread-1.6.1.tgz
 ```
 
 Restart the Web UI:

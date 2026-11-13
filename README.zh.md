@@ -27,7 +27,7 @@ DSH-Paper-DeepRead 把一个 dsh 插件包做成两件事：
 
 ## 功能
 
-- 侧边栏入口 **Paper Deepread**，点击后主面板全高显示精读库页面，带「在新标签页打开」与「刷新」。
+- 侧边栏入口 **Paper Deepread**，点击后主面板全高显示精读库页面；标签栏右侧同一行收着「刷新」「在新标签页打开」两个书库动作和「手机访问」入口（v1.6.1 起合并为单行，不再有独立工具栏行）。
 - 宿主路由 `GET|HEAD /paper-deepread/*`：正确的 Content-Type、Content-Length、百分号解码
   （路径含空格、`·`、中文）、路径穿越防护。
 - 模型工具 `paper_deepread`：返回论文 id、双语标题、期刊、标签、TL;DR、报告/PDF 绝对路径、
